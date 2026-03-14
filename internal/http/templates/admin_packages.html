@@ -38,7 +38,7 @@
 <td class="px-4 py-2"><span class="text-xs px-2 py-0.5 rounded-full {{if eq .Type "plugin"}}bg-blue-100 text-blue-700{{else}}bg-purple-100 text-purple-700{{end}}">{{.Type}}</span></td>
 <td class="px-4 py-2">
 <div class="font-medium">{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Name}}{{end}}</div>
-<div class="text-xs text-gray-400">{{.Name}}</div>
+<div class="text-xs text-gray-500">{{.Name}}</div>
 </td>
 <td class="px-4 py-2 font-mono text-xs">{{if .CurrentVersion}}{{.CurrentVersion}}{{else}}—{{end}}</td>
 <td class="px-4 py-2 text-right">{{formatNumber .ActiveInstalls}}</td>
