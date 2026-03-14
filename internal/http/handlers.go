@@ -249,9 +249,18 @@ func handleAdminDashboard(a *app.App, tmpl *templateSet) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		stats := queryDashboardStats(r.Context(), a.DB)
 
-		// Get current build
+		// Get current build — set it on the Stats struct
 		currentBuild, _ := deploy.CurrentBuildID("storage/repository")
-		stats["CurrentBuild"] = currentBuild
+		s := stats["Stats"].(struct {
+			TotalPackages int64
+			ActivePlugins int64
+			ActiveThemes  int64
+			TotalInstalls int64
+			Installs30d   int64
+			CurrentBuild  string
+		})
+		s.CurrentBuild = currentBuild
+		stats["Stats"] = s
 
 		render(w, tmpl.adminDashboard, "admin_layout", stats)
 	}
