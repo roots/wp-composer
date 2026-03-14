@@ -410,9 +410,10 @@ func queryPackages(ctx context.Context, db *sql.DB, f publicFilters, page, limit
 	args := []any{}
 
 	if f.Search != "" {
-		where += " AND (name LIKE ? OR display_name LIKE ? OR description LIKE ?)"
+		normalized := "%" + strings.NewReplacer("-", "", " ", "").Replace(f.Search) + "%"
 		s := "%" + f.Search + "%"
-		args = append(args, s, s, s)
+		where += " AND (REPLACE(REPLACE(name, '-', ''), ' ', '') LIKE ? OR display_name LIKE ? OR description LIKE ?)"
+		args = append(args, normalized, s, s)
 	}
 	if f.Type != "" {
 		where += " AND type = ?"
@@ -570,9 +571,10 @@ func queryAdminPackages(ctx context.Context, db *sql.DB, f adminFilters, page, l
 	args := []any{}
 
 	if f.Search != "" {
-		where += " AND (name LIKE ? OR display_name LIKE ?)"
+		normalized := "%" + strings.NewReplacer("-", "", " ", "").Replace(f.Search) + "%"
 		s := "%" + f.Search + "%"
-		args = append(args, s, s)
+		where += " AND (REPLACE(REPLACE(name, '-', ''), ' ', '') LIKE ? OR display_name LIKE ? OR description LIKE ?)"
+		args = append(args, normalized, s, s)
 	}
 	if f.Type != "" {
 		where += " AND type = ?"
