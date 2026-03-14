@@ -66,7 +66,7 @@ func executePipelineSteps(cmd *cobra.Command, ctx context.Context, skipDiscover,
 
 func recordFailedBuild(cmd *cobra.Command, started time.Time, pipelineErr error) {
 	now := time.Now().UTC()
-	buildID := started.Format("20060102-150405")
+	buildID := now.Format("20060102-150405") + "-failed"
 	_, dbErr := application.DB.ExecContext(cmd.Context(), `
 		INSERT INTO builds (id, started_at, finished_at, duration_seconds,
 			packages_total, packages_changed, packages_skipped,
