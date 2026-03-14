@@ -1,0 +1,143 @@
+{{template "layout" .}}
+{{define "title"}}WP Composer vs WPackagist — Why Community Ownership Matters{{end}}
+{{define "meta_seo"}}
+<meta name="description" content="Compare WP Composer and WPackagist. Learn why a community-owned Composer repository matters for the WordPress ecosystem.">
+{{if .AppURL}}<link rel="canonical" href="{{.AppURL}}/wp-composer-vs-wpackagist">{{end}}
+{{end}}
+{{define "json_ld"}}{{end}}
+{{define "og_meta"}}
+<meta property="og:title" content="WP Composer vs WPackagist">
+<meta property="og:description" content="Why a community-owned Composer repository matters for the WordPress ecosystem.">
+{{if .OGImage}}<meta property="og:image" content="{{.OGImage}}">{{end}}
+{{if .AppURL}}<meta property="og:url" content="{{.AppURL}}/wp-composer-vs-wpackagist">{{end}}
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="WP Composer vs WPackagist">
+<meta name="twitter:description" content="Why a community-owned Composer repository matters for the WordPress ecosystem.">
+{{if .OGImage}}<meta name="twitter:image" content="{{.OGImage}}">{{end}}
+{{end}}
+{{define "content"}}
+<section class="relative border-b border-gray-200/50">
+<div class="absolute inset-0 bg-gradient-to-b from-brand-lightest/40 to-transparent"></div>
+<div class="relative mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 pt-16 pb-12 sm:pt-24 sm:pb-16 text-center">
+<h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-gray-900 mb-4 text-balance">WP Composer <span class="text-brand-primary">vs</span> WPackagist</h1>
+<p class="text-lg text-gray-500 max-w-xl mx-auto text-balance">Why a community-owned Composer repository matters for the WordPress ecosystem.</p>
+</div>
+</section>
+
+<article class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+
+<div class="prose prose-gray max-w-none">
+
+<p class="text-lg text-gray-600 leading-relaxed mb-10">For years, WPackagist was the go-to Composer repository for WordPress plugins and themes. In March 2026, WPackagist was acquired by WP Engine, a private-equity backed company. Tooling this central to the WordPress Composer workflow shouldn't be owned by a single corporation &mdash; it should be community-owned.</p>
+
+<h2 class="text-2xl font-bold text-gray-900 mb-6">How they compare</h2>
+
+<div class="rounded-xl border border-gray-200/60 overflow-hidden mb-12">
+<table class="w-full text-sm">
+<thead class="bg-gray-50/50">
+<tr>
+<th class="text-left px-4 py-3 font-medium text-gray-500 w-1/3"></th>
+<th class="text-left px-4 py-3 font-semibold text-brand-primary">WP Composer</th>
+<th class="text-left px-4 py-3 font-medium text-gray-500">WPackagist</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-t border-gray-200/40">
+<td class="px-4 py-3 font-medium text-gray-700">Ownership</td>
+<td class="px-4 py-3 text-gray-600">Community-owned by <a href="https://roots.io" class="text-brand-primary hover:underline" target="_blank" rel="noopener">Roots</a></td>
+<td class="px-4 py-3 text-gray-600">WP Engine (private equity)</td>
+</tr>
+<tr class="border-t border-gray-200/40">
+<td class="px-4 py-3 font-medium text-gray-700">Open source</td>
+<td class="px-4 py-3 text-gray-600">Fully open source &mdash; <a href="https://github.com/roots/wp-composer" class="text-brand-primary hover:underline" target="_blank" rel="noopener">contributions welcome</a></td>
+<td class="px-4 py-3 text-gray-600">Unclear &mdash; GitHub repo no longer reflects live site</td>
+</tr>
+<tr class="border-t border-gray-200/40">
+<td class="px-4 py-3 font-medium text-gray-700">Funding</td>
+<td class="px-4 py-3 text-gray-600">Community-funded via <a href="https://github.com/sponsors/roots" class="text-brand-primary hover:underline" target="_blank" rel="noopener">GitHub Sponsors</a></td>
+<td class="px-4 py-3 text-gray-600">Corporate-funded</td>
+</tr>
+<tr class="border-t border-gray-200/40">
+<td class="px-4 py-3 font-medium text-gray-700">Package naming</td>
+<td class="px-4 py-3 text-gray-600"><code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">wp-plugin/*</code> <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">wp-theme/*</code></td>
+<td class="px-4 py-3 text-gray-600"><code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">wpackagist-plugin/*</code> <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">wpackagist-theme/*</code></td>
+</tr>
+<tr class="border-t border-gray-200/40">
+<td class="px-4 py-3 font-medium text-gray-700">Governance</td>
+<td class="px-4 py-3 text-gray-600">Open roadmap, community collaboration</td>
+<td class="px-4 py-3 text-gray-600">Corporate decision-making</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h2 class="text-2xl font-bold text-gray-900 mb-4">The case for community ownership</h2>
+
+<p class="text-gray-600 mb-4 leading-relaxed">WPackagist was originally built and maintained by <a href="https://outlandish.com/" class="text-brand-primary hover:underline" target="_blank" rel="noopener">Outlandish</a>, who operated the service for over a decade. In its later years, the project suffered from neglect &mdash; slow updates, limited maintenance, and no meaningful community input into its direction.</p>
+
+<p class="text-gray-600 mb-4 leading-relaxed">Its acquisition by WP Engine raises important questions. When infrastructure this foundational to the WordPress developer workflow is controlled by a single corporation, the community loses its voice. Decisions about availability, pricing, and direction are made in boardrooms, not in the open.</p>
+
+<p class="text-gray-600 mb-8 leading-relaxed">It's also unclear whether WPackagist remains truly open source. The <a href="https://github.com/outlandishideas/wpackagist" class="text-brand-primary hover:underline" target="_blank" rel="noopener">GitHub repository</a> no longer reflects the live website, making it difficult for the community to audit, contribute to, or fork the project.</p>
+
+<h2 class="text-2xl font-bold text-gray-900 mb-4">Built by Roots, maintained since 2011</h2>
+
+<p class="text-gray-600 mb-4 leading-relaxed">WP Composer is built by <a href="https://roots.io" class="text-brand-primary hover:underline" target="_blank" rel="noopener">Roots</a>, the team behind <a href="https://roots.io/bedrock/" class="text-brand-primary hover:underline" target="_blank" rel="noopener">Bedrock</a>, <a href="https://roots.io/sage/" class="text-brand-primary hover:underline" target="_blank" rel="noopener">Sage</a>, <a href="https://roots.io/trellis/" class="text-brand-primary hover:underline" target="_blank" rel="noopener">Trellis</a>, and <a href="https://roots.io/acorn/" class="text-brand-primary hover:underline" target="_blank" rel="noopener">Acorn</a>. Since 2011, Roots has been continuously improving and maintaining open source WordPress tooling. We pioneered the use of Composer in WordPress development and have a proven track record of long-term commitment to the ecosystem.</p>
+
+<p class="text-gray-600 mb-4 leading-relaxed">WP Composer is <a href="https://github.com/roots/wp-composer" class="text-brand-primary hover:underline" target="_blank" rel="noopener">fully open source</a> and designed for community collaboration. Every line of code is public, contributions are welcome, and the project's direction is shaped by the developers who use it.</p>
+
+<p class="text-gray-600 mb-8 leading-relaxed">The repository includes everything needed to run your own instance: the application code, documentation on how it all works, and the full Ansible setup for deploying to production. Anyone can fork it and build their own WordPress Composer repository.</p>
+
+<h2 class="text-2xl font-bold text-gray-900 mb-4">Community-funded, community-driven</h2>
+
+<p class="text-gray-600 mb-4 leading-relaxed">Unlike corporate-backed alternatives, WP Composer is funded entirely by the community through <a href="https://github.com/sponsors/roots" class="text-brand-primary hover:underline" target="_blank" rel="noopener">GitHub Sponsors</a>. Your sponsorship directly supports the infrastructure, development, and maintenance of WP Composer and the broader Roots ecosystem.</p>
+
+<p class="text-gray-600 mb-8 leading-relaxed">Sponsoring Roots means investing in independent, community-owned WordPress tooling that serves developers &mdash; not shareholders.</p>
+
+<div class="rounded-xl border border-brand-primary/20 bg-brand-lightest/30 p-6 sm:p-8 text-center mb-8">
+<h3 class="text-lg font-bold text-gray-900 mb-2">Support independent WordPress tooling</h3>
+<p class="text-gray-600 mb-5 text-sm">Help us keep WP Composer community-owned and freely available for every WordPress developer.</p>
+<a href="https://github.com/sponsors/roots" class="inline-flex items-center rounded-lg bg-brand-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-primary/85 transition-colors" target="_blank" rel="noopener">Sponsor Roots on GitHub</a>
+</div>
+
+<h2 class="text-2xl font-bold text-gray-900 mb-4">Migrating from WPackagist</h2>
+
+<p class="text-gray-600 mb-6 leading-relaxed">Switching from WPackagist to WP Composer takes just a few commands:</p>
+
+<div class="space-y-4 mb-6">
+<div class="flex gap-4">
+<div class="flex w-8 h-8 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-sm font-bold">1</div>
+<div>
+<p class="text-gray-600 mb-2">Remove wpackagist packages:</p>
+<div class="bg-gray-50 rounded-lg px-4 py-2.5 font-mono text-sm">composer remove wpackagist-theme/twentytwentyfive</div>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="flex w-8 h-8 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-sm font-bold">2</div>
+<div>
+<p class="text-gray-600 mb-2">Remove the wpackagist repository and add WP Composer:</p>
+<div class="bg-gray-50 rounded-lg px-4 py-2.5 font-mono text-sm overflow-x-auto">composer config --unset repositories.wpackagist &amp;&amp; composer config repositories.wp-composer composer https://wp-composer.com</div>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="flex w-8 h-8 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-sm font-bold">3</div>
+<div>
+<p class="text-gray-600 mb-2">Require packages with the new naming:</p>
+<div class="bg-gray-50 rounded-lg px-4 py-2.5 font-mono text-sm">composer require wp-theme/twentytwentyfive</div>
+</div>
+</div>
+</div>
+
+<p class="text-gray-500 text-sm mb-4">Or use the <a href="https://github.com/roots/wp-composer/blob/main/scripts/migrate-from-wpackagist.sh" class="text-brand-primary hover:underline">migration script</a> to automatically update your <code class="text-sm font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">composer.json</code>:</p>
+<div class="inline-flex items-center gap-3 rounded-xl border border-gray-200/80 bg-gray-100/50 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors max-w-full overflow-x-auto mb-4" onclick="navigator.clipboard.writeText('curl -sO https://raw.githubusercontent.com/roots/wp-composer/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh')">
+<span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
+<code class="text-sm font-mono text-gray-900 select-all whitespace-nowrap">curl -sO https://raw.githubusercontent.com/roots/wp-composer/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh</code>
+<button class="text-gray-400 hover:text-gray-900 transition-colors ml-1">
+<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg>
+</button>
+</div>
+
+</div>
+
+</article>
+{{end}}

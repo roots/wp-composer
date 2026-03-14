@@ -1,0 +1,6 @@
+---
+- name: Deploy WP Composer (Go)
+  hosts: all
+  become: true
+  tasks:
+    - include_tasks: roles/app/tasks/deploy.yml

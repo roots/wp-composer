@@ -1,0 +1,30 @@
+popular_plugins:
+  - akismet
+  - all-in-one-seo-pack
+  - all-in-one-wp-migration
+  - classic-editor
+  - contact-form-7
+  - duplicate-page
+  - duplicate-post
+  - elementor
+  - google-site-kit
+  - jetpack
+  - litespeed-cache
+  - really-simple-ssl
+  - seo-by-rank-math
+  - updraftplus
+  - woocommerce
+  - wordfence
+  - wordpress-importer
+  - wordpress-seo
+  - wp-mail-smtp
+  - wpforms-lite
+
+popular_themes:
+  - astra
+  - bluehost-blueprint
+  - hello-biz
+  - hello-elementor
+  - kadence
+  - oceanwp
+  - twentytwentyfive

@@ -1,0 +1,165 @@
+{{template "layout" .}}
+{{define "title"}}WP Composer — WordPress Packages for Composer{{end}}
+{{define "meta_seo"}}
+<meta name="description" content="A modern, community-funded Composer repository for WordPress plugins and themes. Install any WordPress plugin or theme via Composer.">
+{{if .AppURL}}<link rel="canonical" href="{{.AppURL}}/">{{end}}
+{{if and .Page (gt .Page 1)}}<meta name="robots" content="noindex, follow">{{end}}
+{{end}}
+{{define "json_ld"}}{{jsonLD .JSONLD}}{{end}}
+{{define "og_meta"}}
+<meta property="og:title" content="WP Composer — WordPress Packages for Composer">
+<meta property="og:description" content="A modern, community-funded Composer repository for WordPress plugins and themes.">
+{{if .OGImage}}<meta property="og:image" content="{{.OGImage}}">{{end}}
+{{if .AppURL}}<meta property="og:url" content="{{.AppURL}}">{{end}}
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="WP Composer — WordPress Packages for Composer">
+<meta name="twitter:description" content="A modern, community-funded Composer repository for WordPress plugins and themes.">
+{{if .OGImage}}<meta name="twitter:image" content="{{.OGImage}}">{{end}}
+{{end}}
+{{define "content"}}
+<section class="relative overflow-hidden border-b border-gray-200/50">
+<div class="absolute inset-0 bg-gradient-to-b from-brand-lightest/40 to-transparent"></div>
+<div class="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-16 pb-12 sm:pt-24 sm:pb-16 text-center">
+<h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 mb-4 text-balance">WordPress Packages<br><span class="text-brand-primary">for Composer</span></h1>
+<h2 class="text-lg text-gray-500 max-w-xl mx-auto mb-8 text-balance">A modern, community-funded Composer repository for WordPress plugins and themes.</h2>
+<div class="inline-flex items-center gap-3 rounded-xl border border-gray-200/80 bg-gray-100/50 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors max-w-full overflow-x-auto" onclick="navigator.clipboard.writeText('composer config repositories.wp-composer composer https://wp-composer.com')">
+<span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
+<code class="text-sm font-mono text-gray-900 select-all whitespace-nowrap">composer config repositories.wp-composer composer https://wp-composer.com</code>
+<button class="text-gray-400 hover:text-gray-900 transition-colors ml-1">
+<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg>
+</button>
+</div>
+</div>
+<div class="relative border-t border-gray-200/50">
+<div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+<div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200/50">
+<div class="py-6 text-center">
+<div class="text-2xl sm:text-3xl font-bold text-brand-primary tabular-nums">{{formatNumber .Stats.PluginInstalls}}</div>
+<div class="text-sm text-gray-500 mt-0.5">Plugin Installs</div>
+</div>
+<div class="py-6 text-center">
+<div class="text-2xl sm:text-3xl font-bold text-brand-primary tabular-nums">{{formatNumber .Stats.ThemeInstalls}}</div>
+<div class="text-sm text-gray-500 mt-0.5">Theme Installs</div>
+</div>
+<div class="py-6 text-center">
+<div class="text-2xl sm:text-3xl font-bold text-brand-primary tabular-nums">{{formatNumber .Stats.RootsDownloads}}</div>
+<div class="text-sm text-gray-500 mt-0.5"><a href="/roots-wordpress" class="hover:text-gray-900 transition-colors"><code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded-md border border-gray-200/40">roots/wordpress</code> Installs</a></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10">
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2">
+<form id="filter-form" method="GET" action="/" hx-get="/packages-partial" hx-target="#package-results" hx-trigger="submit, change from:select" hx-push-url="false" hx-swap="innerHTML" class="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1 scroll-mt-16">
+<div class="relative w-full sm:max-w-md">
+<svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+<input type="search" name="search" value="{{.Filters.Search}}" placeholder="Search packages..." class="w-full pl-9 pr-12 h-10 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
+<kbd class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:inline-flex h-5 items-center rounded border border-gray-200/80 bg-gray-100/80 px-1.5 text-[10px] font-mono text-gray-400">/</kbd>
+</div>
+<div class="flex items-center gap-2">
+<select name="type" class="h-10 pl-3 pr-8 text-sm border border-gray-200 rounded-lg bg-white select-chevron focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
+<option value="">All types</option>
+<option value="plugin"{{if eq .Filters.Type "plugin"}} selected{{end}}>Plugins</option>
+<option value="theme"{{if eq .Filters.Type "theme"}} selected{{end}}>Themes</option>
+</select>
+<select name="sort" class="h-10 pl-3 pr-8 text-sm border border-gray-200 rounded-lg bg-white select-chevron focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
+<option value="active_installs"{{if eq .Filters.Sort "active_installs"}} selected{{end}}>Active installs</option>
+<option value="composer_installs"{{if eq .Filters.Sort "composer_installs"}} selected{{end}}>Composer installs</option>
+<option value="name"{{if eq .Filters.Sort "name"}} selected{{end}}>Name</option>
+<option value="updated"{{if eq .Filters.Sort "updated"}} selected{{end}}>Recently updated</option>
+</select>
+<button type="submit" class="sr-only">Search</button>
+</div>
+</form>
+<p id="package-count" class="text-sm text-gray-500 whitespace-nowrap">{{formatNumberComma .Total}} packages available</p>
+</div>
+<div id="package-results">
+{{template "package-results" .}}
+</div>
+
+<div class="border-t border-gray-200/50 pt-16 mt-8 max-w-3xl mx-auto">
+
+<h2 class="text-2xl font-bold mb-6">Package naming</h2>
+<div class="rounded-xl border border-gray-200/60 overflow-hidden mb-12">
+<table class="w-full text-sm">
+<thead class="bg-gray-50/50"><tr><th class="text-left px-4 py-3 font-medium text-gray-500">Type</th><th class="text-left px-4 py-3 font-medium text-gray-500">Convention</th><th class="text-left px-4 py-3 font-medium text-gray-500">Example</th></tr></thead>
+<tbody>
+<tr class="border-t border-gray-200/40"><td class="px-4 py-3 font-medium">Plugin</td><td class="px-4 py-3 font-mono text-sm text-gray-500">wp-plugin/plugin-name</td><td class="px-4 py-3"><a href="/packages/wp-plugin/woocommerce" class="font-mono text-sm text-brand-primary hover:underline">wp-plugin/woocommerce</a></td></tr>
+<tr class="border-t border-gray-200/40"><td class="px-4 py-3 font-medium">Theme</td><td class="px-4 py-3 font-mono text-sm text-gray-500">wp-theme/theme-name</td><td class="px-4 py-3"><a href="/packages/wp-theme/twentytwentyfive" class="font-mono text-sm text-brand-primary hover:underline">wp-theme/twentytwentyfive</a></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 class="text-2xl font-bold mb-4">Usage</h2>
+<p class="text-gray-600 mb-4">Add the repository to your <code class="text-sm font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">composer.json</code>:</p>
+<div class="rounded-xl border border-gray-200/60 overflow-hidden mb-12">
+<div class="bg-gray-50/50 px-4 py-2 text-xs text-gray-500 border-b border-gray-200/40">composer.json</div>
+<pre class="p-4 text-sm font-mono leading-relaxed overflow-x-auto"><code>{
+  <span class="text-green-700">"repositories"</span>: [
+    {
+      <span class="text-green-700">"name"</span>: <span class="text-green-700">"wp-composer"</span>,
+      <span class="text-green-700">"type"</span>: <span class="text-green-700">"composer"</span>,
+      <span class="text-green-700">"url"</span>: <span class="text-green-700">"https://wp-composer.com"</span>,
+      <span class="text-green-700">"only"</span>: [<span class="text-green-700">"wp-plugin/*"</span>, <span class="text-green-700">"wp-theme/*"</span>]
+    }
+  ],
+  <span class="text-green-700">"require"</span>: {
+    <span class="text-green-700">"composer/installers"</span>: <span class="text-green-700">"^2.2"</span>,
+    <span class="text-green-700">"wp-plugin/woocommerce"</span>: <span class="text-green-700">"^10.0"</span>,
+    <span class="text-green-700">"wp-theme/twentytwentyfive"</span>: <span class="text-green-700">"^1.0"</span>
+  }
+}</code></pre>
+</div>
+
+<h2 class="text-2xl font-bold mb-4">Roots WordPress packages</h2>
+<p class="text-gray-600 mb-4">WP Composer is built by <a href="https://roots.io" class="font-medium text-gray-900 hover:text-brand-primary transition-colors">Roots</a> and is the recommended repository for use alongside the Roots WordPress packaging ecosystem:</p>
+<div class="rounded-xl border border-gray-200/60 overflow-hidden mb-4">
+<table class="w-full text-sm">
+<tbody>
+<tr class="border-b border-gray-200/40"><td class="px-4 py-3"><a href="/roots-wordpress" class="font-mono text-brand-primary hover:underline">roots/wordpress</a></td><td class="px-4 py-3 text-gray-600">Meta-package for installing WordPress core via Composer</td></tr>
+<tr class="border-b border-gray-200/40"><td class="px-4 py-3"><a href="/roots-wordpress" class="font-mono text-brand-primary hover:underline">roots/wordpress-full</a></td><td class="px-4 py-3 text-gray-600">Full WordPress build (core + default themes + plugins + betas)</td></tr>
+<tr class="border-b border-gray-200/40"><td class="px-4 py-3"><a href="/roots-wordpress" class="font-mono text-brand-primary hover:underline">roots/wordpress-no-content</a></td><td class="px-4 py-3 text-gray-600">Minimal WordPress build (core only)</td></tr>
+<tr><td class="px-4 py-3"><a href="https://github.com/roots/bedrock" class="font-mono text-brand-primary hover:underline">roots/bedrock</a></td><td class="px-4 py-3 text-gray-600">WordPress boilerplate with Composer, better config, and improved structure</td></tr>
+</tbody>
+</table>
+</div>
+<p class="text-gray-600 mb-12">A typical <a href="https://roots.io/bedrock/" class="font-medium text-gray-900 hover:text-brand-primary transition-colors">Bedrock</a> project uses <code class="text-sm font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">roots/wordpress</code> for WordPress core and WP Composer for plugins and themes.</p>
+
+<h2 class="text-2xl font-bold mb-6">Migrating from WPackagist</h2>
+<div class="space-y-6 mb-8">
+<div class="flex gap-4">
+<div class="flex w-8 h-8 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-sm font-bold">1</div>
+<div>
+<p class="text-gray-600 mb-2">Remove wpackagist packages:</p>
+<div class="bg-gray-50 rounded-lg px-4 py-2.5 font-mono text-sm">composer remove wpackagist-theme/twentytwentyfive</div>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="flex w-8 h-8 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-sm font-bold">2</div>
+<div>
+<p class="text-gray-600 mb-2">Remove the wpackagist repository and add WP Composer:</p>
+<div class="bg-gray-50 rounded-lg px-4 py-2.5 font-mono text-sm overflow-x-auto">composer config --unset repositories.wpackagist &amp;&amp; composer config repositories.wp-composer composer https://wp-composer.com</div>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="flex w-8 h-8 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-sm font-bold">3</div>
+<div>
+<p class="text-gray-600 mb-2">Require packages with the new naming:</p>
+<div class="bg-gray-50 rounded-lg px-4 py-2.5 font-mono text-sm">composer require wp-theme/twentytwentyfive</div>
+</div>
+</div>
+</div>
+<p class="text-gray-500 text-sm mb-6">Or use the <a href="https://github.com/roots/wp-composer/blob/main/scripts/migrate-from-wpackagist.sh" class="text-brand-primary hover:underline">migration script</a> to automatically update your <code class="text-sm font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">composer.json</code>:</p>
+<div class="inline-flex items-center gap-3 rounded-xl border border-gray-200/80 bg-gray-100/50 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors max-w-full overflow-x-auto mb-6" onclick="navigator.clipboard.writeText('curl -sO https://raw.githubusercontent.com/roots/wp-composer/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh')">
+<span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
+<code class="text-sm font-mono text-gray-900 select-all whitespace-nowrap">curl -sO https://raw.githubusercontent.com/roots/wp-composer/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh</code>
+<button class="text-gray-400 hover:text-gray-900 transition-colors ml-1">
+<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg>
+</button>
+</div>
+
+</div>
+</section>
+{{end}}

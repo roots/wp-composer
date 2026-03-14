@@ -1,0 +1,12 @@
+[Unit]
+Description=WP Composer Pipeline (discover + update + build + deploy)
+
+[Service]
+Type=oneshot
+User=deploy
+Group=www-data
+WorkingDirectory={{ app_root }}/current
+ExecStart={{ app_root }}/current/{{ go_binary_name }} pipeline --db {{ db_path }}
+StandardOutput=append:{{ app_root }}/shared/storage/logs/pipeline.log
+StandardError=append:{{ app_root }}/shared/storage/logs/pipeline.log
+EnvironmentFile={{ app_root }}/shared/.env

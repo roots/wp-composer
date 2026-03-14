@@ -1,0 +1,169 @@
+package wporg
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log/slog"
+	"math"
+	"net/http"
+	"net/url"
+	"time"
+
+	"github.com/roots/wp-composer/internal/config"
+)
+
+type Client struct {
+	http       *http.Client
+	logger     *slog.Logger
+	maxRetries int
+	retryDelay time.Duration
+}
+
+func NewClient(cfg config.DiscoveryConfig, logger *slog.Logger) *Client {
+	return &Client{
+		http:       &http.Client{Timeout: time.Duration(cfg.APITimeoutS) * time.Second},
+		logger:     logger,
+		maxRetries: cfg.MaxRetries,
+		retryDelay: time.Duration(cfg.RetryDelayMs) * time.Millisecond,
+	}
+}
+
+func (c *Client) FetchPlugin(ctx context.Context, slug string) (map[string]any, error) {
+	u := "https://api.wordpress.org/plugins/info/1.2/?action=plugin_information" +
+		"&request%5Bslug%5D=" + url.QueryEscape(slug) +
+		"&request%5Bfields%5D%5Bversions%5D=true" +
+		"&request%5Bfields%5D%5Bdescription%5D=false" +
+		"&request%5Bfields%5D%5Bsections%5D=false" +
+		"&request%5Bfields%5D%5Bcompatibility%5D=false" +
+		"&request%5Bfields%5D%5Breviews%5D=false" +
+		"&request%5Bfields%5D%5Bbanners%5D=false" +
+		"&request%5Bfields%5D%5Bicons%5D=false" +
+		"&request%5Bfields%5D%5Bdonate_link%5D=false" +
+		"&request%5Bfields%5D%5Bratings%5D=false" +
+		"&request%5Bfields%5D%5Bcontributors%5D=false" +
+		"&request%5Bfields%5D%5Btags%5D=false" +
+		"&request%5Bfields%5D%5Bactive_installs%5D=true" +
+		"&request%5Bfields%5D%5Brequires%5D=true" +
+		"&request%5Bfields%5D%5Btested%5D=true" +
+		"&request%5Bfields%5D%5Brequires_php%5D=true" +
+		"&request%5Bfields%5D%5Bauthor%5D=true" +
+		"&request%5Bfields%5D%5Bshort_description%5D=true" +
+		"&request%5Bfields%5D%5Bhomepage%5D=true" +
+		"&request%5Bfields%5D%5Blast_updated%5D=true" +
+		"&request%5Bfields%5D%5Badded%5D=true" +
+		"&request%5Bfields%5D%5Bdownload_link%5D=true"
+
+	return c.fetchJSON(ctx, u)
+}
+
+func (c *Client) FetchTheme(ctx context.Context, slug string) (map[string]any, error) {
+	u := "https://api.wordpress.org/themes/info/1.2/?action=theme_information" +
+		"&request%5Bslug%5D=" + url.QueryEscape(slug) +
+		"&request%5Bfields%5D%5Bversions%5D=true" +
+		"&request%5Bfields%5D%5Bactive_installs%5D=true" +
+		"&request%5Bfields%5D%5Bsections%5D=true" +
+		"&request%5Bfields%5D%5Bauthor%5D=true" +
+		"&request%5Bfields%5D%5Bhomepage%5D=true" +
+		"&request%5Bfields%5D%5Blast_updated%5D=true"
+
+	return c.fetchJSON(ctx, u)
+}
+
+// FetchLastUpdated fetches only the last_updated date for a package (minimal API call for discovery).
+func (c *Client) FetchLastUpdated(ctx context.Context, pkgType, slug string) (*time.Time, error) {
+	var u string
+	if pkgType == "plugin" {
+		u = "https://api.wordpress.org/plugins/info/1.2/?action=plugin_information" +
+			"&request%5Bslug%5D=" + url.QueryEscape(slug) +
+			"&request%5Bfields%5D%5Blast_updated%5D=true" +
+			"&request%5Bfields%5D%5Bdescription%5D=false" +
+			"&request%5Bfields%5D%5Bsections%5D=false" +
+			"&request%5Bfields%5D%5Bversions%5D=false"
+	} else {
+		u = "https://api.wordpress.org/themes/info/1.2/?action=theme_information" +
+			"&request%5Bslug%5D=" + url.QueryEscape(slug) +
+			"&request%5Bfields%5D%5Blast_updated%5D=true" +
+			"&request%5Bfields%5D%5Bversions%5D=false"
+	}
+
+	data, err := c.fetchJSON(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+
+	if lu, ok := data["last_updated"].(string); ok && lu != "" {
+		for _, f := range []string{
+			"2006-01-02 3:04pm MST",
+			"2006-01-02 15:04:05",
+			time.RFC3339,
+			"2006-01-02",
+		} {
+			if t, err := time.Parse(f, lu); err == nil {
+				t = t.UTC()
+				return &t, nil
+			}
+		}
+	}
+
+	return nil, nil
+}
+
+func (c *Client) fetchJSON(ctx context.Context, rawURL string) (map[string]any, error) {
+	var lastErr error
+
+	for attempt := range c.maxRetries {
+		if attempt > 0 {
+			delay := c.retryDelay * time.Duration(math.Pow(2, float64(attempt-1)))
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(delay):
+			}
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+		if err != nil {
+			return nil, fmt.Errorf("creating request: %w", err)
+		}
+
+		resp, err := c.http.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("fetching %s: %w", rawURL, err)
+			c.logger.Warn("API request failed, retrying", "attempt", attempt+1, "error", err)
+			continue
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+
+		if err != nil {
+			lastErr = fmt.Errorf("reading response: %w", err)
+			continue
+		}
+
+		if resp.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("package not found (404)")
+		}
+		if resp.StatusCode != http.StatusOK {
+			lastErr = fmt.Errorf("unexpected status %d", resp.StatusCode)
+			c.logger.Warn("API returned error status, retrying", "status", resp.StatusCode, "attempt", attempt+1)
+			continue
+		}
+
+		var result map[string]any
+		if err := json.Unmarshal(body, &result); err != nil {
+			return nil, fmt.Errorf("parsing JSON response: %w", err)
+		}
+
+		// WordPress API returns {"error":"...","slug":"..."} for failures
+		if errMsg, ok := result["error"]; ok {
+			return nil, fmt.Errorf("API error: %v", errMsg)
+		}
+
+		return result, nil
+	}
+
+	return nil, fmt.Errorf("all %d attempts failed: %w", c.maxRetries, lastErr)
+}

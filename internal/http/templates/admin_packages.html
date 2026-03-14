@@ -1,0 +1,60 @@
+{{template "admin_layout" .}}
+{{define "title"}}Packages{{end}}
+{{define "content"}}
+<div class="flex items-center justify-between mb-6">
+<h1 class="text-xl font-bold">Packages</h1>
+<span class="text-sm text-gray-500">{{.Total}} total</span>
+</div>
+<form method="GET" action="/admin/packages" class="flex flex-wrap gap-3 items-end mb-4">
+<input type="text" name="search" value="{{.Filters.Search}}" placeholder="Search..." class="border border-gray-300 rounded px-3 py-1.5 text-sm w-48">
+<select name="type" class="border border-gray-300 rounded px-3 py-1.5 text-sm">
+<option value="">All types</option>
+<option value="plugin"{{if eq .Filters.Type "plugin"}} selected{{end}}>Plugins</option>
+<option value="theme"{{if eq .Filters.Type "theme"}} selected{{end}}>Themes</option>
+</select>
+<select name="active" class="border border-gray-300 rounded px-3 py-1.5 text-sm">
+<option value="">All</option>
+<option value="1"{{if eq .Filters.Active "1"}} selected{{end}}>Active</option>
+<option value="0"{{if eq .Filters.Active "0"}} selected{{end}}>Inactive</option>
+</select>
+<button type="submit" class="bg-gray-800 text-white px-3 py-1.5 rounded text-sm">Filter</button>
+</form>
+<div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+<table class="w-full text-sm">
+<thead class="bg-gray-50 text-left">
+<tr>
+<th class="px-4 py-2 font-medium">Type</th>
+<th class="px-4 py-2 font-medium">Name</th>
+<th class="px-4 py-2 font-medium">Version</th>
+<th class="px-4 py-2 font-medium text-right">Active Installs</th>
+<th class="px-4 py-2 font-medium text-right">Composer Installs</th>
+<th class="px-4 py-2 font-medium text-center">Active</th>
+<th class="px-4 py-2 font-medium">Last Synced</th>
+</tr>
+</thead>
+<tbody>
+{{range .Packages}}
+<tr class="border-t border-gray-100 hover:bg-gray-50">
+<td class="px-4 py-2"><span class="text-xs px-2 py-0.5 rounded-full {{if eq .Type "plugin"}}bg-blue-100 text-blue-700{{else}}bg-purple-100 text-purple-700{{end}}">{{.Type}}</span></td>
+<td class="px-4 py-2">
+<div class="font-medium">{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Name}}{{end}}</div>
+<div class="text-xs text-gray-400">{{.Name}}</div>
+</td>
+<td class="px-4 py-2 font-mono text-xs">{{if .CurrentVersion}}{{.CurrentVersion}}{{else}}—{{end}}</td>
+<td class="px-4 py-2 text-right">{{formatNumber .ActiveInstalls}}</td>
+<td class="px-4 py-2 text-right">{{formatNumber .WpComposerInstallsTotal}}</td>
+<td class="px-4 py-2 text-center">{{if .IsActive}}<span class="text-green-600">&#10003;</span>{{else}}<span class="text-gray-300">&#10005;</span>{{end}}</td>
+<td class="px-4 py-2 text-xs text-gray-500">{{if .LastSyncedAt}}{{.LastSyncedAt}}{{else}}never{{end}}</td>
+</tr>
+{{end}}
+</tbody>
+</table>
+</div>
+{{if gt .TotalPages 1}}
+<div class="flex justify-center gap-2 mt-4">
+{{if gt .Page 1}}<a href="{{adminPaginate .Filters (sub .Page 1)}}" class="px-3 py-1 border rounded text-sm">&laquo; Prev</a>{{end}}
+<span class="px-3 py-1 text-sm text-gray-500">Page {{.Page}} of {{.TotalPages}}</span>
+{{if lt .Page .TotalPages}}<a href="{{adminPaginate .Filters (add .Page 1)}}" class="px-3 py-1 border rounded text-sm">Next &raquo;</a>{{end}}
+</div>
+{{end}}
+{{end}}

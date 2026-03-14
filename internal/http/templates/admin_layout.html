@@ -1,0 +1,32 @@
+{{define "admin_layout"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{template "title" .}} — WP Composer Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
+<nav class="bg-gray-900 text-white">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14">
+<a href="/admin" class="font-semibold text-lg">WP Composer Admin</a>
+<div class="flex items-center gap-4 text-sm">
+<a href="/admin" class="hover:text-gray-300">Dashboard</a>
+<a href="/admin/packages" class="hover:text-gray-300">Packages</a>
+<a href="/admin/builds" class="hover:text-gray-300">Builds</a>
+<form method="POST" action="/admin/logout" class="inline">
+<button type="submit" class="hover:text-gray-300">Logout</button>
+</form>
+</div>
+</div>
+</nav>
+<main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+{{template "content" .}}
+</main>
+</body>
+</html>{{end}}

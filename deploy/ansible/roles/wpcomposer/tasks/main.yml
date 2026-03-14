@@ -1,0 +1,82 @@
+---
+- name: Deploy wpcomposer service
+  template:
+    src: wpcomposer.service.j2
+    dest: /etc/systemd/system/wpcomposer.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy pipeline timer
+  template:
+    src: wpcomposer-pipeline.service.j2
+    dest: /etc/systemd/system/wpcomposer-pipeline.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy pipeline timer unit
+  template:
+    src: wpcomposer-pipeline.timer.j2
+    dest: /etc/systemd/system/wpcomposer-pipeline.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy aggregate-installs timer
+  template:
+    src: wpcomposer-aggregate.service.j2
+    dest: /etc/systemd/system/wpcomposer-aggregate.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy aggregate-installs timer unit
+  template:
+    src: wpcomposer-aggregate.timer.j2
+    dest: /etc/systemd/system/wpcomposer-aggregate.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy cleanup-sessions timer
+  template:
+    src: wpcomposer-cleanup.service.j2
+    dest: /etc/systemd/system/wpcomposer-cleanup.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy cleanup-sessions timer unit
+  template:
+    src: wpcomposer-cleanup.timer.j2
+    dest: /etc/systemd/system/wpcomposer-cleanup.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Flush handlers
+  meta: flush_handlers
+
+- name: Enable and start wpcomposer service
+  service:
+    name: wpcomposer
+    state: started
+    enabled: yes
+
+- name: Enable and start timers
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - wpcomposer-pipeline.timer
+    - wpcomposer-aggregate.timer
+    - wpcomposer-cleanup.timer

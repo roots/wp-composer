@@ -1,0 +1,47 @@
+# Application
+app_name: wp-composer
+app_domain: wp-composer.com
+app_root: /srv/wp-composer
+app_env: production
+app_debug: "false"
+app_url: "https://{{ app_domain }}"
+
+# Users (GitHub usernames — public keys fetched during provisioning)
+users:
+  - retlehs
+  - swalkinshaw
+  - log1x
+  - qwp6t
+
+# Go binary
+go_binary_name: wpcomposer
+go_listen_addr: "127.0.0.1:8080"
+go_upstream_addr: "127.0.0.1:8080"
+go_log_level: info
+
+# SQLite
+db_path: "{{ app_root }}/shared/storage/wpcomposer.db"
+
+# Caddy
+caddy_email: "team@roots.io"
+
+# R2
+wp_composer_deploy_r2: "true"
+r2_cdn_public_url: "https://cdn.wp-composer.com"
+
+# Sessions
+session_lifetime_minutes: 7200
+
+# Admin access (Tailscale CIDRs)
+admin_allow_cidr: "100.64.0.0/10,fd7a:115c:a1e0::/48"
+
+# Repository
+repository_path: "{{ app_root }}/shared/storage/repository"
+
+# Seeds
+seeds_file: "{{ app_root }}/current/seeds.yaml"
+
+# Scheduling
+pipeline_schedule: hourly
+aggregate_schedule: hourly
+cleanup_sessions_schedule: daily

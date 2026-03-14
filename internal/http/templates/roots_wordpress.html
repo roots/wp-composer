@@ -1,0 +1,154 @@
+{{template "layout" .}}
+{{define "title"}}WordPress Core via Composer — WP Composer{{end}}
+{{define "meta_seo"}}
+<meta name="description" content="Install WordPress core via Composer with roots/wordpress packages. Choose between full, minimal, or standard WordPress builds for your Composer-based project.">
+{{if .AppURL}}<link rel="canonical" href="{{.AppURL}}/roots-wordpress">{{end}}
+{{end}}
+{{define "json_ld"}}{{end}}
+{{define "og_meta"}}
+<meta property="og:title" content="WordPress Core via Composer — WP Composer">
+<meta property="og:description" content="Install WordPress core via Composer with roots/wordpress packages. Choose between full, minimal, or standard builds.">
+{{if .OGImage}}<meta property="og:image" content="{{.OGImage}}">{{end}}
+{{if .AppURL}}<meta property="og:url" content="{{.AppURL}}/roots-wordpress">{{end}}
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="WordPress Core via Composer — WP Composer">
+<meta name="twitter:description" content="Install WordPress core via Composer with roots/wordpress packages. Choose between full, minimal, or standard builds.">
+{{if .OGImage}}<meta name="twitter:image" content="{{.OGImage}}">{{end}}
+{{end}}
+{{define "content"}}
+<section class="relative border-b border-gray-200/50">
+<div class="absolute inset-0 bg-gradient-to-b from-brand-lightest/40 to-transparent"></div>
+<div class="relative mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 pt-16 pb-12 sm:pt-24 sm:pb-16 text-center">
+<h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-gray-900 mb-4 text-balance">WordPress Core <span class="text-brand-primary">via Composer</span></h1>
+<p class="text-lg text-gray-500 max-w-xl mx-auto text-balance">Meta-packages for installing WordPress core via Composer. Choose the build that fits your project.</p>
+{{if .RootsDownloads}}<p class="mt-6 text-sm text-gray-500"><span class="font-semibold text-brand-primary">{{formatNumber .RootsDownloads}}</span> total installs via Packagist</p>{{end}}
+</div>
+</section>
+
+<article class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+
+<div class="prose prose-gray max-w-none">
+
+<p class="text-lg text-gray-600 leading-relaxed mb-10"><code class="text-sm font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">roots/wordpress</code> is a meta-package that provides WordPress core installation via Composer. It's part of the <a href="https://roots.io" class="text-brand-primary hover:underline" target="_blank" rel="noopener">Roots</a> WordPress packaging ecosystem, which includes several packages to give you flexibility in how WordPress is installed.</p>
+
+<h2 class="text-2xl font-bold text-gray-900 mb-6">Packages</h2>
+
+<div class="rounded-xl border border-gray-200/60 overflow-hidden mb-12">
+<table class="w-full text-sm">
+<thead class="bg-gray-50/50">
+<tr>
+<th class="text-left px-4 py-3 font-medium text-gray-500">Package</th>
+<th class="text-left px-4 py-3 font-medium text-gray-500">Description</th>
+<th class="text-left px-4 py-3 font-medium text-gray-500">Includes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-t border-gray-200/40">
+<td class="px-4 py-3"><a href="https://github.com/roots/wordpress" class="font-mono text-brand-primary hover:underline" target="_blank" rel="noopener">roots/wordpress</a></td>
+<td class="px-4 py-3 text-gray-600">Meta-package (recommended)</td>
+<td class="px-4 py-3 text-gray-600">Installs <code class="text-xs font-mono bg-gray-100 px-1 py-0.5 rounded">roots/wordpress-no-content</code></td>
+</tr>
+<tr class="border-t border-gray-200/40">
+<td class="px-4 py-3"><a href="https://github.com/roots/wordpress-full" class="font-mono text-brand-primary hover:underline" target="_blank" rel="noopener">roots/wordpress-full</a></td>
+<td class="px-4 py-3 text-gray-600">Full WordPress build</td>
+<td class="px-4 py-3 text-gray-600">Core, official themes, Akismet &amp; Hello Dolly, beta &amp; RC releases</td>
+</tr>
+<tr class="border-t border-gray-200/40">
+<td class="px-4 py-3"><a href="https://github.com/roots/wordpress-no-content" class="font-mono text-brand-primary hover:underline" target="_blank" rel="noopener">roots/wordpress-no-content</a></td>
+<td class="px-4 py-3 text-gray-600">Minimal WordPress build</td>
+<td class="px-4 py-3 text-gray-600">Core only &mdash; no themes, plugins, or beta releases</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h2 class="text-2xl font-bold text-gray-900 mb-4">Getting started</h2>
+
+<p class="text-gray-600 mb-4 leading-relaxed">Most projects should use <code class="text-sm font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">roots/wordpress</code>, which installs WordPress core without default themes or plugins. This is the recommended package for <a href="https://roots.io/bedrock/" class="text-brand-primary hover:underline" target="_blank" rel="noopener">Bedrock</a> projects and modern WordPress development.</p>
+
+<div class="inline-flex items-center gap-3 rounded-xl border border-gray-200/80 bg-gray-100/50 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors max-w-full overflow-x-auto mb-8" onclick="navigator.clipboard.writeText('composer require roots/wordpress')">
+<span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
+<code class="text-sm font-mono text-gray-900 select-all whitespace-nowrap">composer require roots/wordpress</code>
+<button class="text-gray-400 hover:text-gray-900 transition-colors ml-1">
+<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg>
+</button>
+</div>
+
+<p class="text-gray-600 mb-4 leading-relaxed">A WordPress Core Installer package is required to handle the installation path. We provide <a href="https://github.com/roots/wordpress-core-installer" class="text-brand-primary hover:underline" target="_blank" rel="noopener">roots/wordpress-core-installer</a> for this.</p>
+
+<h2 class="text-2xl font-bold text-gray-900 mb-4">Example configurations</h2>
+
+<h3 class="text-lg font-semibold text-gray-900 mb-3">Standard (recommended)</h3>
+<p class="text-gray-600 mb-4 leading-relaxed">WordPress core without default themes or plugins. Manage your themes and plugins individually via Composer with <a href="/" class="text-brand-primary hover:underline">WP Composer</a>.</p>
+<div class="rounded-xl border border-gray-200/60 overflow-hidden mb-10">
+<div class="bg-gray-50/50 px-4 py-2 text-xs text-gray-500 border-b border-gray-200/40">composer.json</div>
+<pre class="p-4 text-sm font-mono leading-relaxed overflow-x-auto"><code>{
+  <span class="text-green-700">"repositories"</span>: [
+    {
+      <span class="text-green-700">"name"</span>: <span class="text-green-700">"wp-composer"</span>,
+      <span class="text-green-700">"type"</span>: <span class="text-green-700">"composer"</span>,
+      <span class="text-green-700">"url"</span>: <span class="text-green-700">"https://wp-composer.com"</span>,
+      <span class="text-green-700">"only"</span>: [<span class="text-green-700">"wp-plugin/*"</span>, <span class="text-green-700">"wp-theme/*"</span>]
+    }
+  ],
+  <span class="text-green-700">"require"</span>: {
+    <span class="text-green-700">"composer/installers"</span>: <span class="text-green-700">"^2.2"</span>,
+    <span class="text-green-700">"roots/wordpress"</span>: <span class="text-green-700">"^6.8"</span>,
+    <span class="text-green-700">"roots/wordpress-core-installer"</span>: <span class="text-green-700">"^1.0"</span>,
+    <span class="text-green-700">"wp-plugin/woocommerce"</span>: <span class="text-green-700">"^10.0"</span>,
+    <span class="text-green-700">"wp-theme/twentytwentyfive"</span>: <span class="text-green-700">"^1.0"</span>
+  },
+  <span class="text-green-700">"config"</span>: {
+    <span class="text-green-700">"allow-plugins"</span>: {
+      <span class="text-green-700">"composer/installers"</span>: true,
+      <span class="text-green-700">"roots/wordpress-core-installer"</span>: true
+    }
+  }
+}</code></pre>
+</div>
+
+<h3 class="text-lg font-semibold text-gray-900 mb-3">Full build</h3>
+<p class="text-gray-600 mb-4 leading-relaxed">Includes default themes, Akismet, Hello Dolly, and beta/RC releases. Closest to a standard WordPress download.</p>
+<div class="rounded-xl border border-gray-200/60 overflow-hidden mb-10">
+<div class="bg-gray-50/50 px-4 py-2 text-xs text-gray-500 border-b border-gray-200/40">composer.json</div>
+<pre class="p-4 text-sm font-mono leading-relaxed overflow-x-auto"><code>{
+  <span class="text-green-700">"require"</span>: {
+    <span class="text-green-700">"roots/wordpress-core-installer"</span>: <span class="text-green-700">"^1.0"</span>,
+    <span class="text-green-700">"roots/wordpress-full"</span>: <span class="text-green-700">"^6.8"</span>
+  },
+  <span class="text-green-700">"config"</span>: {
+    <span class="text-green-700">"allow-plugins"</span>: {
+      <span class="text-green-700">"roots/wordpress-core-installer"</span>: true
+    }
+  }
+}</code></pre>
+</div>
+
+<h3 class="text-lg font-semibold text-gray-900 mb-3">Minimal (no content)</h3>
+<p class="text-gray-600 mb-4 leading-relaxed">Bare WordPress core. Same as <code class="text-sm font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">roots/wordpress</code> but as a direct dependency rather than a meta-package.</p>
+<div class="rounded-xl border border-gray-200/60 overflow-hidden mb-10">
+<div class="bg-gray-50/50 px-4 py-2 text-xs text-gray-500 border-b border-gray-200/40">composer.json</div>
+<pre class="p-4 text-sm font-mono leading-relaxed overflow-x-auto"><code>{
+  <span class="text-green-700">"require"</span>: {
+    <span class="text-green-700">"roots/wordpress-core-installer"</span>: <span class="text-green-700">"^1.0"</span>,
+    <span class="text-green-700">"roots/wordpress-no-content"</span>: <span class="text-green-700">"^6.8"</span>
+  },
+  <span class="text-green-700">"config"</span>: {
+    <span class="text-green-700">"allow-plugins"</span>: {
+      <span class="text-green-700">"roots/wordpress-core-installer"</span>: true
+    }
+  }
+}</code></pre>
+</div>
+
+<div class="rounded-xl border border-brand-primary/20 bg-brand-lightest/30 p-6 sm:p-8 text-center mb-8">
+<h3 class="text-lg font-bold text-gray-900 mb-2">Using Bedrock?</h3>
+<p class="text-gray-600 mb-5 text-sm">All of this is already configured for you. <a href="https://roots.io/bedrock/" class="text-brand-primary hover:underline" target="_blank" rel="noopener">Bedrock</a> is a WordPress boilerplate with Composer, better configuration, and an improved folder structure.</p>
+<a href="https://roots.io/bedrock/" class="inline-flex items-center rounded-lg bg-brand-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-primary/85 transition-colors" target="_blank" rel="noopener">Learn more about Bedrock</a>
+</div>
+
+</div>
+
+</article>
+{{end}}

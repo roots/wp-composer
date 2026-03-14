@@ -1,0 +1,18 @@
+[Unit]
+Description=WP Composer
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+Group=www-data
+WorkingDirectory={{ app_root }}/current
+ExecStart={{ app_root }}/current/{{ go_binary_name }} serve --db {{ db_path }}
+Restart=always
+RestartSec=5s
+StandardOutput=append:{{ app_root }}/shared/storage/logs/wpcomposer.log
+StandardError=append:{{ app_root }}/shared/storage/logs/wpcomposer.log
+EnvironmentFile={{ app_root }}/shared/.env
+
+[Install]
+WantedBy=multi-user.target

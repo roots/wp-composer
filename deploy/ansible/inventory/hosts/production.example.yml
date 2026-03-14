@@ -1,0 +1,6 @@
+all:
+  hosts:
+    wp-composer:
+      ansible_host: your.server.ip.or.hostname
+      ansible_user: deploy
+      ansible_python_interpreter: /usr/bin/python3

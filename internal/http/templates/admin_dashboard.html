@@ -1,0 +1,31 @@
+{{template "admin_layout" .}}
+{{define "title"}}Dashboard{{end}}
+{{define "content"}}
+<h1 class="text-xl font-bold mb-6">Dashboard</h1>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+<div class="bg-white rounded-lg border border-gray-200 p-4">
+<div class="text-sm text-gray-500">Total Packages</div>
+<div class="text-2xl font-bold">{{formatNumber .Stats.TotalPackages}}</div>
+<div class="text-xs text-gray-400">{{formatNumber .Stats.ActivePlugins}} plugins, {{formatNumber .Stats.ActiveThemes}} themes</div>
+</div>
+<div class="bg-white rounded-lg border border-gray-200 p-4">
+<div class="text-sm text-gray-500">Composer Installs</div>
+<div class="text-2xl font-bold">{{formatNumber .Stats.TotalInstalls}}</div>
+<div class="text-xs text-gray-400">{{formatNumber .Stats.Installs30d}} in last 30d</div>
+</div>
+<div class="bg-white rounded-lg border border-gray-200 p-4">
+<div class="text-sm text-gray-500">Current Build</div>
+<div class="text-lg font-mono">{{if .Stats.CurrentBuild}}{{.Stats.CurrentBuild}}{{else}}none{{end}}</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<a href="/admin/packages" class="bg-white rounded-lg border border-gray-200 p-4 hover:border-blue-300 transition">
+<div class="font-medium mb-1">Packages</div>
+<div class="text-sm text-gray-500">View and manage packages</div>
+</a>
+<a href="/admin/builds" class="bg-white rounded-lg border border-gray-200 p-4 hover:border-blue-300 transition">
+<div class="font-medium mb-1">Builds</div>
+<div class="text-sm text-gray-500">View build history and deploy</div>
+</a>
+</div>
+{{end}}

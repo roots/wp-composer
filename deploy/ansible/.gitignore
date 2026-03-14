@@ -1,0 +1,5 @@
+.vault_pass
+.venv/
+*.retry
+inventory/hosts/production.yml
+group_vars/production/vault.yml

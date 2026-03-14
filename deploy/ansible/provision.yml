@@ -1,0 +1,9 @@
+---
+- name: Provision WP Composer (Go)
+  hosts: all
+  become: true
+  roles:
+    - server
+    - caddy
+    - app
+    - wpcomposer

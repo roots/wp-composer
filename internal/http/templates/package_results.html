@@ -1,0 +1,37 @@
+{{define "package-results"}}
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-10">
+{{range .Packages}}
+<a href="/packages/wp-{{.Type}}/{{.Name}}" class="group min-w-0">
+<div class="h-full rounded-xl border border-gray-200/60 bg-white p-4 transition-all duration-200 hover:border-brand-primary/40 hover:shadow-md">
+<div class="flex items-start gap-3 mb-3">
+<div class="mt-0.5 flex w-9 h-9 shrink-0 items-center justify-center rounded-lg bg-brand-lightest/60">
+<svg class="w-4 h-4 text-brand-primary" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg>
+</div>
+<div class="min-w-0 flex-1">
+<div class="flex items-center gap-2">
+<h3 class="text-sm font-semibold text-gray-900 truncate group-hover:text-brand-primary transition-colors">{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Name}}{{end}}</h3>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+{{if .CurrentVersion}}<span class="text-xs font-mono text-gray-500">{{.CurrentVersion}}</span>{{end}}
+<span class="inline-flex items-center rounded-md bg-gray-100 px-1.5 py-0 h-4 text-[10px] text-gray-500">{{.Type}}</span>
+</div>
+</div>
+</div>
+{{if .Description}}<p class="text-xs text-gray-500 line-clamp-2 mb-3 leading-relaxed">{{.Description}}</p>{{end}}
+<div class="flex items-center justify-between text-xs text-gray-400 pt-2 border-t border-gray-200/40">
+<span class="flex items-center gap-1"><svg class="w-3 h-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/></svg>{{formatNumber .ActiveInstalls}} active installs</span>
+<span class="flex items-center gap-1"><svg class="w-3 h-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z"/></svg>{{formatNumber .WpComposerInstallsTotal}} composer installs</span>
+</div>
+</div>
+</a>
+{{end}}
+</div>
+{{if gt .TotalPages 1}}
+<div class="flex justify-center items-center gap-2 pb-8">
+{{if gt .Page 1}}<a hx-get="{{paginatePartial .Filters (sub .Page 1)}}" hx-target="#package-results" hx-swap="innerHTML show:#filter-form:top" class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer">&laquo; Previous</a>{{end}}
+<span class="px-4 py-2 text-sm text-gray-500">Page {{.Page}} of {{.TotalPages}}</span>
+{{if lt .Page .TotalPages}}<a hx-get="{{paginatePartial .Filters (add .Page 1)}}" hx-target="#package-results" hx-swap="innerHTML show:#filter-form:top" class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer">Next &raquo;</a>{{end}}
+</div>
+{{end}}
+<p id="package-count" hx-swap-oob="true" class="text-sm text-gray-500 whitespace-nowrap">{{formatNumberComma .Total}} packages available</p>
+{{end}}

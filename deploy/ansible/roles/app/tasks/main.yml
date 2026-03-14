@@ -1,0 +1,33 @@
+---
+- name: Create directory structure
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: deploy
+    group: www-data
+    mode: "0775"
+  loop:
+    - "{{ app_root }}/releases"
+    - "{{ app_root }}/shared"
+    - "{{ app_root }}/shared/storage"
+    - "{{ app_root }}/shared/storage/repository"
+    - "{{ app_root }}/shared/storage/repository/builds"
+
+- name: Deploy environment file
+  template:
+    src: env.j2
+    dest: "{{ app_root }}/shared/.env"
+    owner: deploy
+    group: www-data
+    mode: "0640"
+
+- name: Deploy logrotate config
+  template:
+    src: logrotate.j2
+    dest: /etc/logrotate.d/wp-composer
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Run initial deploy
+  include_tasks: deploy.yml

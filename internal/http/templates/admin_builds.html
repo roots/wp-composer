@@ -1,0 +1,43 @@
+{{template "admin_layout" .}}
+{{define "title"}}Builds{{end}}
+{{define "content"}}
+<h1 class="text-xl font-bold mb-6">Build History</h1>
+{{if not .Builds}}
+<p class="text-gray-500">No builds found.</p>
+{{else}}
+<div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+<table class="w-full text-sm">
+<thead class="bg-gray-50 text-left">
+<tr>
+<th class="px-4 py-2 font-medium">Build ID</th>
+<th class="px-4 py-2 font-medium">Started</th>
+<th class="px-4 py-2 font-medium text-right">Packages</th>
+<th class="px-4 py-2 font-medium text-right">Changed</th>
+<th class="px-4 py-2 font-medium text-right">Artifacts</th>
+<th class="px-4 py-2 font-medium">Status</th>
+<th class="px-4 py-2 font-medium">R2</th>
+</tr>
+</thead>
+<tbody>
+{{range .Builds}}
+<tr class="border-t border-gray-100 hover:bg-gray-50">
+<td class="px-4 py-2 font-mono text-xs">{{.ID}}</td>
+<td class="px-4 py-2 text-xs text-gray-500">{{.StartedAt}}</td>
+<td class="px-4 py-2 text-right">{{.PackagesTotal}}</td>
+<td class="px-4 py-2 text-right">{{.PackagesChanged}}</td>
+<td class="px-4 py-2 text-right">{{.ArtifactCount}}</td>
+<td class="px-4 py-2">
+{{if .IsCurrent}}<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Current</span>
+{{else}}<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{{.Status}}</span>{{end}}
+</td>
+<td class="px-4 py-2">
+{{if .R2SyncedAt}}<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full" title="Synced {{.R2SyncedAt}}">Synced</span>
+{{else}}<span class="text-xs text-gray-300">—</span>{{end}}
+</td>
+</tr>
+{{end}}
+</tbody>
+</table>
+</div>
+{{end}}
+{{end}}

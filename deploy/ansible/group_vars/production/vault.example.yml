@@ -1,0 +1,18 @@
+# Example only.
+# Copy to `vault.yml` in private ops context and encrypt with:
+#   ansible-vault encrypt deploy/ansible/group_vars/production/vault.yml
+#
+# Expected keys used by templates:
+# - vault_r2_access_key_id
+# - vault_r2_secret_access_key
+# - vault_r2_bucket
+# - vault_r2_endpoint
+# - vault_r2_cdn_bucket
+# - vault_sentry_dsn
+
+vault_r2_access_key_id: "REPLACE_ME"
+vault_r2_secret_access_key: "REPLACE_ME"
+vault_r2_bucket: "REPLACE_ME"
+vault_r2_endpoint: "REPLACE_ME"
+vault_r2_cdn_bucket: "REPLACE_ME"
+vault_sentry_dsn: "REPLACE_ME"

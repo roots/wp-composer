@@ -1,0 +1,87 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install base packages
+  apt:
+    name:
+      - git
+      - curl
+      - unzip
+      - acl
+      - ufw
+      - fail2ban
+      - sqlite3
+      - software-properties-common
+    state: present
+
+- name: Set timezone to UTC
+  timezone:
+    name: UTC
+
+- name: Create deploy user
+  user:
+    name: deploy
+    shell: /bin/bash
+    create_home: yes
+    groups: www-data
+    append: yes
+
+- name: Add SSH keys from GitHub
+  authorized_key:
+    user: deploy
+    key: "https://github.com/{{ item }}.keys"
+  loop: "{{ users }}"
+
+- name: Add local public keys
+  authorized_key:
+    user: deploy
+    key: "{{ lookup('file', item) }}"
+  with_fileglob:
+    - "{{ playbook_dir }}/public_keys/*.pub"
+  ignore_errors: yes
+
+- name: Configure UFW defaults
+  ufw:
+    direction: incoming
+    policy: deny
+
+- name: Allow SSH
+  ufw:
+    rule: allow
+    port: "22"
+
+- name: Allow HTTP
+  ufw:
+    rule: allow
+    port: "80"
+
+- name: Allow HTTPS
+  ufw:
+    rule: allow
+    port: "443"
+
+- name: Enable UFW
+  ufw:
+    state: enabled
+
+- name: Enable fail2ban
+  service:
+    name: fail2ban
+    state: started
+    enabled: yes
+
+- name: Create app directory
+  file:
+    path: "{{ app_root }}"
+    state: directory
+    owner: deploy
+    group: www-data
+    mode: "0775"
+
+- name: Enable unattended-upgrades
+  apt:
+    name: unattended-upgrades
+    state: present

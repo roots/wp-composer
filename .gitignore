@@ -1,0 +1,6 @@
+/wpcomposer
+storage/
+*.db
+*.db-wal
+*.db-shm
+.env

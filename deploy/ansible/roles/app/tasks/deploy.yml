@@ -1,0 +1,83 @@
+---
+- name: Generate release ID
+  set_fact:
+    release_id: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+
+- name: Set release path
+  set_fact:
+    release_path: "{{ app_root }}/releases/{{ release_id }}"
+
+- name: Create release directory
+  file:
+    path: "{{ release_path }}"
+    state: directory
+    owner: deploy
+    group: www-data
+    mode: "0775"
+
+- name: Build Go binary locally
+  delegate_to: localhost
+  become: false
+  shell: >
+    cd {{ playbook_dir }}/../.. &&
+    GOOS=linux GOARCH=amd64 go build -o /tmp/wpcomposer-deploy-{{ release_id }} ./cmd/wpcomposer
+
+- name: Upload binary
+  copy:
+    src: "/tmp/wpcomposer-deploy-{{ release_id }}"
+    dest: "{{ release_path }}/{{ go_binary_name }}"
+    owner: deploy
+    group: www-data
+    mode: "0755"
+
+- name: Upload seeds file
+  copy:
+    src: "{{ playbook_dir }}/../../seeds.yaml"
+    dest: "{{ release_path }}/seeds.yaml"
+    owner: deploy
+    group: www-data
+    mode: "0644"
+
+- name: Symlink shared storage
+  file:
+    src: "{{ app_root }}/shared/storage"
+    dest: "{{ release_path }}/storage"
+    state: link
+    owner: deploy
+    group: www-data
+
+- name: Symlink shared .env
+  file:
+    src: "{{ app_root }}/shared/.env"
+    dest: "{{ release_path }}/.env"
+    state: link
+    owner: deploy
+    group: www-data
+
+- name: Run database migrations
+  become_user: deploy
+  shell: "{{ release_path }}/{{ go_binary_name }} migrate --db {{ db_path }}"
+
+- name: Atomic symlink swap
+  shell: |
+    ln -sfn {{ release_path }} {{ app_root }}/current.tmp
+    mv -T {{ app_root }}/current.tmp {{ app_root }}/current
+
+- name: Restart wpcomposer service
+  service:
+    name: wpcomposer
+    state: restarted
+
+- name: Clean up old releases
+  shell: |
+    cd {{ app_root }}/releases
+    ls -1dt */ | tail -n +6 | xargs -r rm -rf
+  args:
+    warn: false
+
+- name: Clean up local build artifact
+  delegate_to: localhost
+  become: false
+  file:
+    path: "/tmp/wpcomposer-deploy-{{ release_id }}"
+    state: absent
