@@ -361,7 +361,7 @@ func handleAdminLogStream(a *app.App) http.HandlerFunc {
 			if opened, err := os.Open(logPath); err == nil {
 				f = opened
 			} else {
-				fmt.Fprintf(w, "data: Waiting for %s ...\n\n", filepath.Base(logPath))
+				_, _ = fmt.Fprintf(w, "data: Waiting for %s ...\n\n", filepath.Base(logPath))
 				flusher.Flush()
 				select {
 				case <-ctx.Done():
@@ -370,12 +370,12 @@ func handleAdminLogStream(a *app.App) http.HandlerFunc {
 				}
 			}
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 
 		// Send initial batch: last 200 lines
 		lines := tailFile(logPath, 200)
 		for _, line := range lines {
-			fmt.Fprintf(w, "data: %s\n\n", line)
+			_, _ = fmt.Fprintf(w, "data: %s\n\n", line)
 		}
 		flusher.Flush()
 
@@ -395,7 +395,7 @@ func handleAdminLogStream(a *app.App) http.HandlerFunc {
 				}
 				if info.Size() < offset {
 					// File was truncated/rotated, reopen
-					f.Close()
+					_ = f.Close()
 					f, err = os.Open(logPath)
 					if err != nil {
 						continue

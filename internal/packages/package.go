@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/roots/wp-composer/internal/version"
@@ -248,6 +249,7 @@ func BatchUpsertPackages(ctx context.Context, db *sql.DB, pkgs []*Package) error
 type UpdateQueryOpts struct {
 	Type            string
 	Name            string
+	Names           []string // filter to these slugs only
 	Force           bool
 	IncludeInactive bool
 	Limit           int
@@ -261,6 +263,15 @@ func GetPackagesNeedingUpdate(ctx context.Context, db *sql.DB, opts UpdateQueryO
 	if opts.Name != "" {
 		query += ` AND name = ?`
 		args = append(args, opts.Name)
+	}
+
+	if len(opts.Names) > 0 {
+		placeholders := make([]string, len(opts.Names))
+		for i, n := range opts.Names {
+			placeholders[i] = "?"
+			args = append(args, n)
+		}
+		query += ` AND name IN (` + strings.Join(placeholders, ",") + `)`
 	}
 
 	if opts.Type != "" && opts.Type != "all" {
