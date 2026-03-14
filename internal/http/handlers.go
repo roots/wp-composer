@@ -83,6 +83,8 @@ func handleIndex(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			},
 		}
 
+		w.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=300")
+
 		render(w, tmpl.index, "layout", map[string]any{
 			"Packages":   packages,
 			"Filters":    filters,
