@@ -1,0 +1,79 @@
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Playbook to run
+        required: true
+        default: deploy
+        type: choice
+        options:
+          - deploy
+          - provision
+      ref:
+        description: Git ref to deploy
+        required: true
+        default: main
+        type: string
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible dependencies
+        working-directory: deploy/ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+
+      - name: Materialize production inventory and vault
+        working-directory: deploy/ansible
+        run: |
+          mkdir -p inventory/hosts group_vars/production
+          echo "${{ secrets.PROD_INVENTORY_YML_B64 }}" | base64 --decode > inventory/hosts/production.yml
+          echo "${{ secrets.PROD_VAULT_YML_B64 }}" | base64 --decode > group_vars/production/vault.yml
+          printf '%s' "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > .vault_pass
+          chmod 600 .vault_pass
+
+      - name: Run Ansible playbook
+        working-directory: deploy/ansible
+        env:
+          ANSIBLE_FORCE_COLOR: "1"
+        run: |
+          if [ "${{ inputs.action }}" = "provision" ]; then
+            ansible-playbook provision.yml --vault-password-file .vault_pass
+          else
+            ansible-playbook deploy.yml --vault-password-file .vault_pass
+          fi
+
+      - name: Cleanup sensitive files
+        if: always()
+        working-directory: deploy/ansible
+        run: |
+          rm -f .vault_pass
+          rm -f inventory/hosts/production.yml
+          rm -f group_vars/production/vault.yml
