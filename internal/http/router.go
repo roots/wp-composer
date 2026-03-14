@@ -36,7 +36,7 @@ func NewRouter(a *app.App) chi.Router {
 
 	staticSub, _ := fs.Sub(staticFS, "static")
 	staticServer := http.FileServer(http.FS(staticSub))
-	for _, f := range []string{"/favicon.ico", "/icon.svg", "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png", "/manifest.webmanifest"} {
+	for _, f := range []string{"/favicon.ico", "/icon.svg", "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png", "/manifest.webmanifest", "/carrot.svg", "/kinsta.svg", "/wordpress-com.svg", "/itineris.svg"} {
 		r.Get(f, staticServer.ServeHTTP)
 	}
 
