@@ -67,7 +67,13 @@ func runDev(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("discover: %w", err)
 	}
 
-	// 4. Update all packages
+	// 4. Update seeded packages only
+	seeds, err := packages.LoadSeeds(application.Config.Discovery.SeedsFile)
+	if err != nil {
+		return fmt.Errorf("loading seeds: %w", err)
+	}
+	seedSlugs := append(seeds.PopularPlugins, seeds.PopularThemes...)
+
 	application.Logger.Info("dev: fetching package metadata")
 	syncRun, err := packages.AllocateSyncRunID(ctx, application.DB)
 	if err != nil {
@@ -76,6 +82,7 @@ func runDev(cmd *cobra.Command, args []string) error {
 
 	pkgs, err := packages.GetPackagesNeedingUpdate(ctx, application.DB, packages.UpdateQueryOpts{
 		Type:  "all",
+		Names: seedSlugs,
 		Force: true,
 	})
 	if err != nil {
@@ -127,10 +134,11 @@ func runDev(cmd *cobra.Command, args []string) error {
 	application.Logger.Info("dev: building repository")
 	output := filepath.Join("storage", "repository", "builds")
 	result, err := repository.Build(ctx, application.DB, repository.BuildOpts{
-		OutputDir: output,
-		AppURL:    application.Config.AppURL,
-		Force:     true,
-		Logger:    application.Logger,
+		OutputDir:    output,
+		AppURL:       application.Config.AppURL,
+		Force:        true,
+		PackageNames: seedSlugs,
+		Logger:       application.Logger,
 	})
 	if err != nil {
 		return fmt.Errorf("build: %w", err)
