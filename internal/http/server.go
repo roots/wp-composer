@@ -85,7 +85,7 @@ func socketActivationListener() (net.Listener, error) {
 	if f == nil {
 		return nil, nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	ln, err := net.FileListener(f)
 	if err != nil {

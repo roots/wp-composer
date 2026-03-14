@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/roots/wp-composer/internal/app"
@@ -359,7 +359,7 @@ func handleAdminLogStream(a *app.App) http.HandlerFunc {
 			if opened, err := os.Open(logPath); err == nil {
 				f = opened
 			} else {
-				fmt.Fprintf(w, "data: Waiting for %s ...\n\n", filepath.Base(logPath))
+				_, _ = fmt.Fprintf(w, "data: Waiting for %s ...\n\n", filepath.Base(logPath))
 				flusher.Flush()
 				select {
 				case <-ctx.Done():
@@ -368,12 +368,12 @@ func handleAdminLogStream(a *app.App) http.HandlerFunc {
 				}
 			}
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 
 		// Send initial batch: last 200 lines
 		lines := tailFile(logPath, 200)
 		for _, line := range lines {
-			fmt.Fprintf(w, "data: %s\n\n", line)
+			_, _ = fmt.Fprintf(w, "data: %s\n\n", line)
 		}
 		flusher.Flush()
 
@@ -393,7 +393,7 @@ func handleAdminLogStream(a *app.App) http.HandlerFunc {
 				}
 				if info.Size() < offset {
 					// File was truncated/rotated, reopen
-					f.Close()
+					_ = f.Close()
 					f, err = os.Open(logPath)
 					if err != nil {
 						continue
@@ -540,15 +540,26 @@ func queryIndexStats(ctx context.Context, db *sql.DB) indexStats {
 	return s
 }
 
+// ftsQuery converts a user search string into an FTS5 query.
+// Each token becomes a prefix search, joined with AND.
+// e.g. "woo commerce" -> "woo* AND commerce*"
+func ftsQuery(s string) string {
+	words := strings.Fields(s)
+	for i, w := range words {
+		// Escape double quotes to prevent FTS5 syntax injection
+		w = strings.ReplaceAll(w, `"`, `""`)
+		words[i] = `"` + w + `"` + "*"
+	}
+	return strings.Join(words, " AND ")
+}
+
 func queryPackages(ctx context.Context, db *sql.DB, f publicFilters, page, limit int) ([]packageRow, int, error) {
 	where := "is_active = 1"
 	args := []any{}
 
-	if f.Search != "" {
-		normalized := "%" + strings.NewReplacer("-", "", " ", "").Replace(f.Search) + "%"
-		s := "%" + f.Search + "%"
-		where += " AND (REPLACE(REPLACE(name, '-', ''), ' ', '') LIKE ? OR display_name LIKE ? OR description LIKE ?)"
-		args = append(args, normalized, s, s)
+	if q := ftsQuery(f.Search); q != "" {
+		where += " AND id IN (SELECT rowid FROM packages_fts WHERE packages_fts MATCH ?)"
+		args = append(args, q)
 	}
 	if f.Type != "" {
 		where += " AND type = ?"
@@ -705,11 +716,9 @@ func queryAdminPackages(ctx context.Context, db *sql.DB, f adminFilters, page, l
 	where := "1=1"
 	args := []any{}
 
-	if f.Search != "" {
-		normalized := "%" + strings.NewReplacer("-", "", " ", "").Replace(f.Search) + "%"
-		s := "%" + f.Search + "%"
-		where += " AND (REPLACE(REPLACE(name, '-', ''), ' ', '') LIKE ? OR display_name LIKE ? OR description LIKE ?)"
-		args = append(args, normalized, s, s)
+	if q := ftsQuery(f.Search); q != "" {
+		where += " AND id IN (SELECT rowid FROM packages_fts WHERE packages_fts MATCH ?)"
+		args = append(args, q)
 	}
 	if f.Type != "" {
 		where += " AND type = ?"
