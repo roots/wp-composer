@@ -756,11 +756,13 @@ type buildRow struct {
 	Status          string
 	IsCurrent       bool
 	R2SyncedAt      string
+	ErrorMessage    string
 }
 
 func queryBuilds(ctx context.Context, db *sql.DB) ([]buildRow, error) {
 	rows, err := db.QueryContext(ctx, `SELECT id, started_at, packages_total, packages_changed,
-		artifact_count, status, COALESCE(r2_synced_at, '') FROM builds ORDER BY started_at DESC LIMIT 50`)
+		artifact_count, status, COALESCE(r2_synced_at, ''), COALESCE(error_message, '')
+		FROM builds ORDER BY started_at DESC LIMIT 50`)
 	if err != nil {
 		return nil, err
 	}
@@ -769,7 +771,7 @@ func queryBuilds(ctx context.Context, db *sql.DB) ([]buildRow, error) {
 	var builds []buildRow
 	for rows.Next() {
 		var b buildRow
-		_ = rows.Scan(&b.ID, &b.StartedAt, &b.PackagesTotal, &b.PackagesChanged, &b.ArtifactCount, &b.Status, &b.R2SyncedAt)
+		_ = rows.Scan(&b.ID, &b.StartedAt, &b.PackagesTotal, &b.PackagesChanged, &b.ArtifactCount, &b.Status, &b.R2SyncedAt, &b.ErrorMessage)
 		builds = append(builds, b)
 	}
 	return builds, rows.Err()
