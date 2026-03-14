@@ -88,6 +88,16 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 					application.Logger.Warn("failed to fetch", "type", p.Type, "name", p.Name, "error", fetchErr)
 					failed.Add(1)
 				}
+				total := succeeded.Load() + failed.Load() + deactivated.Load()
+				if total%500 == 0 {
+					application.Logger.Info("update progress",
+						"completed", total,
+						"total", len(pkgs),
+						"succeeded", succeeded.Load(),
+						"failed", failed.Load(),
+						"deactivated", deactivated.Load(),
+					)
+				}
 				return nil
 			}
 
@@ -120,6 +130,16 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 			}
 
 			succeeded.Add(1)
+			total := succeeded.Load() + failed.Load() + deactivated.Load()
+			if total%500 == 0 {
+				application.Logger.Info("update progress",
+					"completed", total,
+					"total", len(pkgs),
+					"succeeded", succeeded.Load(),
+					"failed", failed.Load(),
+					"deactivated", deactivated.Load(),
+				)
+			}
 			application.Logger.Debug("updated package", "type", p.Type, "name", p.Name, "versions", validVersions)
 			return nil
 		})
