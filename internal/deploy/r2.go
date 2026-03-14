@@ -73,7 +73,7 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID string
 		}
 		uploaded++
 		if uploaded%100 == 0 {
-			logger.Info("R2 upload progress", "files", uploaded)
+			logger.Info("R2 upload progress", "uploaded", uploaded, "total", len(files))
 		}
 	}
 
