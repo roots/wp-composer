@@ -88,10 +88,10 @@ this.textContent = showing ? 'Show all {{len .Versions}} versions' : 'Show fewer
 {{if .Package.Author}}<div class="flex justify-between items-center py-2.5 border-b border-gray-200/30"><span class="text-gray-500 text-sm">Author</span><span class="text-sm text-gray-900">{{.Package.Author}}</span></div>{{end}}
 </div>
 <div class="px-4 py-3 border-t border-gray-200/40 flex flex-col gap-2">
-<a href="https://wordpress.org/{{if eq .Package.Type "plugin"}}plugins{{else}}themes{{end}}/{{.Package.Name}}/" class="flex items-center gap-1.5 text-sm text-brand-primary hover:underline" target="_blank" rel="noopener">
+<a href="https://wordpress.org/{{if eq .Package.Type "plugin"}}plugins{{else}}themes{{end}}/{{.Package.Name}}/" class="flex items-center gap-1.5 text-sm text-brand-primary hover:underline" rel="noopener">
 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
 WordPress.org</a>
-{{if .Package.Homepage}}<a href="{{.Package.Homepage}}" class="flex items-center gap-1.5 text-sm text-brand-primary hover:underline" target="_blank" rel="noopener">
+{{if .Package.Homepage}}<a href="{{.Package.Homepage}}" class="flex items-center gap-1.5 text-sm text-brand-primary hover:underline" rel="noopener">
 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
 Homepage</a>{{end}}
 </div>
