@@ -49,6 +49,22 @@ jq --indent "$INDENT" '
   # Rename packages in extra.patches (composer-patches plugin)
   (if .extra.patches then .extra.patches |= rename_packages else . end) |
 
+  # Rename package references in extra.installer-paths values
+  (if .extra["installer-paths"] then
+    .extra["installer-paths"] |= (
+      to_entries | map(
+        .value |= map(
+          if startswith("wpackagist-plugin/") then
+            "wp-plugin/" + ltrimstr("wpackagist-plugin/")
+          elif startswith("wpackagist-theme/") then
+            "wp-theme/" + ltrimstr("wpackagist-theme/")
+          else .
+          end
+        )
+      ) | from_entries
+    )
+  else . end) |
+
   # Filter out wpackagist repo entry
   def is_wpackagist:
     (.url // "" | test("wpackagist\\.org")) or ((.name // "") == "wpackagist");
@@ -82,6 +98,7 @@ echo "Done! Changes made to $COMPOSER_FILE:"
 echo "  - Renamed wpackagist-plugin/* → wp-plugin/*"
 echo "  - Renamed wpackagist-theme/* → wp-theme/*"
 echo "  - Renamed wpackagist-plugin/*, wpackagist-theme/* in extra.patches"
+echo "  - Renamed wpackagist-plugin/*, wpackagist-theme/* in extra.installer-paths"
 echo "  - Replaced WPackagist repository with WP Composer"
 echo ""
 echo "Run 'composer update' to install packages from WP Composer."
