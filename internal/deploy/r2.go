@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync/atomic"
@@ -57,71 +59,65 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 		previousPrefix = "releases/" + previousBuildID + "/"
 	}
 
-	// Collect all files, then sort: index files last.
-	var files []buildFile
-	err := WalkBuildFiles(buildDir, func(relPath string, data []byte) error {
-		files = append(files, buildFile{relPath: relPath, data: data})
+	// Collect file paths only (not data) to avoid loading everything into memory.
+	var filePaths []string
+	err := filepath.Walk(buildDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return err
+		}
+		rel, err := filepath.Rel(buildDir, path)
+		if err != nil {
+			return err
+		}
+		filePaths = append(filePaths, strings.ReplaceAll(rel, string(os.PathSeparator), "/"))
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("collecting build files: %w", err)
+		return fmt.Errorf("walking build files: %w", err)
 	}
 
-	sortBuildFiles(files)
+	sortBuildFiles2(filePaths)
+	total := len(filePaths)
 
-	// Extract packages.json data before parallel upload.
-	var packagesData []byte
-	for _, f := range files {
-		if f.relPath == r2IndexFile {
-			packagesData = f.data
-			break
-		}
+	// Read packages.json for the root rewrite at the end.
+	packagesData, err := os.ReadFile(filepath.Join(buildDir, r2IndexFile))
+	if err != nil {
+		return fmt.Errorf("R2 sync: reading packages.json: %w", err)
 	}
 
-	// Build a set of content-addressed p/ files from the previous build for CopyObject.
-	previousKeys := make(map[string]bool)
-	if previousPrefix != "" {
-		for _, f := range files {
-			if strings.HasPrefix(f.relPath, "p/") && strings.Contains(f.relPath, "$") {
-				previousKeys[previousPrefix+f.relPath] = true
-			}
-		}
-	}
-
-	// Upload all files under the release prefix (parallel).
+	// Upload all files under the release prefix (parallel, streaming from disk).
 	var uploaded, copied atomic.Int64
 	g, gCtx := errgroup.WithContext(ctx)
-	g.SetLimit(10)
+	g.SetLimit(20)
 
-	for _, f := range files {
-		f := f
+	for _, relPath := range filePaths {
+		relPath := relPath
 		g.Go(func() error {
-			key := releasePrefix + f.relPath
+			key := releasePrefix + relPath
 
-			// For content-addressed p/ files that existed in the previous build,
-			// use CopyObject within R2 instead of re-uploading.
-			if previousPrefix != "" && strings.HasPrefix(f.relPath, "p/") && strings.Contains(f.relPath, "$") {
-				srcKey := previousPrefix + f.relPath
-				if previousKeys[srcKey] {
-					if err := copyObjectWithRetry(gCtx, client, cfg.Bucket, srcKey, key, logger); err == nil {
-						copied.Add(1)
-						n := uploaded.Add(1) + copied.Load()
-						if n%500 == 0 {
-							logger.Info("R2 upload progress", "uploaded", uploaded.Load(), "copied", copied.Load(), "total", len(files))
-						}
-						return nil
+			// For content-addressed p/ files, try CopyObject from previous release.
+			if previousPrefix != "" && strings.HasPrefix(relPath, "p/") && strings.Contains(relPath, "$") {
+				srcKey := previousPrefix + relPath
+				if err := copyObjectWithRetry(gCtx, client, cfg.Bucket, srcKey, key, logger); err == nil {
+					n := copied.Add(1)
+					if (n+uploaded.Load())%500 == 0 {
+						logger.Info("R2 upload progress", "uploaded", uploaded.Load(), "copied", n, "total", total)
 					}
-					// Fall through to upload on copy failure.
-					logger.Warn("CopyObject failed, falling back to upload", "key", key)
+					return nil
 				}
 			}
 
-			if err := putObjectWithRetry(gCtx, client, cfg.Bucket, key, f.data, logger); err != nil {
+			// Read file from disk on demand.
+			data, err := os.ReadFile(filepath.Join(buildDir, relPath))
+			if err != nil {
+				return fmt.Errorf("reading %s: %w", relPath, err)
+			}
+			if err := putObjectWithRetry(gCtx, client, cfg.Bucket, key, data, logger); err != nil {
 				return fmt.Errorf("R2 sync: %w", err)
 			}
 			n := uploaded.Add(1)
-			if n%500 == 0 {
-				logger.Info("R2 upload progress", "uploaded", int(n), "total", len(files))
+			if (n+copied.Load())%500 == 0 {
+				logger.Info("R2 upload progress", "uploaded", n, "copied", copied.Load(), "total", total)
 			}
 			return nil
 		})
@@ -132,9 +128,6 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 	}
 
 	// Rewrite and upload root packages.json — the atomic switch.
-	if packagesData == nil {
-		return fmt.Errorf("R2 sync: packages.json not found in build")
-	}
 	rewritten, err := RewritePackagesJSON(packagesData, releasePrefix)
 	if err != nil {
 		return fmt.Errorf("rewriting packages.json: %w", err)
@@ -145,6 +138,13 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 
 	logger.Info("R2 sync complete", "uploaded", uploaded.Load(), "copied", copied.Load(), "release", releasePrefix)
 	return nil
+}
+
+// sortBuildFiles2 sorts relative paths so index files come last.
+func sortBuildFiles2(paths []string) {
+	sort.SliceStable(paths, func(i, j int) bool {
+		return uploadPriority(paths[i]) < uploadPriority(paths[j])
+	})
 }
 
 // RewritePackagesJSON prefixes URL templates and provider-includes keys with
