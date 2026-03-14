@@ -26,7 +26,7 @@
 <div class="inline-flex items-center gap-3 rounded-xl border border-gray-200/80 bg-gray-100/50 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors max-w-full overflow-x-auto" onclick="navigator.clipboard.writeText('composer config repositories.wp-composer composer https://wp-composer.com')">
 <span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
 <code class="text-sm font-mono text-gray-900 select-all whitespace-nowrap">composer config repositories.wp-composer composer https://wp-composer.com</code>
-<button class="text-gray-400 hover:text-gray-900 transition-colors ml-1">
+<button aria-label="Copy to clipboard" class="text-gray-400 hover:text-gray-900 transition-colors ml-1">
 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg>
 </button>
 </div>
@@ -59,12 +59,14 @@
 <kbd class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:inline-flex h-5 items-center rounded border border-gray-200/80 bg-gray-100/80 px-1.5 text-[10px] font-mono text-gray-400">/</kbd>
 </div>
 <div class="flex items-center gap-2">
-<select name="type" class="h-10 pl-3 pr-8 text-sm border border-gray-200 rounded-lg bg-white select-chevron focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
+<label for="filter-type" class="sr-only">Package type</label>
+<select id="filter-type" name="type" class="h-10 pl-3 pr-8 text-sm border border-gray-200 rounded-lg bg-white select-chevron focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
 <option value="">All types</option>
 <option value="plugin"{{if eq .Filters.Type "plugin"}} selected{{end}}>Plugins</option>
 <option value="theme"{{if eq .Filters.Type "theme"}} selected{{end}}>Themes</option>
 </select>
-<select name="sort" class="h-10 pl-3 pr-8 text-sm border border-gray-200 rounded-lg bg-white select-chevron focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
+<label for="filter-sort" class="sr-only">Sort by</label>
+<select id="filter-sort" name="sort" class="h-10 pl-3 pr-8 text-sm border border-gray-200 rounded-lg bg-white select-chevron focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
 <option value="active_installs"{{if eq .Filters.Sort "active_installs"}} selected{{end}}>Active installs</option>
 <option value="composer_installs"{{if eq .Filters.Sort "composer_installs"}} selected{{end}}>Composer installs</option>
 <option value="name"{{if eq .Filters.Sort "name"}} selected{{end}}>Name</option>
@@ -155,7 +157,7 @@
 <div class="inline-flex items-center gap-3 rounded-xl border border-gray-200/80 bg-gray-100/50 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors max-w-full overflow-x-auto mb-6" onclick="navigator.clipboard.writeText('curl -sO https://raw.githubusercontent.com/roots/wp-composer/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh')">
 <span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
 <code class="text-sm font-mono text-gray-900 select-all whitespace-nowrap">curl -sO https://raw.githubusercontent.com/roots/wp-composer/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh</code>
-<button class="text-gray-400 hover:text-gray-900 transition-colors ml-1">
+<button aria-label="Copy to clipboard" class="text-gray-400 hover:text-gray-900 transition-colors ml-1">
 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg>
 </button>
 </div>
