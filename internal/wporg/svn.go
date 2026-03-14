@@ -1,12 +1,12 @@
 package wporg
 
 import (
+	"bufio"
 	"context"
-	"encoding/xml"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -15,8 +15,7 @@ type SVNEntry struct {
 	LastCommitted *time.Time
 }
 
-// ParseSVNListing streams an SVN XML listing from the given URL and calls fn
-// for each directory entry. This handles 100k+ entries with constant memory.
+// ParseSVNListing fetches the SVN HTML directory listing and extracts slugs.
 func (c *Client) ParseSVNListing(ctx context.Context, baseURL string, fn func(SVNEntry) error) error {
 	client := &http.Client{Timeout: 600 * time.Second}
 
@@ -24,7 +23,6 @@ func (c *Client) ParseSVNListing(ctx context.Context, baseURL string, fn func(SV
 	if err != nil {
 		return fmt.Errorf("creating SVN request: %w", err)
 	}
-	req.Header.Set("Accept", "application/xml")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -36,69 +34,50 @@ func (c *Client) ParseSVNListing(ctx context.Context, baseURL string, fn func(SV
 		return fmt.Errorf("SVN listing returned status %d", resp.StatusCode)
 	}
 
-	return parseSVNXML(ctx, resp.Body, fn, c.logger)
+	return parseSVNHTML(ctx, resp.Body, fn, c.logger)
 }
 
-func parseSVNXML(ctx context.Context, r io.Reader, fn func(SVNEntry) error, logger *slog.Logger) error {
-	decoder := xml.NewDecoder(r)
+func parseSVNHTML(ctx context.Context, r interface{ Read([]byte) (int, error) }, fn func(SVNEntry) error, logger *slog.Logger) error {
+	scanner := bufio.NewScanner(r)
+	// HTML lines are short; default buffer is fine.
 
 	var count int
-	var inEntry bool
-	var entry SVNEntry
-
-	for {
+	for scanner.Scan() {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 
-		tok, err := decoder.Token()
-		if err == io.EOF {
-			break
+		line := scanner.Text()
+
+		// Each entry is: <li><a href="slug-name/">slug-name/</a></li>
+		idx := strings.Index(line, `<a href="`)
+		if idx < 0 {
+			continue
 		}
-		if err != nil {
-			return fmt.Errorf("parsing SVN XML: %w", err)
+		rest := line[idx+len(`<a href="`):]
+		end := strings.IndexByte(rest, '"')
+		if end < 0 {
+			continue
+		}
+		href := rest[:end]
+
+		slug := strings.TrimSuffix(href, "/")
+		if slug == "" || slug == ".." || strings.HasPrefix(slug, "!svn") {
+			continue
 		}
 
-		switch t := tok.(type) {
-		case xml.StartElement:
-			switch t.Name.Local {
-			case "entry":
-				inEntry = false
-				entry = SVNEntry{}
-				for _, attr := range t.Attr {
-					if attr.Name.Local == "kind" && attr.Value == "dir" {
-						inEntry = true
-					}
-				}
-			case "name":
-				if inEntry {
-					var name string
-					if err := decoder.DecodeElement(&name, &t); err == nil {
-						entry.Slug = name
-					}
-				}
-			case "date":
-				if inEntry {
-					var dateStr string
-					if err := decoder.DecodeElement(&dateStr, &t); err == nil {
-						if parsed, err := time.Parse(time.RFC3339Nano, dateStr); err == nil {
-							parsed = parsed.UTC()
-							entry.LastCommitted = &parsed
-						}
-					}
-				}
-			}
-		case xml.EndElement:
-			if t.Name.Local == "entry" && inEntry && entry.Slug != "" {
-				if err := fn(entry); err != nil {
-					return err
-				}
-				count++
-				if count%5000 == 0 {
-					logger.Info("SVN discovery progress", "entries", count)
-				}
-			}
+		if err := fn(SVNEntry{Slug: slug}); err != nil {
+			return err
 		}
+
+		count++
+		if count%10000 == 0 {
+			logger.Info("SVN discovery progress", "entries", count)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("reading SVN listing: %w", err)
 	}
 
 	logger.Info("SVN discovery complete", "total_entries", count)
