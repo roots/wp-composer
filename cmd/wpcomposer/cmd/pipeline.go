@@ -15,27 +15,33 @@ func runPipeline(cmd *cobra.Command, args []string) error {
 	skipDeploy, _ := cmd.Flags().GetBool("skip-deploy")
 	discoverSource, _ := cmd.Flags().GetString("discover-source")
 
+	ctx := cmd.Context()
+
 	if !skipDiscover {
 		application.Logger.Info("pipeline: running discover")
+		discoverCmd.SetContext(ctx)
 		_ = discoverCmd.Flags().Set("source", discoverSource)
-		if err := runDiscover(cmd, nil); err != nil {
+		if err := runDiscover(discoverCmd, nil); err != nil {
 			return err
 		}
 	}
 
 	application.Logger.Info("pipeline: running update")
-	if err := runUpdate(cmd, nil); err != nil {
+	updateCmd.SetContext(ctx)
+	if err := runUpdate(updateCmd, nil); err != nil {
 		return err
 	}
 
 	application.Logger.Info("pipeline: running build")
-	if err := runBuild(cmd, nil); err != nil {
+	buildCmd.SetContext(ctx)
+	if err := runBuild(buildCmd, nil); err != nil {
 		return err
 	}
 
 	if !skipDeploy {
 		application.Logger.Info("pipeline: running deploy")
-		if err := runDeploy(cmd, nil); err != nil {
+		deployCmd.SetContext(ctx)
+		if err := runDeploy(deployCmd, nil); err != nil {
 			return err
 		}
 	}
