@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/roots/wp-composer/internal/app"
@@ -82,6 +82,8 @@ func handleIndex(a *app.App, tmpl *templateSet) http.HandlerFunc {
 				"query-input": "required name=search_term_string",
 			},
 		}
+
+		w.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=300")
 
 		render(w, tmpl.index, "layout", map[string]any{
 			"Packages":   packages,
