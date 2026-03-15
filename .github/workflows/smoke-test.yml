@@ -1,0 +1,39 @@
+name: smoke-test
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  install:
+    name: Composer Install
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer:v2
+
+      - name: Create composer.json
+        run: |
+          cat > composer.json <<'EOF'
+          {
+            "repositories": [
+              {
+                "name": "wp-composer",
+                "type": "composer",
+                "url": "https://repo.wp-composer.com",
+                "only": ["wp-plugin/*", "wp-theme/*"]
+              }
+            ],
+            "require": {
+              "wp-plugin/woocommerce": "*",
+              "wp-theme/twentytwentyfive": "*"
+            }
+          }
+          EOF
+
+      - name: Composer install
+        run: composer install --no-interaction --no-progress
