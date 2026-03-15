@@ -356,6 +356,48 @@ func RefreshSiteStats(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
+// MarkPackagesChanged sets last_committed = now for the given slugs of a
+// specific type, so they'll be picked up by GetPackagesNeedingUpdate.
+func MarkPackagesChanged(ctx context.Context, db *sql.DB, pkgType string, slugs []string) (int64, error) {
+	if len(slugs) == 0 {
+		return 0, nil
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	stmt, err := tx.PrepareContext(ctx, `
+		UPDATE packages
+		SET last_committed = ?, provider_group = ?, updated_at = ?
+		WHERE type = ? AND name = ? AND is_active = 1`)
+	if err != nil {
+		return 0, fmt.Errorf("preparing statement: %w", err)
+	}
+	defer func() { _ = stmt.Close() }()
+
+	t, _ := time.Parse(time.RFC3339, now)
+	pg := ComputeProviderGroup(&t)
+	var affected int64
+	for _, slug := range slugs {
+		res, err := stmt.ExecContext(ctx, now, pg, now, pkgType, slug)
+		if err != nil {
+			return affected, fmt.Errorf("marking package %s/%s changed: %w", pkgType, slug, err)
+		}
+		n, _ := res.RowsAffected()
+		affected += n
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("committing: %w", err)
+	}
+	return affected, nil
+}
+
 func boolToInt(b bool) int {
 	if b {
 		return 1
