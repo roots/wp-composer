@@ -94,7 +94,7 @@
 </div>
 
 <h2 class="text-2xl font-bold mb-4">Usage</h2>
-<p class="text-gray-600 mb-4">Add the repository to your <code class="text-sm font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">composer.json</code>:</p>
+<p class="text-gray-600 mb-4">Example <code class="text-sm font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">composer.json</code> for standalone WordPress projects:</p>
 <div class="rounded-xl border border-gray-200/60 overflow-hidden mb-12">
 <div class="bg-gray-50/50 px-4 py-2 text-xs text-gray-500 border-b border-gray-200/40">composer.json</div>
 <pre class="p-4 text-sm font-mono leading-relaxed overflow-x-auto"><code>{
@@ -110,12 +110,20 @@
     <span class="text-green-700">"composer/installers"</span>: <span class="text-green-700">"^2.2"</span>,
     <span class="text-green-700">"wp-plugin/woocommerce"</span>: <span class="text-green-700">"^10.0"</span>,
     <span class="text-green-700">"wp-theme/twentytwentyfive"</span>: <span class="text-green-700">"^1.0"</span>
+  },
+  <span class="text-green-700">"extra"</span>: {
+    <span class="text-green-700">"installer-paths"</span>: {
+      <span class="text-green-700">"wp-content/plugins/{$name}/"</span>: [<span class="text-green-700">"type:wordpress-plugin"</span>],
+      <span class="text-green-700">"wp-content/mu-plugins/{$name}/"</span>: [<span class="text-green-700">"type:wordpress-muplugin"</span>],
+      <span class="text-green-700">"wp-content/themes/{$name}/"</span>: [<span class="text-green-700">"type:wordpress-theme"</span>]
+    }
   }
 }</code></pre>
 </div>
+<p class="text-sm text-gray-500 mt-1 mb-12"><a href="https://github.com/roots/bedrock" class="text-brand-primary hover:underline">Bedrock</a> already comes configured for both WP Composer and the <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">roots/wordpress</code> package.</p>
 
 <h2 class="text-2xl font-bold mb-4">Roots WordPress packages</h2>
-<p class="text-gray-600 mb-4">WP Composer is built by <a href="https://roots.io" class="font-medium text-gray-900 hover:text-brand-primary transition-colors">Roots</a> and is the recommended repository for use alongside the Roots WordPress packaging ecosystem:</p>
+<p class="text-gray-600 mb-4"><a href="https://roots.io" class="font-medium text-gray-900 hover:text-brand-primary transition-colors">Roots</a> also provides WordPress core as Composer packages:</p>
 <div class="rounded-xl border border-gray-200/60 overflow-hidden mb-4">
 <table class="w-full text-sm">
 <tbody>
