@@ -541,6 +541,16 @@ func queryIndexStats(ctx context.Context, db *sql.DB) indexStats {
 	return s
 }
 
+// collapseSlug strips hyphens, underscores, and spaces to produce a
+// compact form suitable for LIKE-matching against similarly collapsed names.
+func collapseSlug(s string) string {
+	s = strings.ToLower(s)
+	s = strings.ReplaceAll(s, "-", "")
+	s = strings.ReplaceAll(s, "_", "")
+	s = strings.ReplaceAll(s, " ", "")
+	return s
+}
+
 // ftsQuery converts a user search string into an FTS5 query.
 // Each token becomes a prefix search, joined with AND.
 // e.g. "woo commerce" -> "woo* AND commerce*"
@@ -559,8 +569,8 @@ func queryPackages(ctx context.Context, db *sql.DB, f publicFilters, page, limit
 	args := []any{}
 
 	if q := ftsQuery(f.Search); q != "" {
-		where += " AND id IN (SELECT rowid FROM packages_fts WHERE packages_fts MATCH ?)"
-		args = append(args, q)
+		where += " AND (id IN (SELECT rowid FROM packages_fts WHERE packages_fts MATCH ?) OR REPLACE(name, '-', '') LIKE ?)"
+		args = append(args, q, "%"+collapseSlug(f.Search)+"%")
 	}
 	if f.Type != "" {
 		where += " AND type = ?"
@@ -720,8 +730,8 @@ func queryAdminPackages(ctx context.Context, db *sql.DB, f adminFilters, page, l
 	args := []any{}
 
 	if q := ftsQuery(f.Search); q != "" {
-		where += " AND id IN (SELECT rowid FROM packages_fts WHERE packages_fts MATCH ?)"
-		args = append(args, q)
+		where += " AND (id IN (SELECT rowid FROM packages_fts WHERE packages_fts MATCH ?) OR REPLACE(name, '-', '') LIKE ?)"
+		args = append(args, q, "%"+collapseSlug(f.Search)+"%")
 	}
 	if f.Type != "" {
 		where += " AND type = ?"

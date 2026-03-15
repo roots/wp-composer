@@ -342,8 +342,8 @@ func RefreshSiteStats(ctx context.Context, db *sql.DB) error {
 	_, err := db.ExecContext(ctx, `
 		INSERT OR REPLACE INTO package_stats (id, active_plugins, active_themes, plugin_installs, theme_installs, installs_30d, updated_at)
 		SELECT 1,
-			SUM(CASE WHEN type = 'plugin' THEN 1 ELSE 0 END),
-			SUM(CASE WHEN type = 'theme' THEN 1 ELSE 0 END),
+			COALESCE(SUM(CASE WHEN type = 'plugin' THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN type = 'theme' THEN 1 ELSE 0 END), 0),
 			COALESCE(SUM(CASE WHEN type = 'plugin' THEN wp_composer_installs_total ELSE 0 END), 0),
 			COALESCE(SUM(CASE WHEN type = 'theme' THEN wp_composer_installs_total ELSE 0 END), 0),
 			COALESCE(SUM(wp_composer_installs_30d), 0),
