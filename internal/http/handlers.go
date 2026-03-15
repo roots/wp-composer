@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/roots/wp-composer/internal/app"
@@ -537,8 +537,7 @@ type indexStats struct {
 
 func queryIndexStats(ctx context.Context, db *sql.DB) indexStats {
 	var s indexStats
-	_ = db.QueryRowContext(ctx, "SELECT COALESCE(SUM(wp_composer_installs_total), 0) FROM packages WHERE type = 'plugin'").Scan(&s.PluginInstalls)
-	_ = db.QueryRowContext(ctx, "SELECT COALESCE(SUM(wp_composer_installs_total), 0) FROM packages WHERE type = 'theme'").Scan(&s.ThemeInstalls)
+	_ = db.QueryRowContext(ctx, "SELECT plugin_installs, theme_installs FROM package_stats WHERE id = 1").Scan(&s.PluginInstalls, &s.ThemeInstalls)
 	return s
 }
 
@@ -693,11 +692,9 @@ func queryDashboardStats(ctx context.Context, db *sql.DB) map[string]any {
 		CurrentBuild  string
 	}
 
-	_ = db.QueryRowContext(ctx, "SELECT COUNT(*) FROM packages WHERE is_active = 1").Scan(&s.TotalPackages)
-	_ = db.QueryRowContext(ctx, "SELECT COUNT(*) FROM packages WHERE is_active = 1 AND type = 'plugin'").Scan(&s.ActivePlugins)
-	_ = db.QueryRowContext(ctx, "SELECT COUNT(*) FROM packages WHERE is_active = 1 AND type = 'theme'").Scan(&s.ActiveThemes)
-	_ = db.QueryRowContext(ctx, "SELECT COALESCE(SUM(wp_composer_installs_total), 0) FROM packages").Scan(&s.TotalInstalls)
-	_ = db.QueryRowContext(ctx, "SELECT COALESCE(SUM(wp_composer_installs_30d), 0) FROM packages").Scan(&s.Installs30d)
+	_ = db.QueryRowContext(ctx, `SELECT active_plugins, active_themes, active_plugins + active_themes,
+		plugin_installs + theme_installs, installs_30d FROM package_stats WHERE id = 1`).Scan(
+		&s.ActivePlugins, &s.ActiveThemes, &s.TotalPackages, &s.TotalInstalls, &s.Installs30d)
 
 	stats["Stats"] = s
 	return stats

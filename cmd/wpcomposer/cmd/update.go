@@ -196,6 +196,10 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("finishing sync run: %w", err)
 	}
 
+	if err := packages.RefreshSiteStats(ctx, application.DB); err != nil {
+		return fmt.Errorf("refreshing package stats: %w", err)
+	}
+
 	application.Logger.Info("update complete",
 		"updated", succeeded.Load(),
 		"failed", failed.Load(),

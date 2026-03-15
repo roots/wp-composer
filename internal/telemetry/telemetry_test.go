@@ -36,6 +36,16 @@ func setupTestDB(t *testing.T) *sql.DB {
 			created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
 			UNIQUE(type, name)
 		);
+		CREATE TABLE package_stats (
+			id INTEGER PRIMARY KEY CHECK (id = 1),
+			active_plugins INTEGER NOT NULL DEFAULT 0,
+			active_themes INTEGER NOT NULL DEFAULT 0,
+			plugin_installs INTEGER NOT NULL DEFAULT 0,
+			theme_installs INTEGER NOT NULL DEFAULT 0,
+			installs_30d INTEGER NOT NULL DEFAULT 0,
+			updated_at TEXT NOT NULL DEFAULT ''
+		);
+		INSERT INTO package_stats (id) VALUES (1);
 		CREATE TABLE install_events (
 			id INTEGER PRIMARY KEY,
 			package_id INTEGER NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
