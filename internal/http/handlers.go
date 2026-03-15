@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -328,9 +330,65 @@ func handleAdminBuilds(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			}
 		}
 
-		render(w, r, tmpl.adminBuilds, "admin_layout", map[string]any{
-			"Builds": builds,
-		})
+		data := map[string]any{
+			"Builds":    builds,
+			"Triggered": r.URL.Query().Get("triggered") == "1",
+			"Error":     r.URL.Query().Get("error"),
+		}
+		if len(builds) > 0 {
+			data["LastBuildStartedAt"] = builds[0].StartedAt
+		}
+
+		render(w, r, tmpl.adminBuilds, "admin_layout", data)
+	}
+}
+
+const pipelineLockPath = "storage/pipeline.lock"
+
+func handleTriggerBuild(a *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		self, err := os.Executable()
+		if err != nil {
+			a.Logger.Error("failed to find executable", "error", err)
+			http.Redirect(w, r, "/admin/builds?error=internal+error", http.StatusSeeOther)
+			return
+		}
+
+		// Acquire the lock before spawning so we know the status is accurate.
+		lockFile, err := os.OpenFile(pipelineLockPath, os.O_CREATE|os.O_RDWR, 0644)
+		if err != nil {
+			a.Logger.Error("failed to open pipeline lock", "error", err)
+			http.Redirect(w, r, "/admin/builds?error=internal+error", http.StatusSeeOther)
+			return
+		}
+		if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+			_ = lockFile.Close()
+			http.Redirect(w, r, "/admin/builds?error=build+already+running", http.StatusSeeOther)
+			return
+		}
+
+		// Pass the locked fd to the child via ExtraFiles (fd 3) so the lock
+		// transfers atomically. The child detects PIPELINE_LOCK_FD and skips
+		// its own acquisition.
+		go func() {
+			defer func() {
+				_ = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
+				_ = lockFile.Close()
+			}()
+
+			cmd := exec.Command(self, "pipeline")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.ExtraFiles = []*os.File{lockFile} // fd 3 in child
+			cmd.Env = append(os.Environ(), "PIPELINE_LOCK_FD=3")
+			if err := cmd.Run(); err != nil {
+				a.Logger.Error("triggered pipeline failed", "error", err)
+			} else {
+				a.Logger.Info("triggered pipeline completed")
+			}
+		}()
+
+		http.Redirect(w, r, "/admin/builds?triggered=1", http.StatusSeeOther)
 	}
 }
 

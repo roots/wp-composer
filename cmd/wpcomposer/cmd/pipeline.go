@@ -3,12 +3,73 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
+	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/roots/wp-composer/internal/deploy"
 	"github.com/spf13/cobra"
 )
+
+const pipelineLockPath = "storage/pipeline.lock"
+
+// pipelineLockFile holds the lock file reference for the lifetime of the process,
+// preventing the GC finalizer from closing the fd and releasing the lock.
+var pipelineLockFile *os.File
+
+// acquirePipelineLock ensures only one pipeline runs at a time.
+func acquirePipelineLock() error {
+	return acquireLock(pipelineLockPath)
+}
+
+// acquireLock acquires an exclusive file lock at lockPath. If PIPELINE_LOCK_FD is
+// set, the lock is expected to have been inherited from the parent process via fd
+// passing; the inherited fd is validated for both inode identity and lock ownership.
+func acquireLock(lockPath string) error {
+	if v := os.Getenv("PIPELINE_LOCK_FD"); v != "" {
+		fd, err := strconv.Atoi(v)
+		if err != nil {
+			return fmt.Errorf("invalid PIPELINE_LOCK_FD: %w", err)
+		}
+		pipelineLockFile = os.NewFile(uintptr(fd), lockPath)
+		if pipelineLockFile == nil {
+			return fmt.Errorf("PIPELINE_LOCK_FD=%d: invalid file descriptor", fd)
+		}
+
+		// Verify the inherited fd points to the actual lock file (inode match).
+		var fdStat, pathStat syscall.Stat_t
+		if err := syscall.Fstat(fd, &fdStat); err != nil {
+			return fmt.Errorf("PIPELINE_LOCK_FD=%d: fstat failed: %w", fd, err)
+		}
+		if err := syscall.Stat(lockPath, &pathStat); err != nil {
+			return fmt.Errorf("pipeline lock stat: %w", err)
+		}
+		if fdStat.Dev != pathStat.Dev || fdStat.Ino != pathStat.Ino {
+			return fmt.Errorf("PIPELINE_LOCK_FD=%d does not refer to %s", fd, lockPath)
+		}
+
+		// Verify this fd actually holds the lock. Re-locking our own fd is a
+		// no-op in flock, so LOCK_EX|LOCK_NB succeeds if we hold it, and fails
+		// with EWOULDBLOCK if a different open file description holds it.
+		if err := syscall.Flock(fd, syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+			return fmt.Errorf("PIPELINE_LOCK_FD=%d does not hold the pipeline lock", fd)
+		}
+		return nil
+	}
+
+	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		return fmt.Errorf("pipeline lock: %w", err)
+	}
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		_ = f.Close()
+		return fmt.Errorf("pipeline already running (could not acquire %s)", lockPath)
+	}
+	pipelineLockFile = f
+	return nil
+}
 
 var pipelineCmd = &cobra.Command{
 	Use:   "pipeline",
@@ -17,6 +78,13 @@ var pipelineCmd = &cobra.Command{
 }
 
 func runPipeline(cmd *cobra.Command, args []string) error {
+	// Acquire a system-wide file lock so only one pipeline runs at a time.
+	// When triggered from the admin UI, the parent process passes the already-locked
+	// fd via PIPELINE_LOCK_FD so the lock transfers atomically with no TOCTOU gap.
+	if err := acquirePipelineLock(); err != nil {
+		return err
+	}
+
 	skipDiscover, _ := cmd.Flags().GetBool("skip-discover")
 	skipDeploy, _ := cmd.Flags().GetBool("skip-deploy")
 	discoverSource, _ := cmd.Flags().GetString("discover-source")

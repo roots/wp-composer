@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 //go:embed templates/*.html
@@ -24,6 +25,8 @@ var funcMap = template.FuncMap{
 	"paginatePartial":   paginatePartialURL,
 	"adminPaginate":     adminPaginateURL,
 	"jsonLD":            jsonLD,
+	"formatCST":         formatCST,
+	"timeAgo":           timeAgo,
 }
 
 type templateSet struct {
@@ -188,4 +191,52 @@ func jsonLD(data any) template.HTML {
 		return ""
 	}
 	return template.HTML(`<script type="application/ld+json">` + string(b) + `</script>`)
+}
+
+var cst = func() *time.Location {
+	loc, err := time.LoadLocation("America/Chicago")
+	if err != nil {
+		return time.FixedZone("CST", -6*60*60)
+	}
+	return loc
+}()
+
+// formatCST converts an RFC3339 string to "Jan 2, 3:04 PM" in America/Chicago.
+func formatCST(raw string) string {
+	t, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return raw
+	}
+	return t.In(cst).Format("Jan 2, 3:04 PM")
+}
+
+// timeAgo returns a human-readable relative time like "23 minutes ago".
+func timeAgo(raw string) string {
+	t, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return raw
+	}
+	d := time.Since(t)
+	switch {
+	case d < time.Minute:
+		return "just now"
+	case d < time.Hour:
+		m := int(d.Minutes())
+		if m == 1 {
+			return "1 minute ago"
+		}
+		return fmt.Sprintf("%d minutes ago", m)
+	case d < 24*time.Hour:
+		h := int(d.Hours())
+		if h == 1 {
+			return "1 hour ago"
+		}
+		return fmt.Sprintf("%d hours ago", h)
+	default:
+		days := int(d.Hours() / 24)
+		if days == 1 {
+			return "1 day ago"
+		}
+		return fmt.Sprintf("%d days ago", days)
+	}
 }

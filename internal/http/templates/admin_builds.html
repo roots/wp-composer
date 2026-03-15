@@ -1,7 +1,17 @@
 {{template "admin_layout" .}}
 {{define "title"}}Builds{{end}}
 {{define "content"}}
-<h1 class="text-xl font-bold mb-6">Build History</h1>
+<div class="flex items-center justify-between mb-6">
+<div>
+<h1 class="text-xl font-bold">Build History</h1>
+{{if .LastBuildStartedAt}}<p class="text-sm text-gray-500 mt-1">Last build: {{timeAgo .LastBuildStartedAt}}</p>{{end}}
+</div>
+<form method="POST" action="/admin/builds/trigger">
+<button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">Run Build Now</button>
+</form>
+</div>
+{{if .Triggered}}<div class="mb-4 px-4 py-3 text-sm bg-blue-50 text-blue-700 rounded-lg border border-blue-200">Pipeline triggered. It may take a few minutes to complete.</div>{{end}}
+{{if .Error}}<div class="mb-4 px-4 py-3 text-sm bg-red-50 text-red-700 rounded-lg border border-red-200">{{.Error}}</div>{{end}}
 {{if not .Builds}}
 <p class="text-gray-500">No builds found.</p>
 {{else}}
@@ -22,7 +32,7 @@
 {{range .Builds}}
 <tr class="border-t border-gray-100 hover:bg-gray-50">
 <td class="px-4 py-2 font-mono text-xs">{{.ID}}</td>
-<td class="px-4 py-2 text-xs text-gray-500">{{.StartedAt}}</td>
+<td class="px-4 py-2 text-xs text-gray-500" title="{{.StartedAt}}">{{formatCST .StartedAt}}</td>
 <td class="px-4 py-2 text-right">{{.PackagesTotal}}</td>
 <td class="px-4 py-2 text-right">{{.PackagesChanged}}</td>
 <td class="px-4 py-2 text-right">{{.ArtifactCount}}</td>
