@@ -25,9 +25,9 @@ func secondsPtrSince(start time.Time) *int {
 	return &v
 }
 
-func syncToR2Timed(cmd *cobra.Command, buildDir, buildID, previousBuildID string) error {
+func syncToR2Timed(cmd *cobra.Command, buildDir, buildID, previousBuildDir string) error {
 	started := time.Now()
-	err := deploy.SyncToR2(cmd.Context(), application.Config.R2, buildDir, buildID, previousBuildID, application.Logger)
+	err := deploy.SyncToR2(cmd.Context(), application.Config.R2, buildDir, buildID, previousBuildDir, application.Logger)
 	deployR2SyncSeconds = secondsPtrSince(started)
 	if err != nil {
 		return fmt.Errorf("R2 sync failed: %w", err)
@@ -42,7 +42,7 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 	repoDir := filepath.Join("storage", "repository")
 	cleanup, _ := cmd.Flags().GetBool("cleanup")
 	toR2, _ := cmd.Flags().GetBool("to-r2")
-	previousBuildID, _ := deploy.CurrentBuildID(repoDir)
+	previousBuildDir := previousBuildDirFor(repoDir)
 
 	r2Cleanup, _ := cmd.Flags().GetBool("r2-cleanup")
 	retainCount, _ := cmd.Flags().GetInt("retain")
@@ -99,7 +99,7 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 
 		// Sync to R2 first, then promote locally
 		if toR2 || application.Config.R2.Enabled {
-			if err := syncToR2Timed(cmd, buildDir, target, previousBuildID); err != nil {
+			if err := syncToR2Timed(cmd, buildDir, target, previousBuildDir); err != nil {
 				return err
 			}
 		}
@@ -130,7 +130,7 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 
 	// Sync to R2 first, then promote locally
 	if toR2 || application.Config.R2.Enabled {
-		if err := syncToR2Timed(cmd, buildDir, buildID, previousBuildID); err != nil {
+		if err := syncToR2Timed(cmd, buildDir, buildID, previousBuildDir); err != nil {
 			return err
 		}
 	}
@@ -140,6 +140,25 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// previousBuildDirFor returns the build directory for the currently promoted
+// build, but only if that build was previously synced to R2 (has r2_synced_at).
+// Returns "" if no build is promoted or the promoted build was never R2-synced.
+// This prevents skipping shared p/ uploads for builds that only exist locally.
+func previousBuildDirFor(repoDir string) string {
+	id, _ := deploy.CurrentBuildID(repoDir)
+	if id == "" {
+		return ""
+	}
+	var synced *string
+	err := application.DB.QueryRow(
+		`SELECT r2_synced_at FROM builds WHERE id = ?`, id,
+	).Scan(&synced)
+	if err != nil || synced == nil {
+		return ""
+	}
+	return deploy.BuildDirFromID(repoDir, id)
 }
 
 func recordR2Sync(cmd *cobra.Command, buildID string) {

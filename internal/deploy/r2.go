@@ -45,19 +45,21 @@ type buildFile struct {
 	data    []byte
 }
 
-// SyncToR2 uploads all files in a build directory to R2 under a versioned
-// release prefix (releases/<buildID>/). When previousBuildID is non-empty,
-// content-addressed p/ files that exist in both builds are copied within R2
-// instead of re-uploaded. After all release files are uploaded, it rewrites
-// the root packages.json to point at the new prefix — the atomic pointer swap
-// that makes the new release live.
-func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previousBuildID string, logger *slog.Logger) error {
+// isSharedFile returns true for content-addressed p/ files that belong in the
+// shared top-level prefix rather than under a per-release prefix.
+func isSharedFile(relPath string) bool {
+	return strings.HasPrefix(relPath, "p/") && strings.Contains(relPath, "$")
+}
+
+// SyncToR2 uploads build files to R2. Content-addressed p/ files (containing $)
+// are stored once in a shared top-level prefix. When previousBuildDir is non-empty,
+// shared files that also exist in the previous build are skipped (they're already
+// on R2). Per-release files (p2/, packages.json, manifest.json) go under
+// releases/<buildID>/. After all files are uploaded, the root packages.json is
+// rewritten to point at the new release — the atomic pointer swap.
+func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previousBuildDir string, logger *slog.Logger) error {
 	client := newS3Client(cfg)
 	releasePrefix := "releases/" + buildID + "/"
-	previousPrefix := ""
-	if previousBuildID != "" {
-		previousPrefix = "releases/" + previousBuildID + "/"
-	}
 
 	// Collect file paths only (not data) to avoid loading everything into memory.
 	var filePaths []string
@@ -76,6 +78,21 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 		return fmt.Errorf("walking build files: %w", err)
 	}
 
+	// Check if the current R2 root already uses the shared p/ prefix layout.
+	// If not (first deploy after upgrade from old release-prefixed layout),
+	// we must upload all shared files — they don't exist at the top level yet.
+	previousShared := collectSharedFiles(previousBuildDir)
+	if len(previousShared) > 0 {
+		live, err := fetchLiveRelease(ctx, client, cfg.Bucket)
+		if err != nil {
+			return fmt.Errorf("checking R2 layout: %w", err)
+		}
+		if !live.hasSharedPrefix {
+			logger.Info("R2 sync: shared p/ prefix not yet on R2, uploading all shared files")
+			previousShared = nil
+		}
+	}
+
 	sortBuildFiles2(filePaths)
 	total := len(filePaths)
 
@@ -85,39 +102,46 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 		return fmt.Errorf("R2 sync: reading packages.json: %w", err)
 	}
 
-	// Upload all files under the release prefix (parallel, streaming from disk).
-	var uploaded, copied atomic.Int64
+	// Upload files (parallel, streaming from disk).
+	// Shared p/ files go to the top-level prefix; everything else under releases/<buildID>/.
+	var uploaded, skipped atomic.Int64
 	g, gCtx := errgroup.WithContext(ctx)
 	g.SetLimit(50)
 
 	for _, relPath := range filePaths {
 		relPath := relPath
 		g.Go(func() error {
-			key := releasePrefix + relPath
-
-			// For content-addressed p/ files, try CopyObject from previous release.
-			if previousPrefix != "" && strings.HasPrefix(relPath, "p/") && strings.Contains(relPath, "$") {
-				srcKey := previousPrefix + relPath
-				if err := copyObjectWithRetry(gCtx, client, cfg.Bucket, srcKey, key, logger); err == nil {
-					n := copied.Add(1)
+			if isSharedFile(relPath) {
+				// Already on R2 from a previous deploy — skip entirely.
+				if previousShared[relPath] {
+					n := skipped.Add(1)
 					if (n+uploaded.Load())%500 == 0 {
-						logger.Info("R2 upload progress", "uploaded", uploaded.Load(), "copied", n, "total", total)
+						logger.Info("R2 upload progress", "uploaded", uploaded.Load(), "skipped", n, "total", total)
 					}
 					return nil
 				}
-			}
-
-			// Read file from disk on demand.
-			data, err := os.ReadFile(filepath.Join(buildDir, relPath))
-			if err != nil {
-				return fmt.Errorf("reading %s: %w", relPath, err)
-			}
-			if err := putObjectWithRetry(gCtx, client, cfg.Bucket, key, data, logger); err != nil {
-				return fmt.Errorf("R2 sync: %w", err)
+				// New shared file — upload to top-level prefix.
+				data, err := os.ReadFile(filepath.Join(buildDir, relPath))
+				if err != nil {
+					return fmt.Errorf("reading %s: %w", relPath, err)
+				}
+				if err := putObjectWithRetry(gCtx, client, cfg.Bucket, relPath, data, logger); err != nil {
+					return fmt.Errorf("R2 sync: %w", err)
+				}
+			} else {
+				// Per-release file — upload under release prefix.
+				key := releasePrefix + relPath
+				data, err := os.ReadFile(filepath.Join(buildDir, relPath))
+				if err != nil {
+					return fmt.Errorf("reading %s: %w", relPath, err)
+				}
+				if err := putObjectWithRetry(gCtx, client, cfg.Bucket, key, data, logger); err != nil {
+					return fmt.Errorf("R2 sync: %w", err)
+				}
 			}
 			n := uploaded.Add(1)
-			if (n+copied.Load())%500 == 0 {
-				logger.Info("R2 upload progress", "uploaded", n, "copied", copied.Load(), "total", total)
+			if (n+skipped.Load())%500 == 0 {
+				logger.Info("R2 upload progress", "uploaded", n, "skipped", skipped.Load(), "total", total)
 			}
 			return nil
 		})
@@ -136,8 +160,32 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 		return fmt.Errorf("R2 sync (root packages.json): %w", err)
 	}
 
-	logger.Info("R2 sync complete", "uploaded", uploaded.Load(), "copied", copied.Load(), "release", releasePrefix)
+	logger.Info("R2 sync complete", "uploaded", uploaded.Load(), "skipped", skipped.Load(), "release", releasePrefix)
 	return nil
+}
+
+// collectSharedFiles walks a build directory and returns the set of shared
+// (content-addressed) p/ file relative paths. Returns nil if dir is empty or unreadable.
+func collectSharedFiles(buildDir string) map[string]bool {
+	if buildDir == "" {
+		return nil
+	}
+	shared := make(map[string]bool)
+	_ = filepath.Walk(buildDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return err
+		}
+		rel, err := filepath.Rel(buildDir, path)
+		if err != nil {
+			return nil
+		}
+		rel = strings.ReplaceAll(rel, string(os.PathSeparator), "/")
+		if isSharedFile(rel) {
+			shared[rel] = true
+		}
+		return nil
+	})
+	return shared
 }
 
 // sortBuildFiles2 sorts relative paths so index files come last.
@@ -147,28 +195,19 @@ func sortBuildFiles2(paths []string) {
 	})
 }
 
-// RewritePackagesJSON prefixes URL templates and provider-includes keys with
-// the given release prefix so all paths point into the versioned release dir.
+// RewritePackagesJSON prefixes the metadata-url with the release prefix so p2/
+// paths point into the versioned release dir. providers-url and provider-includes
+// are left unprefixed because p/ files live in the shared content-addressed store.
 func RewritePackagesJSON(data []byte, releasePrefix string) ([]byte, error) {
 	var pkg map[string]any
 	if err := json.Unmarshal(data, &pkg); err != nil {
 		return nil, fmt.Errorf("parsing packages.json: %w", err)
 	}
 
-	// Prefix metadata-url and providers-url.
-	for _, key := range []string{"metadata-url", "providers-url"} {
-		if v, ok := pkg[key].(string); ok {
-			pkg[key] = "/" + releasePrefix + strings.TrimPrefix(v, "/")
-		}
-	}
-
-	// Prefix provider-includes keys.
-	if pi, ok := pkg["provider-includes"].(map[string]any); ok {
-		rewritten := make(map[string]any, len(pi))
-		for k, v := range pi {
-			rewritten[releasePrefix+k] = v
-		}
-		pkg["provider-includes"] = rewritten
+	// Only prefix metadata-url (per-release p2/ files).
+	// providers-url and provider-includes point at shared top-level p/ files.
+	if v, ok := pkg["metadata-url"].(string); ok {
+		pkg["metadata-url"] = "/" + releasePrefix + strings.TrimPrefix(v, "/")
 	}
 
 	return deterministicJSON(pkg)
@@ -229,35 +268,6 @@ func putObjectWithRetry(ctx context.Context, client *s3.Client, bucket, key stri
 	return fmt.Errorf("uploading %s after %d attempts: %w", key, r2MaxRetries, lastErr)
 }
 
-// copyObjectWithRetry copies a single object within R2 with exponential backoff retry.
-func copyObjectWithRetry(ctx context.Context, client *s3.Client, bucket, srcKey, dstKey string, logger *slog.Logger) error {
-	copySource := bucket + "/" + srcKey
-	cacheControl := CacheControlForPath(dstKey)
-
-	var lastErr error
-	for attempt := range r2MaxRetries {
-		if attempt > 0 {
-			delay := time.Duration(float64(r2RetryBaseMs)*math.Pow(2, float64(attempt-1))) * time.Millisecond
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(delay):
-			}
-		}
-
-		_, lastErr = client.CopyObject(ctx, &s3.CopyObjectInput{
-			Bucket:       aws.String(bucket),
-			CopySource:   aws.String(copySource),
-			Key:          aws.String(dstKey),
-			CacheControl: aws.String(cacheControl),
-		})
-		if lastErr == nil {
-			return nil
-		}
-	}
-	return fmt.Errorf("copying %s -> %s after %d attempts: %w", srcKey, dstKey, r2MaxRetries, lastErr)
-}
-
 // CleanupR2 removes old release prefixes from R2, keeping the live release,
 // releases within the grace period, and the top N most recent releases.
 // It no longer depends on the local filesystem — all state is read from R2.
@@ -306,7 +316,9 @@ func cleanupR2(ctx context.Context, client r2API, bucket string, graceHours, ret
 				if len(parts) >= 1 && parts[0] != "" {
 					releaseObjects[parts[0]] = append(releaseObjects[parts[0]], key)
 				}
-			} else if key != r2IndexFile {
+			} else if key != r2IndexFile && !isSharedFile(key) {
+				// Shared content-addressed p/ files are not legacy — they're
+				// part of the new layout. Only collect non-shared, non-root files.
 				legacyKeys = append(legacyKeys, key)
 			}
 		}
@@ -421,6 +433,10 @@ type liveReleaseResult struct {
 	// isVersioned is true when the root packages.json uses releases/ URLs.
 	// False means the bucket still uses flat-path layout (pre-versioned deploy).
 	isVersioned bool
+	// hasSharedPrefix is true when providers-url points at the shared top-level p/
+	// prefix (new layout). False means the old layout where p/ files lived under
+	// releases/<id>/p/... — shared files have not been uploaded to the top level yet.
+	hasSharedPrefix bool
 	// exists is true when a root packages.json was found on R2.
 	exists bool
 }
@@ -461,6 +477,14 @@ func fetchLiveRelease(ctx context.Context, client r2API, bucket string) (liveRel
 				result.isVersioned = true
 			}
 		}
+	}
+
+	// Detect whether the root already uses the shared p/ prefix layout.
+	// Old layout: providers-url = "/releases/<id>/p/%package%$%hash%.json"
+	// New layout: providers-url = "/p/%package%$%hash%.json"
+	if pu, ok := pkg["providers-url"].(string); ok {
+		pu = strings.TrimPrefix(pu, "/")
+		result.hasSharedPrefix = !strings.HasPrefix(pu, "releases/")
 	}
 
 	return result, nil

@@ -4,17 +4,22 @@ WP Composer deploys built repository artifacts to Cloudflare R2 for serving via 
 
 ## Versioned Deploy Model
 
-Each deploy uploads all files to an immutable release prefix (`releases/<build-id>/`). The only mutable object in the bucket is the root `packages.json`, which acts as an atomic pointer to the current release.
+Content-addressed `p/` files (containing `$` in the filename) are stored once in a shared top-level prefix and never re-uploaded. Per-release files (`p2/`, `packages.json`, `manifest.json`) go under an immutable release prefix. The only mutable object in the bucket is the root `packages.json`, which acts as an atomic pointer to the current release.
 
 ```
 packages.json                                        ← atomic pointer (only mutable object)
-releases/20260314-150405/packages.json               ← snapshot reference (immutable)
-releases/20260314-150405/manifest.json
-releases/20260314-150405/p/wp-plugin/akismet$abc.json
-releases/20260314-150405/p2/wp-plugin/akismet.json   ← immutable within release
+p/wp-plugin/akismet$abc123.json                      ← shared, uploaded once ever (immutable)
+p/providers-week$def456.json                         ← shared, uploaded once ever (immutable)
+releases/20260314-150405/packages.json               ← per-release snapshot (immutable)
+releases/20260314-150405/manifest.json               ← per-release (immutable)
+releases/20260314-150405/p2/wp-plugin/akismet.json   ← per-release (immutable)
 ```
 
-The root `packages.json` is rewritten on each deploy so that `metadata-url`, `providers-url`, and `provider-includes` keys point into the new release prefix. This single PUT is the atomic switch — clients either see the old release or the new one, never a mix.
+Since ~95% of files are content-addressed and identical across releases, the deploy diffs the current build against the previous build locally and only uploads new shared files. This reduces R2 operations from ~140k to ~2-5k (only new `p/` files + all `p2/` files + indexes), with zero R2 calls for unchanged files.
+
+On the first deploy with this layout (upgrading from the old release-prefixed model, or no previous build), all shared `p/` files are uploaded. The deploy detects this by reading the current root `packages.json` from R2 — if `providers-url` still points into `releases/`, the shared prefix doesn't exist yet and the local diff is bypassed. Subsequent deploys benefit from the local diff immediately.
+
+The root `packages.json` is rewritten on each deploy so that `metadata-url` points into the new release prefix. `providers-url` and `provider-includes` point at the shared top-level `p/` prefix. This single PUT is the atomic switch — clients either see the old release or the new one, never a mix.
 
 ## Prerequisites
 
@@ -63,8 +68,8 @@ Find your account ID in the Cloudflare dashboard under **R2 > Overview**.
 When deploying to R2 (`wpcomposer deploy --to-r2`):
 
 1. Validates the build (packages.json and manifest.json must exist).
-2. Uploads all files under `releases/<build-id>/` with appropriate `Cache-Control` headers. Provider and package files upload first; `packages.json` uploads last within the release prefix. Each upload retries up to 3 times with exponential backoff.
-3. Rewrites `packages.json` URL templates to point at the new release prefix.
+2. Diffs shared `p/` files against the previous build directory to find new content-addressed files. Uploads only new `p/` files to the shared top-level prefix (zero R2 ops for unchanged files). Uploads per-release files (`p2/`, indexes) under `releases/<build-id>/`. Each upload retries up to 3 times with exponential backoff.
+3. Rewrites `packages.json`: `metadata-url` points into the release prefix; `providers-url` and `provider-includes` point at the shared `p/` prefix.
 4. Uploads the rewritten `packages.json` as the root — the atomic switch.
 5. Promotes the local build symlink (for rollback capability).
 
@@ -80,22 +85,15 @@ When using a Cloudflare custom domain on the R2 bucket, cache behavior is contro
 |---|---|---|
 | `packages.json` (root) | `max-age=300` | Atomic pointer, only mutable object |
 | `releases/*` (everything) | `max-age=31536000, immutable` | Entire release prefix is immutable |
-
-Legacy flat-path cases (backward compat during transition):
-
-| Path pattern | Cache-Control | Rationale |
-|---|---|---|
-| `manifest.json` | `max-age=300` | Build metadata |
-| `p/*$hash.json` | `max-age=31536000, immutable` | Content-addressed, never changes |
-| `p2/*.json` | `max-age=300` | No hash in URL, must revalidate |
+| `p/*$hash.json` (shared) | `max-age=31536000, immutable` | Content-addressed, never changes |
 
 ## URL Requirements
 
 The generated root `packages.json` on R2 contains prefixed URLs pointing into the current release:
 
-- `metadata-url`: `/releases/<build-id>/p2/%package%.json`
-- `providers-url`: `/releases/<build-id>/p/%package%$%hash%.json`
-- `provider-includes` keys: `releases/<build-id>/p/providers-*$hash.json`
+- `metadata-url`: `/releases/<build-id>/p2/%package%.json` (per-release)
+- `providers-url`: `/p/%package%$%hash%.json` (shared, not prefixed)
+- `provider-includes` keys: `p/providers-*$hash.json` (shared, not prefixed)
 - `notify-batch`: absolute URL pointing to the **app domain** (not R2, not rewritten)
 
 ## AWS CLI Setup (Manual Operations)
@@ -138,7 +136,7 @@ wpcomposer deploy --cleanup --r2-cleanup
 wpcomposer deploy --cleanup --r2-cleanup --grace-hours 6
 ```
 
-`--r2-cleanup` is required — plain `--cleanup` only removes local build directories. The cleanup reads R2 state directly (no local filesystem dependency), identifies release prefixes, and deletes those outside the keep set. It also deletes legacy flat files (anything not under `releases/` except root `packages.json`).
+`--r2-cleanup` is required — plain `--cleanup` only removes local build directories. The cleanup reads R2 state directly (no local filesystem dependency), identifies release prefixes, and deletes those outside the keep set. It also deletes legacy flat files (anything not under `releases/` except root `packages.json` and shared content-addressed `p/` files). Shared `p/` files are preserved — GC of orphaned shared files is deferred to a future release.
 
 The keep set is: live release (from root `packages.json`) + releases within `--grace-hours` + top `--retain` most recent. The retain count has a hard minimum of 5 — even if `--retain` is set lower, at least 5 recent releases are always preserved.
 

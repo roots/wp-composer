@@ -59,10 +59,11 @@ func (f *fakeR2) DeleteObjects(_ context.Context, input *s3.DeleteObjectsInput, 
 }
 
 // versionedRootJSON builds a root packages.json pointing at the given release.
+// metadata-url is prefixed (per-release p2/); providers-url is unprefixed (shared p/).
 func versionedRootJSON(buildID string) []byte {
 	data, _ := json.Marshal(map[string]any{
 		"metadata-url":  "/releases/" + buildID + "/p2/%package%.json",
-		"providers-url": "/releases/" + buildID + "/p/%package%$%hash%.json",
+		"providers-url": "/p/%package%$%hash%.json",
 	})
 	return data
 }
@@ -72,6 +73,16 @@ func flatRootJSON() []byte {
 	data, _ := json.Marshal(map[string]any{
 		"metadata-url":  "/p2/%package%.json",
 		"providers-url": "/p/%package%$%hash%.json",
+	})
+	return data
+}
+
+// oldLayoutRootJSON builds a root packages.json using the old release-prefixed
+// layout where both metadata-url and providers-url point into releases/.
+func oldLayoutRootJSON(buildID string) []byte {
+	data, _ := json.Marshal(map[string]any{
+		"metadata-url":  "/releases/" + buildID + "/p2/%package%.json",
+		"providers-url": "/releases/" + buildID + "/p/%package%$%hash%.json",
 	})
 	return data
 }
@@ -206,26 +217,26 @@ func TestRewritePackagesJSON(t *testing.T) {
 		t.Fatalf("unmarshal result: %v", err)
 	}
 
-	// Check metadata-url rewritten.
+	// Check metadata-url rewritten (per-release).
 	wantMeta := "/releases/20260314-150405/p2/%package%.json"
 	if got["metadata-url"] != wantMeta {
 		t.Errorf("metadata-url = %q, want %q", got["metadata-url"], wantMeta)
 	}
 
-	// Check providers-url rewritten.
-	wantProv := "/releases/20260314-150405/p/%package%$%hash%.json"
+	// Check providers-url NOT rewritten (shared content-addressed store).
+	wantProv := "/p/%package%$%hash%.json"
 	if got["providers-url"] != wantProv {
 		t.Errorf("providers-url = %q, want %q", got["providers-url"], wantProv)
 	}
 
-	// Check provider-includes keys rewritten.
+	// Check provider-includes keys NOT rewritten (shared content-addressed store).
 	pi, ok := got["provider-includes"].(map[string]any)
 	if !ok {
 		t.Fatal("provider-includes not a map")
 	}
 	for key := range pi {
-		if !strings.HasPrefix(key, "releases/20260314-150405/") {
-			t.Errorf("provider-includes key %q not prefixed", key)
+		if strings.HasPrefix(key, "releases/") {
+			t.Errorf("provider-includes key %q should not be prefixed", key)
 		}
 	}
 	if len(pi) != 2 {
@@ -336,7 +347,8 @@ func TestCleanupSkipsLegacyFilesWhenRootNotVersioned(t *testing.T) {
 }
 
 func TestCleanupDeletesLegacyFilesWhenRootIsVersioned(t *testing.T) {
-	// Root packages.json points at a release prefix — legacy flat files should be cleaned up.
+	// Root packages.json points at a release prefix — legacy flat files should be cleaned up,
+	// but shared content-addressed p/ files should NOT be deleted (they're part of the new layout).
 	liveID := "20260314-150000"
 	fake := &fakeR2{
 		objects: map[string][]byte{
@@ -344,9 +356,10 @@ func TestCleanupDeletesLegacyFilesWhenRootIsVersioned(t *testing.T) {
 			"releases/" + liveID + "/packages.json":       []byte(`{}`),
 			"releases/" + liveID + "/p2/wp-plugin/a.json": []byte(`{}`),
 			// Legacy flat files — should be deleted.
-			"p2/wp-plugin/akismet.json":    []byte(`{}`),
+			"p2/wp-plugin/akismet.json": []byte(`{}`),
+			"manifest.json":            []byte(`{}`),
+			// Shared content-addressed p/ file — should NOT be deleted.
 			"p/wp-plugin/akismet$abc.json": []byte(`{}`),
-			"manifest.json":                []byte(`{}`),
 		},
 	}
 
@@ -354,8 +367,8 @@ func TestCleanupDeletesLegacyFilesWhenRootIsVersioned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cleanupR2: %v", err)
 	}
-	if deleted != 3 {
-		t.Errorf("expected 3 legacy deletions, got %d", deleted)
+	if deleted != 2 {
+		t.Errorf("expected 2 legacy deletions (not shared p/ files), got %d", deleted)
 	}
 
 	// Live release files must NOT be deleted.
@@ -363,5 +376,76 @@ func TestCleanupDeletesLegacyFilesWhenRootIsVersioned(t *testing.T) {
 		if strings.HasPrefix(key, "releases/"+liveID+"/") {
 			t.Errorf("live release file deleted: %s", key)
 		}
+		if strings.HasPrefix(key, "p/") && strings.Contains(key, "$") {
+			t.Errorf("shared content-addressed file deleted: %s", key)
+		}
+	}
+}
+
+func TestFetchLiveReleaseDetectsSharedPrefix(t *testing.T) {
+	tests := []struct {
+		name            string
+		root            []byte
+		wantShared      bool
+		wantIsVersioned bool
+	}{
+		{
+			name:            "new layout (shared p/)",
+			root:            versionedRootJSON("20260314-150000"),
+			wantShared:      true,
+			wantIsVersioned: true,
+		},
+		{
+			name:            "old layout (release-prefixed p/)",
+			root:            oldLayoutRootJSON("20260314-150000"),
+			wantShared:      false,
+			wantIsVersioned: true,
+		},
+		{
+			name:            "flat layout (pre-versioned)",
+			root:            flatRootJSON(),
+			wantShared:      true, // providers-url = /p/... (not releases/), so shared
+			wantIsVersioned: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fake := &fakeR2{objects: map[string][]byte{"packages.json": tt.root}}
+			result, err := fetchLiveRelease(context.Background(), fake, "test-bucket")
+			if err != nil {
+				t.Fatalf("fetchLiveRelease: %v", err)
+			}
+			if result.hasSharedPrefix != tt.wantShared {
+				t.Errorf("hasSharedPrefix = %v, want %v", result.hasSharedPrefix, tt.wantShared)
+			}
+			if result.isVersioned != tt.wantIsVersioned {
+				t.Errorf("isVersioned = %v, want %v", result.isVersioned, tt.wantIsVersioned)
+			}
+		})
+	}
+}
+
+func TestCollectSharedFilesSkipsNonShared(t *testing.T) {
+	dir := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(dir, "p", "wp-plugin"), 0755)
+	_ = os.MkdirAll(filepath.Join(dir, "p2", "wp-plugin"), 0755)
+
+	_ = os.WriteFile(filepath.Join(dir, "p", "wp-plugin", "akismet$abc.json"), []byte(`{}`), 0644)
+	_ = os.WriteFile(filepath.Join(dir, "p2", "wp-plugin", "akismet.json"), []byte(`{}`), 0644)
+	_ = os.WriteFile(filepath.Join(dir, "packages.json"), []byte(`{}`), 0644)
+
+	shared := collectSharedFiles(dir)
+	if len(shared) != 1 {
+		t.Fatalf("expected 1 shared file, got %d: %v", len(shared), shared)
+	}
+	if !shared["p/wp-plugin/akismet$abc.json"] {
+		t.Errorf("expected p/wp-plugin/akismet$abc.json in shared set")
+	}
+}
+
+func TestCollectSharedFilesEmptyDir(t *testing.T) {
+	shared := collectSharedFiles("")
+	if shared != nil {
+		t.Errorf("expected nil for empty dir, got %v", shared)
 	}
 }
