@@ -6,3 +6,4 @@ storage/
 *.db-wal
 *.db-shm
 .env
+benchmarks/results/
