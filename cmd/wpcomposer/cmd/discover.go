@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync/atomic"
 
 	"github.com/spf13/cobra"
@@ -119,14 +120,23 @@ func discoverFromSVN(ctx context.Context, pkgType string, limit int) error {
 	type svnSource struct {
 		url     string
 		pkgType string
+		metaKey string // site_meta key for storing last-seen SVN revision
 	}
 
 	var sources []svnSource
 	if pkgType == "all" || pkgType == "plugin" {
-		sources = append(sources, svnSource{url: "https://plugins.svn.wordpress.org/", pkgType: "plugin"})
+		sources = append(sources, svnSource{
+			url:     "https://plugins.svn.wordpress.org/",
+			pkgType: "plugin",
+			metaKey: "svn_revision_plugin",
+		})
 	}
 	if pkgType == "all" || pkgType == "theme" {
-		sources = append(sources, svnSource{url: "https://themes.svn.wordpress.org/", pkgType: "theme"})
+		sources = append(sources, svnSource{
+			url:     "https://themes.svn.wordpress.org/",
+			pkgType: "theme",
+			metaKey: "svn_revision_theme",
+		})
 	}
 
 	var totalCount, totalFailed int
@@ -153,7 +163,7 @@ func discoverFromSVN(ctx context.Context, pkgType string, limit int) error {
 			batch = batch[:0]
 		}
 
-		err := client.ParseSVNListing(ctx, src.url, func(entry wporg.SVNEntry) error {
+		result, err := client.ParseSVNListing(ctx, src.url, func(entry wporg.SVNEntry) error {
 			if limit > 0 && totalCount >= limit {
 				return errLimitReached
 			}
@@ -178,6 +188,16 @@ func discoverFromSVN(ctx context.Context, pkgType string, limit int) error {
 			return fmt.Errorf("SVN discovery for %s: %w", src.pkgType, err)
 		}
 
+		// Use SVN revision log to find which packages changed since last run.
+		// Skip when --limit is set (partial/test runs shouldn't mutate global
+		// change state or trigger large update workloads).
+		if limit == 0 && result != nil && result.Revision > 0 {
+			if markErr := markChangedFromSVNLog(ctx, client, src, result.Revision); markErr != nil {
+				application.Logger.Warn("SVN changelog fetch failed, skipping change detection",
+					"type", src.pkgType, "error", markErr)
+			}
+		}
+
 		totalFailed += failed
 		application.Logger.Info("SVN discovery done", "type", src.pkgType, "succeeded", count, "failed", failed)
 
@@ -193,6 +213,58 @@ func discoverFromSVN(ctx context.Context, pkgType string, limit int) error {
 	if totalFailed > 0 {
 		return fmt.Errorf("SVN discovery completed with %d failures", totalFailed)
 	}
+	return nil
+}
+
+// markChangedFromSVNLog fetches the SVN log between the last-seen revision and
+// the current revision, extracts which slugs changed, and marks them in the DB
+// so they'll be picked up by the update step.
+func markChangedFromSVNLog(ctx context.Context, client *wporg.Client, src struct {
+	url     string
+	pkgType string
+	metaKey string
+}, currentRev int64) error {
+	lastRevStr, err := packages.GetMeta(ctx, application.DB, src.metaKey)
+	if err != nil {
+		return fmt.Errorf("reading last revision: %w", err)
+	}
+
+	var lastRev int64
+	if lastRevStr != "" {
+		var parseErr error
+		lastRev, parseErr = strconv.ParseInt(lastRevStr, 10, 64)
+		if parseErr != nil {
+			return fmt.Errorf("malformed stored revision %q for %s: %w", lastRevStr, src.metaKey, parseErr)
+		}
+	}
+
+	if lastRev > 0 && lastRev < currentRev {
+		application.Logger.Info("fetching SVN changelog",
+			"type", src.pkgType, "from_rev", lastRev, "to_rev", currentRev)
+
+		slugs, err := client.FetchSVNChangedSlugs(ctx, src.url, lastRev+1, currentRev)
+		if err != nil {
+			return err
+		}
+
+		if len(slugs) > 0 {
+			affected, err := packages.MarkPackagesChanged(ctx, application.DB, src.pkgType, slugs)
+			if err != nil {
+				return fmt.Errorf("marking changed packages: %w", err)
+			}
+			application.Logger.Info("marked changed packages from SVN log",
+				"type", src.pkgType, "slugs_in_log", len(slugs), "packages_marked", affected)
+		}
+	} else if lastRev == 0 {
+		application.Logger.Info("no previous SVN revision stored, skipping changelog (first run)",
+			"type", src.pkgType, "current_rev", currentRev)
+	}
+
+	// Store current revision for next run.
+	if err := packages.SetMeta(ctx, application.DB, src.metaKey, strconv.FormatInt(currentRev, 10)); err != nil {
+		return fmt.Errorf("storing revision: %w", err)
+	}
+
 	return nil
 }
 
