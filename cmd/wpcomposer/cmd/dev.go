@@ -128,6 +128,9 @@ func runDev(cmd *cobra.Command, args []string) error {
 	_ = packages.FinishSyncRun(ctx, application.DB, syncRun.RowID, "completed", map[string]any{
 		"updated": succeeded.Load(), "failed": failed.Load(),
 	})
+	if err := packages.RefreshSiteStats(ctx, application.DB); err != nil {
+		return fmt.Errorf("refreshing package stats: %w", err)
+	}
 	application.Logger.Info("dev: metadata fetched", "updated", succeeded.Load(), "failed", failed.Load())
 
 	// 5. Build

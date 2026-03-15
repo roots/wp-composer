@@ -102,6 +102,9 @@ func discoverFromConfig(ctx context.Context, pkgType string, limit, concurrency 
 	}
 
 	application.Logger.Info("discovery complete", "succeeded", succeeded.Load(), "failed", failed.Load())
+	if err := packages.RefreshSiteStats(ctx, application.DB); err != nil {
+		return fmt.Errorf("refreshing package stats: %w", err)
+	}
 	if failed.Load() > 0 {
 		return fmt.Errorf("discovery completed with %d failures", failed.Load())
 	}
@@ -181,6 +184,10 @@ func discoverFromSVN(ctx context.Context, pkgType string, limit int) error {
 		if limit > 0 && totalCount >= limit {
 			break
 		}
+	}
+
+	if err := packages.RefreshSiteStats(ctx, application.DB); err != nil {
+		return fmt.Errorf("refreshing package stats: %w", err)
 	}
 
 	if totalFailed > 0 {

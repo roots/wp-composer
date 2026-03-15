@@ -46,14 +46,23 @@ func setupTestDB(t *testing.T) *sql.DB {
 			updated_at TEXT NOT NULL,
 			UNIQUE(type, name)
 		);
-		CREATE TABLE sync_runs (
-			id INTEGER PRIMARY KEY,
-			started_at TEXT NOT NULL,
-			finished_at TEXT,
-			status TEXT NOT NULL,
-			meta_json TEXT NOT NULL DEFAULT '{}'
-		);
-	`)
+			CREATE TABLE sync_runs (
+				id INTEGER PRIMARY KEY,
+				started_at TEXT NOT NULL,
+				finished_at TEXT,
+				status TEXT NOT NULL,
+				meta_json TEXT NOT NULL DEFAULT '{}'
+			);
+			CREATE TABLE package_stats (
+				id INTEGER PRIMARY KEY CHECK (id = 1),
+				active_plugins INTEGER NOT NULL DEFAULT 0,
+				active_themes INTEGER NOT NULL DEFAULT 0,
+				plugin_installs INTEGER NOT NULL DEFAULT 0,
+				theme_installs INTEGER NOT NULL DEFAULT 0,
+				installs_30d INTEGER NOT NULL DEFAULT 0,
+				updated_at TEXT NOT NULL DEFAULT ''
+			);
+		`)
 	if err != nil {
 		t.Fatalf("creating tables: %v", err)
 	}
@@ -169,6 +178,89 @@ func TestDeactivatePackage(t *testing.T) {
 	_ = database.QueryRow("SELECT is_active FROM packages WHERE id=?", id).Scan(&isActive)
 	if isActive != 0 {
 		t.Error("package should be inactive")
+	}
+}
+
+func TestRefreshSiteStats(t *testing.T) {
+	database := setupTestDB(t)
+	ctx := context.Background()
+
+	cur := "1.0.0"
+	p1 := &Package{
+		Type:                    "plugin",
+		Name:                    "plugin-one",
+		VersionsJSON:            "{}",
+		CurrentVersion:          &cur,
+		IsActive:                true,
+		WpComposerInstallsTotal: 100,
+		WpComposerInstalls30d:   25,
+	}
+	p2 := &Package{
+		Type:                    "plugin",
+		Name:                    "plugin-two",
+		VersionsJSON:            "{}",
+		CurrentVersion:          &cur,
+		IsActive:                false,
+		WpComposerInstallsTotal: 999,
+		WpComposerInstalls30d:   999,
+	}
+	t1 := &Package{
+		Type:                    "theme",
+		Name:                    "theme-one",
+		VersionsJSON:            "{}",
+		CurrentVersion:          &cur,
+		IsActive:                true,
+		WpComposerInstallsTotal: 50,
+		WpComposerInstalls30d:   5,
+	}
+
+	if err := UpsertPackage(ctx, database, p1); err != nil {
+		t.Fatalf("upserting plugin-one: %v", err)
+	}
+	if err := UpsertPackage(ctx, database, p2); err != nil {
+		t.Fatalf("upserting plugin-two: %v", err)
+	}
+	if err := UpsertPackage(ctx, database, t1); err != nil {
+		t.Fatalf("upserting theme-one: %v", err)
+	}
+
+	// Install counters are maintained by telemetry aggregation, not package upserts.
+	if _, err := database.Exec(`UPDATE packages SET wp_composer_installs_total = 100, wp_composer_installs_30d = 25 WHERE name = 'plugin-one'`); err != nil {
+		t.Fatalf("updating plugin-one counters: %v", err)
+	}
+	if _, err := database.Exec(`UPDATE packages SET wp_composer_installs_total = 999, wp_composer_installs_30d = 999 WHERE name = 'plugin-two'`); err != nil {
+		t.Fatalf("updating plugin-two counters: %v", err)
+	}
+	if _, err := database.Exec(`UPDATE packages SET wp_composer_installs_total = 50, wp_composer_installs_30d = 5 WHERE name = 'theme-one'`); err != nil {
+		t.Fatalf("updating theme-one counters: %v", err)
+	}
+
+	if err := RefreshSiteStats(ctx, database); err != nil {
+		t.Fatalf("refreshing site stats: %v", err)
+	}
+
+	var activePlugins, activeThemes, pluginInstalls, themeInstalls, installs30d int
+	err := database.QueryRow(`SELECT active_plugins, active_themes, plugin_installs, theme_installs, installs_30d FROM package_stats WHERE id = 1`).Scan(
+		&activePlugins, &activeThemes, &pluginInstalls, &themeInstalls, &installs30d,
+	)
+	if err != nil {
+		t.Fatalf("querying package_stats: %v", err)
+	}
+
+	if activePlugins != 1 {
+		t.Errorf("active_plugins = %d, want 1", activePlugins)
+	}
+	if activeThemes != 1 {
+		t.Errorf("active_themes = %d, want 1", activeThemes)
+	}
+	if pluginInstalls != 100 {
+		t.Errorf("plugin_installs = %d, want 100", pluginInstalls)
+	}
+	if themeInstalls != 50 {
+		t.Errorf("theme_installs = %d, want 50", themeInstalls)
+	}
+	if installs30d != 30 {
+		t.Errorf("installs_30d = %d, want 30", installs30d)
 	}
 }
 
