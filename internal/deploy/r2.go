@@ -55,9 +55,10 @@ func isSharedFile(relPath string) bool {
 // are stored once in a shared top-level prefix. When previousBuildDir is non-empty,
 // shared files that also exist in the previous build are skipped (they're already
 // on R2). Per-release files (p2/, packages.json, manifest.json) go under
-// releases/<buildID>/. After all files are uploaded, the root packages.json is
-// rewritten to point at the new release — the atomic pointer swap.
-func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previousBuildDir string, logger *slog.Logger) error {
+// releases/<buildID>/. Unchanged per-release files are copied server-side from
+// the previous release prefix. After all files are uploaded, the root packages.json
+// is rewritten to point at the new release — the atomic pointer swap.
+func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previousBuildID, previousBuildDir string, logger *slog.Logger) error {
 	client := newS3Client(cfg)
 	releasePrefix := "releases/" + buildID + "/"
 
@@ -103,8 +104,13 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 	}
 
 	// Upload files (parallel, streaming from disk).
-	// Shared p/ files go to the top-level prefix; everything else under releases/<buildID>/.
-	var uploaded, skipped atomic.Int64
+	// Shared p/ files go to the top-level prefix; per-release files under releases/<buildID>/.
+	// Unchanged per-release files are copied server-side from the previous release.
+	previousReleasePrefix := ""
+	if previousBuildID != "" {
+		previousReleasePrefix = "releases/" + previousBuildID + "/"
+	}
+	var uploaded, skipped, copied atomic.Int64
 	g, gCtx := errgroup.WithContext(ctx)
 	g.SetLimit(50)
 
@@ -115,8 +121,8 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 				// Already on R2 from a previous deploy — skip entirely.
 				if previousShared[relPath] {
 					n := skipped.Add(1)
-					if (n+uploaded.Load())%500 == 0 {
-						logger.Info("R2 upload progress", "uploaded", uploaded.Load(), "skipped", n, "total", total)
+					if (n+uploaded.Load()+copied.Load())%500 == 0 {
+						logger.Info("R2 upload progress", "uploaded", uploaded.Load(), "copied", copied.Load(), "skipped", n, "total", total)
 					}
 					return nil
 				}
@@ -129,8 +135,20 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 					return fmt.Errorf("R2 sync: %w", err)
 				}
 			} else {
-				// Per-release file — upload under release prefix.
 				key := releasePrefix + relPath
+				// If unchanged from previous build, copy server-side (no data transfer).
+				if previousReleasePrefix != "" && fileUnchanged(previousBuildDir, buildDir, relPath) {
+					srcKey := previousReleasePrefix + relPath
+					if err := copyObjectWithRetry(gCtx, client, cfg.Bucket, srcKey, key, logger); err == nil {
+						n := copied.Add(1)
+						if (n+uploaded.Load()+skipped.Load())%500 == 0 {
+							logger.Info("R2 upload progress", "uploaded", uploaded.Load(), "copied", n, "skipped", skipped.Load(), "total", total)
+						}
+						return nil
+					}
+					// CopyObject failed (source missing?) — fall through to upload.
+				}
+				// Per-release file — upload from disk.
 				data, err := os.ReadFile(filepath.Join(buildDir, relPath))
 				if err != nil {
 					return fmt.Errorf("reading %s: %w", relPath, err)
@@ -140,8 +158,8 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 				}
 			}
 			n := uploaded.Add(1)
-			if (n+skipped.Load())%500 == 0 {
-				logger.Info("R2 upload progress", "uploaded", n, "skipped", skipped.Load(), "total", total)
+			if (n+skipped.Load()+copied.Load())%500 == 0 {
+				logger.Info("R2 upload progress", "uploaded", n, "copied", copied.Load(), "skipped", skipped.Load(), "total", total)
 			}
 			return nil
 		})
@@ -160,7 +178,7 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 		return fmt.Errorf("R2 sync (root packages.json): %w", err)
 	}
 
-	logger.Info("R2 sync complete", "uploaded", uploaded.Load(), "skipped", skipped.Load(), "release", releasePrefix)
+	logger.Info("R2 sync complete", "uploaded", uploaded.Load(), "copied", copied.Load(), "skipped", skipped.Load(), "release", releasePrefix)
 	return nil
 }
 
@@ -266,6 +284,54 @@ func putObjectWithRetry(ctx context.Context, client *s3.Client, bucket, key stri
 		}
 	}
 	return fmt.Errorf("uploading %s after %d attempts: %w", key, r2MaxRetries, lastErr)
+}
+
+// copyObjectWithRetry copies a single object within R2 with exponential backoff retry.
+func copyObjectWithRetry(ctx context.Context, client *s3.Client, bucket, srcKey, dstKey string, logger *slog.Logger) error {
+	copySource := bucket + "/" + srcKey
+	cacheControl := CacheControlForPath(dstKey)
+
+	var lastErr error
+	for attempt := range r2MaxRetries {
+		if attempt > 0 {
+			delay := time.Duration(float64(r2RetryBaseMs)*math.Pow(2, float64(attempt-1))) * time.Millisecond
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(delay):
+			}
+		}
+
+		_, lastErr = client.CopyObject(ctx, &s3.CopyObjectInput{
+			Bucket:       aws.String(bucket),
+			CopySource:   aws.String(copySource),
+			Key:          aws.String(dstKey),
+			CacheControl: aws.String(cacheControl),
+		})
+		if lastErr == nil {
+			return nil
+		}
+	}
+	return fmt.Errorf("copying %s -> %s after %d attempts: %w", srcKey, dstKey, r2MaxRetries, lastErr)
+}
+
+// fileUnchanged returns true if relPath exists in both directories with identical content.
+func fileUnchanged(prevDir, curDir, relPath string) bool {
+	if prevDir == "" {
+		return false
+	}
+	prevPath := filepath.Join(prevDir, filepath.FromSlash(relPath))
+	curPath := filepath.Join(curDir, filepath.FromSlash(relPath))
+
+	prevData, err := os.ReadFile(prevPath)
+	if err != nil {
+		return false
+	}
+	curData, err := os.ReadFile(curPath)
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(prevData, curData)
 }
 
 // CleanupR2 removes old release prefixes from R2, keeping the live release,
