@@ -128,11 +128,11 @@ type svnLogReport struct {
 }
 
 type svnLogItem struct {
-	Revision     int64    `xml:"version-name"`
-	Date         string   `xml:"date"`
-	AddedPaths   []string `xml:"added-path"`
+	Revision      int64    `xml:"version-name"`
+	Date          string   `xml:"date"`
+	AddedPaths    []string `xml:"added-path"`
 	ModifiedPaths []string `xml:"modified-path"`
-	DeletedPaths []string `xml:"deleted-path"`
+	DeletedPaths  []string `xml:"deleted-path"`
 }
 
 // FetchSVNChangedSlugs queries the SVN DAV log between two revisions and returns
