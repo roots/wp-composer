@@ -191,7 +191,7 @@ type sitemapURL struct {
 	LastMod string `xml:"lastmod,omitempty"`
 }
 
-const sitemapPageSize = 40000
+const sitemapPageSize = 2500
 
 type sitemapData struct {
 	mu              sync.RWMutex
