@@ -14,15 +14,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const pipelineLockPath = "storage/pipeline.lock"
-
 // pipelineLockFile holds the lock file reference for the lifetime of the process,
 // preventing the GC finalizer from closing the fd and releasing the lock.
 var pipelineLockFile *os.File
 
 // acquirePipelineLock ensures only one pipeline runs at a time.
+// The lock file is placed next to the database file.
 func acquirePipelineLock() error {
-	return acquireLock(pipelineLockPath)
+	lockPath := filepath.Join(filepath.Dir(application.Config.DB.Path), "pipeline.lock")
+	return acquireLock(lockPath)
 }
 
 // acquireLock acquires an exclusive file lock at lockPath.
