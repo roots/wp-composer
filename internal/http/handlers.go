@@ -3,7 +3,9 @@ package http
 import (
 	"cmp"
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -33,6 +35,22 @@ func captureError(r *http.Request, err error) {
 	} else {
 		sentry.CaptureException(err)
 	}
+}
+
+// setETag computes an ETag from the given seed strings, sets it on the
+// response, and returns true if the client already has this version (304).
+func setETag(w http.ResponseWriter, r *http.Request, parts ...string) bool {
+	h := sha256.New()
+	for _, p := range parts {
+		h.Write([]byte(p))
+	}
+	etag := `"` + hex.EncodeToString(h.Sum(nil))[:16] + `"`
+	w.Header().Set("ETag", etag)
+	if r.Header.Get("If-None-Match") == etag {
+		w.WriteHeader(http.StatusNotModified)
+		return true
+	}
+	return false
 }
 
 type packageRow struct {
@@ -96,7 +114,10 @@ func handleIndex(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			},
 		}
 
-		w.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=300")
+		w.Header().Set("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=3600")
+		if setETag(w, r, "index", stats.UpdatedAt, filters.Search, filters.Type, filters.Sort, strconv.Itoa(page)) {
+			return
+		}
 
 		render(w, r, tmpl.index, "layout", map[string]any{
 			"Packages":   packages,
@@ -151,6 +172,7 @@ func handleIndexPartial(a *app.App, tmpl *templateSet) http.HandlerFunc {
 
 func handleCompare(a *app.App, tmpl *templateSet) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
 		render(w, r, tmpl.compare, "layout", map[string]any{
 			"AppURL":  a.Config.AppURL,
 			"CDNURL":  a.Config.R2.CDNPublicURL,
@@ -161,6 +183,7 @@ func handleCompare(a *app.App, tmpl *templateSet) http.HandlerFunc {
 
 func handleRootsWordpress(a *app.App, tmpl *templateSet) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
 		render(w, r, tmpl.rootsWordpress, "layout", map[string]any{
 			"AppURL":         a.Config.AppURL,
 			"CDNURL":         a.Config.R2.CDNPublicURL,
@@ -249,6 +272,11 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 					"item":     pkgURL,
 				},
 			},
+		}
+
+		w.Header().Set("Cache-Control", "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400")
+		if setETag(w, r, "detail", pkg.Type, pkg.Name, pkg.UpdatedAt) {
+			return
 		}
 
 		render(w, r, tmpl.detail, "layout", map[string]any{
@@ -607,11 +635,12 @@ type indexStats struct {
 	PluginInstalls int64
 	ThemeInstalls  int64
 	RootsDownloads int64
+	UpdatedAt      string
 }
 
 func queryIndexStats(ctx context.Context, db *sql.DB) indexStats {
 	var s indexStats
-	_ = db.QueryRowContext(ctx, "SELECT plugin_installs, theme_installs FROM package_stats WHERE id = 1").Scan(&s.PluginInstalls, &s.ThemeInstalls)
+	_ = db.QueryRowContext(ctx, "SELECT plugin_installs, theme_installs, COALESCE(updated_at,'') FROM package_stats WHERE id = 1").Scan(&s.PluginInstalls, &s.ThemeInstalls, &s.UpdatedAt)
 	return s
 }
 
@@ -697,6 +726,7 @@ type packageDetail struct {
 	packageRow
 	VersionsJSON       string
 	OGImageGeneratedAt *string
+	UpdatedAt          string
 }
 
 func packageExistsInactive(ctx context.Context, db *sql.DB, pkgType, name string) bool {
@@ -710,11 +740,12 @@ func queryPackageDetail(ctx context.Context, db *sql.DB, pkgType, name string) (
 	var p packageDetail
 	err := db.QueryRowContext(ctx, `SELECT type, name, COALESCE(display_name,''), COALESCE(description,''),
 		COALESCE(author,''), COALESCE(homepage,''), COALESCE(current_version,''),
-		downloads, active_installs, wp_composer_installs_total, versions_json, og_image_generated_at
+		downloads, active_installs, wp_composer_installs_total, versions_json, og_image_generated_at,
+		COALESCE(updated_at,'')
 		FROM packages WHERE type = ? AND name = ? AND is_active = 1`, pkgType, name,
 	).Scan(&p.Type, &p.Name, &p.DisplayName, &p.Description, &p.Author, &p.Homepage,
 		&p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpComposerInstallsTotal,
-		&p.VersionsJSON, &p.OGImageGeneratedAt)
+		&p.VersionsJSON, &p.OGImageGeneratedAt, &p.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -853,11 +884,17 @@ type buildRow struct {
 	IsCurrent       bool
 	R2SyncedAt      string
 	ErrorMessage    string
+	DurationSeconds *int
+	DiscoverSeconds *int
+	UpdateSeconds   *int
+	BuildSeconds    *int
+	DeploySeconds   *int
 }
 
 func queryBuilds(ctx context.Context, db *sql.DB) ([]buildRow, error) {
 	rows, err := db.QueryContext(ctx, `SELECT id, started_at, packages_total, packages_changed,
-		artifact_count, status, COALESCE(r2_synced_at, ''), COALESCE(error_message, '')
+		artifact_count, status, COALESCE(r2_synced_at, ''), COALESCE(error_message, ''),
+		duration_seconds, discover_seconds, update_seconds, build_seconds, deploy_seconds
 		FROM builds ORDER BY started_at DESC LIMIT 50`)
 	if err != nil {
 		return nil, err
@@ -867,7 +904,9 @@ func queryBuilds(ctx context.Context, db *sql.DB) ([]buildRow, error) {
 	var builds []buildRow
 	for rows.Next() {
 		var b buildRow
-		_ = rows.Scan(&b.ID, &b.StartedAt, &b.PackagesTotal, &b.PackagesChanged, &b.ArtifactCount, &b.Status, &b.R2SyncedAt, &b.ErrorMessage)
+		_ = rows.Scan(&b.ID, &b.StartedAt, &b.PackagesTotal, &b.PackagesChanged,
+			&b.ArtifactCount, &b.Status, &b.R2SyncedAt, &b.ErrorMessage,
+			&b.DurationSeconds, &b.DiscoverSeconds, &b.UpdateSeconds, &b.BuildSeconds, &b.DeploySeconds)
 		builds = append(builds, b)
 	}
 	return builds, rows.Err()

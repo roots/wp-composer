@@ -1,12 +1,17 @@
 package http
 
 import (
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"net/http"
 	"net/url"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -16,7 +21,41 @@ var templateFS embed.FS
 //go:embed all:static
 var staticFS embed.FS
 
+// assetHashes maps static file paths (e.g. "assets/styles/app.css") to a
+// short content hash computed once at startup from the embedded filesystem.
+var assetHashes = func() map[string]string {
+	hashes := make(map[string]string)
+	_ = fs.WalkDir(staticFS, "static", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		data, err := staticFS.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+		h := sha256.Sum256(data)
+		// strip "static/" prefix to match URL paths
+		key := strings.TrimPrefix(path, "static/")
+		hashes[key] = hex.EncodeToString(h[:])[:12]
+		return nil
+	})
+	return hashes
+}()
+
+// assetPath inserts a content hash into the filename for cache busting.
+// e.g. "/assets/styles/app.css" → "/assets/styles/app.a1b2c3d4e5f6.css"
+func assetPath(path string) string {
+	key := strings.TrimPrefix(path, "/")
+	v, ok := assetHashes[key]
+	if !ok {
+		return path
+	}
+	ext := filepath.Ext(path)
+	return path[:len(path)-len(ext)] + "." + v + ext
+}
+
 var funcMap = template.FuncMap{
+	"assetPath":         assetPath,
 	"formatNumber":      formatNumber,
 	"formatNumberComma": formatNumberComma,
 	"sub":               func(a, b int) int { return a - b },
@@ -27,6 +66,7 @@ var funcMap = template.FuncMap{
 	"jsonLD":            jsonLD,
 	"formatCST":         formatCST,
 	"timeAgo":           timeAgo,
+	"formatDuration":    formatDuration,
 }
 
 type templateSet struct {
@@ -208,6 +248,18 @@ func formatCST(raw string) string {
 		return raw
 	}
 	return t.In(cst).Format("Jan 2, 3:04 PM")
+}
+
+// formatDuration converts seconds (as *int) to a human-readable duration like "2m 35s".
+func formatDuration(v *int) string {
+	if v == nil {
+		return ""
+	}
+	s := *v
+	if s < 60 {
+		return fmt.Sprintf("%ds", s)
+	}
+	return fmt.Sprintf("%dm %ds", s/60, s%60)
 }
 
 // timeAgo returns a human-readable relative time like "23 minutes ago".
