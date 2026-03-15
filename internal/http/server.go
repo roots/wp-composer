@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/roots/wp-composer/internal/app"
 )
 
@@ -57,6 +58,8 @@ func ListenAndServe(a *app.App) error {
 		a.Logger.Info("shutting down", "signal", sig.String())
 	case err := <-errCh:
 		if err != nil {
+			sentry.CaptureException(err)
+			sentry.Flush(2 * time.Second)
 			return err
 		}
 	}
@@ -65,7 +68,10 @@ func ListenAndServe(a *app.App) error {
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		return fmt.Errorf("shutdown: %w", err)
+		shutdownErr := fmt.Errorf("shutdown: %w", err)
+		sentry.CaptureException(shutdownErr)
+		sentry.Flush(2 * time.Second)
+		return shutdownErr
 	}
 
 	a.Logger.Info("server stopped")

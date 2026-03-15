@@ -72,6 +72,7 @@ func handleLogin(a *app.App) http.HandlerFunc {
 		sessionID, err := auth.CreateSession(r.Context(), a.DB, user.ID, a.Config.Session.LifetimeMinutes)
 		if err != nil {
 			a.Logger.Error("failed to create session", "error", err)
+			captureError(r, err)
 			http.Redirect(w, r, "/admin/login?error=internal+error", http.StatusSeeOther)
 			return
 		}

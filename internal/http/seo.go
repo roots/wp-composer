@@ -36,6 +36,7 @@ func handleFeed(a *app.App) http.HandlerFunc {
 			cached, err = generateFeed(r.Context(), a.DB, a.Config.AppURL)
 			if err != nil {
 				a.Logger.Error("generating feed", "error", err)
+				captureError(r, err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -209,6 +210,7 @@ func handleSitemapIndex(a *app.App, data *sitemapData) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := ensureSitemapData(r.Context(), a, data); err != nil {
 			a.Logger.Error("generating sitemap", "error", err)
+			captureError(r, err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -227,6 +229,7 @@ func handleSitemapPages(a *app.App, data *sitemapData) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := ensureSitemapData(r.Context(), a, data); err != nil {
 			a.Logger.Error("generating sitemap", "error", err)
+			captureError(r, err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -245,6 +248,7 @@ func handleSitemapPackages(a *app.App, data *sitemapData) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := ensureSitemapData(r.Context(), a, data); err != nil {
 			a.Logger.Error("generating sitemap", "error", err)
+			captureError(r, err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}

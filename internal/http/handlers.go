@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/go-chi/chi/v5"
 	"github.com/roots/wp-composer/internal/app"
 	"github.com/roots/wp-composer/internal/config"
@@ -22,6 +23,15 @@ import (
 )
 
 const perPage = 12
+
+// captureError reports a non-panic error to Sentry with the request's hub.
+func captureError(r *http.Request, err error) {
+	if hub := sentry.GetHubFromContext(r.Context()); hub != nil {
+		hub.CaptureException(err)
+	} else {
+		sentry.CaptureException(err)
+	}
+}
 
 type packageRow struct {
 	Type                    string
@@ -61,6 +71,7 @@ func handleIndex(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		packages, total, err := queryPackages(r.Context(), a.DB, filters, page, perPage)
 		if err != nil {
 			a.Logger.Error("querying packages", "error", err)
+			captureError(r, err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -85,7 +96,7 @@ func handleIndex(a *app.App, tmpl *templateSet) http.HandlerFunc {
 
 		w.Header().Set("Cache-Control", "public, max-age=60, stale-while-revalidate=300")
 
-		render(w, tmpl.index, "layout", map[string]any{
+		render(w, r, tmpl.index, "layout", map[string]any{
 			"Packages":   packages,
 			"Filters":    filters,
 			"Page":       page,
@@ -118,6 +129,7 @@ func handleIndexPartial(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		packages, total, err := queryPackages(r.Context(), a.DB, filters, page, perPage)
 		if err != nil {
 			a.Logger.Error("querying packages", "error", err)
+			captureError(r, err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -125,7 +137,7 @@ func handleIndexPartial(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		totalPages := (total + perPage - 1) / perPage
 
 		w.Header().Set("X-Robots-Tag", "noindex")
-		render(w, tmpl.indexPartial, "package-results", map[string]any{
+		render(w, r, tmpl.indexPartial, "package-results", map[string]any{
 			"Packages":   packages,
 			"Filters":    filters,
 			"Page":       page,
@@ -137,7 +149,7 @@ func handleIndexPartial(a *app.App, tmpl *templateSet) http.HandlerFunc {
 
 func handleCompare(a *app.App, tmpl *templateSet) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		render(w, tmpl.compare, "layout", map[string]any{
+		render(w, r, tmpl.compare, "layout", map[string]any{
 			"AppURL":  a.Config.AppURL,
 			"CDNURL":  a.Config.R2.CDNPublicURL,
 			"OGImage": ogImageURL(a.Config, "social/default.png"),
@@ -147,7 +159,7 @@ func handleCompare(a *app.App, tmpl *templateSet) http.HandlerFunc {
 
 func handleRootsWordpress(a *app.App, tmpl *templateSet) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		render(w, tmpl.rootsWordpress, "layout", map[string]any{
+		render(w, r, tmpl.rootsWordpress, "layout", map[string]any{
 			"AppURL":         a.Config.AppURL,
 			"CDNURL":         a.Config.R2.CDNPublicURL,
 			"OGImage":        ogImageURL(a.Config, "social/default.png"),
@@ -172,7 +184,7 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			} else {
 				w.WriteHeader(http.StatusNotFound)
 			}
-			render(w, tmpl.notFound, "layout", map[string]any{"Gone": gone, "CDNURL": a.Config.R2.CDNPublicURL})
+			render(w, r, tmpl.notFound, "layout", map[string]any{"Gone": gone, "CDNURL": a.Config.R2.CDNPublicURL})
 			return
 		}
 
@@ -237,7 +249,7 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			},
 		}
 
-		render(w, tmpl.detail, "layout", map[string]any{
+		render(w, r, tmpl.detail, "layout", map[string]any{
 			"Package":  pkg,
 			"Versions": versions,
 			"AppURL":   a.Config.AppURL,
@@ -265,7 +277,7 @@ func handleAdminDashboard(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		s.CurrentBuild = currentBuild
 		stats["Stats"] = s
 
-		render(w, tmpl.adminDashboard, "admin_layout", stats)
+		render(w, r, tmpl.adminDashboard, "admin_layout", stats)
 	}
 }
 
@@ -284,13 +296,14 @@ func handleAdminPackages(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		packages, total, err := queryAdminPackages(r.Context(), a.DB, filters, page, 50)
 		if err != nil {
 			a.Logger.Error("querying admin packages", "error", err)
+			captureError(r, err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
 		totalPages := (total + 50 - 1) / 50
 
-		render(w, tmpl.adminPackages, "admin_layout", map[string]any{
+		render(w, r, tmpl.adminPackages, "admin_layout", map[string]any{
 			"Packages":   packages,
 			"Filters":    filters,
 			"Page":       page,
@@ -305,6 +318,7 @@ func handleAdminBuilds(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		builds, err := queryBuilds(r.Context(), a.DB)
 		if err != nil {
 			a.Logger.Error("querying builds", "error", err)
+			captureError(r, err)
 		}
 
 		currentID, _ := deploy.CurrentBuildID("storage/repository")
@@ -314,7 +328,7 @@ func handleAdminBuilds(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			}
 		}
 
-		render(w, tmpl.adminBuilds, "admin_layout", map[string]any{
+		render(w, r, tmpl.adminBuilds, "admin_layout", map[string]any{
 			"Builds": builds,
 		})
 	}
@@ -327,7 +341,7 @@ var logFiles = map[string]string{
 
 func handleAdminLogs(tmpl *templateSet) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		render(w, tmpl.adminLogs, "admin_layout", nil)
+		render(w, r, tmpl.adminLogs, "admin_layout", nil)
 	}
 }
 
@@ -513,6 +527,7 @@ func generatePackageOG(a *app.App, pkg *packageDetail) {
 	pngBytes, err := og.GeneratePackageImage(data)
 	if err != nil {
 		a.Logger.Error("generating OG image", "package", pkg.Name, "error", err)
+		sentry.CaptureException(err)
 		return
 	}
 
@@ -520,6 +535,7 @@ func generatePackageOG(a *app.App, pkg *packageDetail) {
 	key := "social/" + pkg.Type + "/" + pkg.Name + ".png"
 	if err := uploader.Upload(context.Background(), key, pngBytes); err != nil {
 		a.Logger.Error("uploading OG image", "package", pkg.Name, "error", err)
+		sentry.CaptureException(err)
 		return
 	}
 

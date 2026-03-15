@@ -59,9 +59,10 @@ func parse(files ...string) *template.Template {
 	return template.Must(template.New("").Funcs(funcMap).ParseFS(templateFS, files...))
 }
 
-func render(w http.ResponseWriter, tmpl *template.Template, name string, data any) {
+func render(w http.ResponseWriter, r *http.Request, tmpl *template.Template, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, name, data); err != nil {
+		captureError(r, err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }

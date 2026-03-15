@@ -23,10 +23,10 @@ func NewRouter(a *app.App) chi.Router {
 		r.Use(middleware.RealIP)
 	}
 
+	r.Use(middleware.Recoverer)
+
 	sentryMiddleware := sentryhttp.New(sentryhttp.Options{Repanic: true})
 	r.Use(sentryMiddleware.Handle)
-
-	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -100,7 +100,7 @@ func NewRouter(a *app.App) chi.Router {
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		render(w, tmpl.notFound, "layout", map[string]any{"Gone": false, "CDNURL": a.Config.R2.CDNPublicURL})
+		render(w, r, tmpl.notFound, "layout", map[string]any{"Gone": false, "CDNURL": a.Config.R2.CDNPublicURL})
 	})
 
 	return r
