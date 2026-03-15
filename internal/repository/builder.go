@@ -18,8 +18,9 @@ type BuildOpts struct {
 	OutputDir        string // base output dir (e.g. storage/repository/builds)
 	AppURL           string // absolute app URL for notify-batch
 	Force            bool
-	PackageName      string // optional: build single package
-	PreviousBuildDir string // optional: previous build dir for incremental builds
+	PackageName      string   // optional: build single package
+	PackageNames     []string // optional: build only these slugs
+	PreviousBuildDir string   // optional: previous build dir for incremental builds
 	Logger           *slog.Logger
 }
 
@@ -96,6 +97,14 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 	if opts.PackageName != "" {
 		query += ` AND (type || '/' || name) = ?`
 		args = append(args, opts.PackageName)
+	}
+	if len(opts.PackageNames) > 0 {
+		placeholders := make([]string, len(opts.PackageNames))
+		for i, n := range opts.PackageNames {
+			placeholders[i] = "?"
+			args = append(args, n)
+		}
+		query += ` AND name IN (` + strings.Join(placeholders, ",") + `)`
 	}
 	query += ` ORDER BY type, name`
 

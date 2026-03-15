@@ -111,7 +111,7 @@ func paginateURL(f publicFilters, page int) string {
 	if f.Type != "" {
 		v.Set("type", f.Type)
 	}
-	if f.Sort != "" && f.Sort != "downloads" {
+	if f.Sort != "" && f.Sort != "composer_installs" {
 		v.Set("sort", f.Sort)
 	}
 	if page > 1 {
@@ -132,7 +132,7 @@ func paginatePartialURL(f publicFilters, page int) string {
 	if f.Type != "" {
 		v.Set("type", f.Type)
 	}
-	if f.Sort != "" && f.Sort != "downloads" {
+	if f.Sort != "" && f.Sort != "composer_installs" {
 		v.Set("sort", f.Sort)
 	}
 	if page > 1 {

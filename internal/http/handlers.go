@@ -21,7 +21,7 @@ import (
 	"github.com/roots/wp-composer/internal/og"
 )
 
-const perPage = 24
+const perPage = 12
 
 type packageRow struct {
 	Type                    string
@@ -51,7 +51,7 @@ func handleIndex(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			Sort:   r.URL.Query().Get("sort"),
 		}
 		if filters.Sort == "" {
-			filters.Sort = "downloads"
+			filters.Sort = "composer_installs"
 		}
 		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 		if page < 1 {
@@ -108,7 +108,7 @@ func handleIndexPartial(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			Sort:   r.URL.Query().Get("sort"),
 		}
 		if filters.Sort == "" {
-			filters.Sort = "downloads"
+			filters.Sort = "composer_installs"
 		}
 		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 		if page < 1 {
@@ -567,10 +567,10 @@ func queryPackages(ctx context.Context, db *sql.DB, f publicFilters, page, limit
 		args = append(args, f.Type)
 	}
 
-	orderBy := "active_installs DESC"
+	orderBy := "wp_composer_installs_total DESC"
 	switch f.Sort {
-	case "composer_installs":
-		orderBy = "wp_composer_installs_total DESC"
+	case "active_installs":
+		orderBy = "active_installs DESC"
 	case "updated":
 		orderBy = "last_committed DESC NULLS LAST"
 	case "name":
@@ -768,11 +768,13 @@ type buildRow struct {
 	Status          string
 	IsCurrent       bool
 	R2SyncedAt      string
+	ErrorMessage    string
 }
 
 func queryBuilds(ctx context.Context, db *sql.DB) ([]buildRow, error) {
 	rows, err := db.QueryContext(ctx, `SELECT id, started_at, packages_total, packages_changed,
-		artifact_count, status, COALESCE(r2_synced_at, '') FROM builds ORDER BY started_at DESC LIMIT 50`)
+		artifact_count, status, COALESCE(r2_synced_at, ''), COALESCE(error_message, '')
+		FROM builds ORDER BY started_at DESC LIMIT 50`)
 	if err != nil {
 		return nil, err
 	}
@@ -781,7 +783,7 @@ func queryBuilds(ctx context.Context, db *sql.DB) ([]buildRow, error) {
 	var builds []buildRow
 	for rows.Next() {
 		var b buildRow
-		_ = rows.Scan(&b.ID, &b.StartedAt, &b.PackagesTotal, &b.PackagesChanged, &b.ArtifactCount, &b.Status, &b.R2SyncedAt)
+		_ = rows.Scan(&b.ID, &b.StartedAt, &b.PackagesTotal, &b.PackagesChanged, &b.ArtifactCount, &b.Status, &b.R2SyncedAt, &b.ErrorMessage)
 		builds = append(builds, b)
 	}
 	return builds, rows.Err()

@@ -33,5 +33,5 @@
 {{if lt .Page .TotalPages}}<a href="{{paginate .Filters (add .Page 1)}}" hx-get="{{paginatePartial .Filters (add .Page 1)}}" hx-target="#package-results" hx-swap="innerHTML show:#filter-form:top" class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer">Next &raquo;</a>{{end}}
 </div>
 {{end}}
-<p id="package-count" hx-swap-oob="true" class="text-sm text-gray-500 whitespace-nowrap">{{formatNumberComma .Total}} packages available</p>
+
 {{end}}
