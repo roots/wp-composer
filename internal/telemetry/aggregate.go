@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/roots/wp-composer/internal/packages"
 )
 
 // AggregateInstalls recomputes wp_composer_installs_total, wp_composer_installs_30d,
@@ -67,6 +69,10 @@ func AggregateInstalls(ctx context.Context, db *sql.DB) (AggregateResult, error)
 		return AggregateResult{}, fmt.Errorf("resetting stale 30d counts: %w", err)
 	}
 	resetCount, _ := resetResult.RowsAffected()
+
+	if err := packages.RefreshSiteStats(ctx, db); err != nil {
+		return AggregateResult{}, err
+	}
 
 	return AggregateResult{
 		PackagesUpdated: totalUpdated,
