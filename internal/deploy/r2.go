@@ -79,11 +79,11 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 		return fmt.Errorf("walking build files: %w", err)
 	}
 
-	// Check if the current R2 root already uses the shared p/ prefix layout.
-	// If not (first deploy after upgrade from old release-prefixed layout),
-	// we must upload all shared files — they don't exist at the top level yet.
+	// Check if the current R2 root already uses the shared layout.
+	// If not, we must upload all files — they don't exist at the top level yet.
 	previousShared := collectSharedFiles(previousBuildDir)
-	if len(previousShared) > 0 {
+	skipUnchangedP2 := previousBuildDir != ""
+	if previousBuildDir != "" {
 		live, err := fetchLiveRelease(ctx, client, cfg.Bucket)
 		if err != nil {
 			return fmt.Errorf("checking R2 layout: %w", err)
@@ -91,6 +91,10 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 		if !live.hasSharedPrefix {
 			logger.Info("R2 sync: shared p/ prefix not yet on R2, uploading all shared files")
 			previousShared = nil
+		}
+		if !live.hasSharedP2 {
+			logger.Info("R2 sync: shared p2/ prefix not yet on R2, uploading all p2/ files")
+			skipUnchangedP2 = false
 		}
 	}
 
@@ -126,8 +130,9 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 					return fmt.Errorf("R2 sync: %w", err)
 				}
 			} else if strings.HasPrefix(relPath, "p2/") {
-				// Mutable p2/ file — skip if unchanged from previous build.
-				if fileUnchanged(previousBuildDir, buildDir, relPath) {
+				// Mutable p2/ file — skip if unchanged from previous build
+				// and p2/ files already exist at top level on R2.
+				if skipUnchangedP2 && fileUnchanged(previousBuildDir, buildDir, relPath) {
 					skipped.Add(1)
 					return nil
 				}
@@ -464,6 +469,9 @@ type liveReleaseResult struct {
 	// prefix (new layout). False means the old layout where p/ files lived under
 	// releases/<id>/p/... — shared files have not been uploaded to the top level yet.
 	hasSharedPrefix bool
+	// hasSharedP2 is true when metadata-url points at the shared top-level p2/
+	// prefix. False means p2/ files still live under releases/<id>/p2/.
+	hasSharedP2 bool
 	// exists is true when a root packages.json was found on R2.
 	exists bool
 }
@@ -516,6 +524,14 @@ func fetchLiveRelease(ctx context.Context, client r2API, bucket string) (liveRel
 	if pu, ok := pkg["providers-url"].(string); ok {
 		pu = strings.TrimPrefix(pu, "/")
 		result.hasSharedPrefix = !strings.HasPrefix(pu, "releases/")
+	}
+
+	// Detect whether p2/ files are at the shared top-level prefix.
+	// Old layout: metadata-url = "/releases/<id>/p2/%package%.json"
+	// New layout: metadata-url = "/p2/%package%.json"
+	if mu, ok := pkg["metadata-url"].(string); ok {
+		mu = strings.TrimPrefix(mu, "/")
+		result.hasSharedP2 = !strings.HasPrefix(mu, "releases/")
 	}
 
 	return result, nil
