@@ -29,8 +29,14 @@ jobs:
               }
             ],
             "require": {
+              "composer/installers": "^2.2",
               "wp-plugin/woocommerce": "*",
               "wp-theme/twentytwentyfive": "*"
+            },
+            "config": {
+              "allow-plugins": {
+                "composer/installers": true
+              }
             }
           }
           EOF
