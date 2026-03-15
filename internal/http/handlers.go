@@ -7,7 +7,9 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/exec"
@@ -371,8 +373,6 @@ func handleAdminBuilds(a *app.App, tmpl *templateSet) http.HandlerFunc {
 	}
 }
 
-const pipelineLockPath = "storage/pipeline.lock"
-
 func handleTriggerBuild(a *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		self, err := os.Executable()
@@ -382,41 +382,111 @@ func handleTriggerBuild(a *app.App) http.HandlerFunc {
 			return
 		}
 
-		// Acquire the lock before spawning so we know the status is accurate.
-		lockFile, err := os.OpenFile(pipelineLockPath, os.O_CREATE|os.O_RDWR, 0644)
+		// Clean up stale "running" rows (dead PID) before checking.
+		markStaleBuildsCancelled(r.Context(), a.DB, a.Logger)
+
+		// Atomically claim a build slot before starting the child. The row
+		// is inserted with the server's own PID so that stale cleanup
+		// (which checks PID liveness) cannot cancel it while we start the
+		// child. The child will UPDATE the PID to its own once it begins.
+		buildID := time.Now().UTC().Format("20060102-150405")
+		res, err := a.DB.ExecContext(r.Context(), `
+			INSERT INTO builds (id, started_at, status, pid,
+				packages_total, packages_changed, packages_skipped,
+				provider_groups, artifact_count, root_hash, manifest_json)
+			SELECT ?, ?, 'running', ?, 0, 0, 0, 0, 0, '', '{}'
+			WHERE NOT EXISTS (
+				SELECT 1 FROM builds WHERE status = 'running'
+			)`,
+			buildID,
+			time.Now().UTC().Format(time.RFC3339),
+			os.Getpid(),
+		)
 		if err != nil {
-			a.Logger.Error("failed to open pipeline lock", "error", err)
+			a.Logger.Error("failed to claim build slot", "error", err)
 			http.Redirect(w, r, "/admin/builds?error=internal+error", http.StatusSeeOther)
 			return
 		}
-		if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-			_ = lockFile.Close()
+		n, _ := res.RowsAffected()
+		if n == 0 {
 			http.Redirect(w, r, "/admin/builds?error=build+already+running", http.StatusSeeOther)
 			return
 		}
 
-		// Pass the locked fd to the child via ExtraFiles (fd 3) so the lock
-		// transfers atomically. The child detects PIPELINE_LOCK_FD and skips
-		// its own acquisition.
-		go func() {
-			defer func() {
-				_ = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
-				_ = lockFile.Close()
-			}()
+		// Slot claimed — start the child. On failure, mark the row
+		// failed so the slot is freed.
+		cmd := exec.Command(self, "pipeline", "--build-id", buildID)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Start(); err != nil {
+			a.Logger.Error("failed to start pipeline", "error", err)
+			_, _ = a.DB.ExecContext(r.Context(), `
+				UPDATE builds SET status = 'failed', finished_at = ?,
+					error_message = ? WHERE id = ?`,
+				time.Now().UTC().Format(time.RFC3339),
+				"failed to start: "+err.Error(), buildID)
+			http.Redirect(w, r, "/admin/builds?error=internal+error", http.StatusSeeOther)
+			return
+		}
 
-			cmd := exec.Command(self, "pipeline")
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			cmd.ExtraFiles = []*os.File{lockFile} // fd 3 in child
-			cmd.Env = append(os.Environ(), "PIPELINE_LOCK_FD=3")
-			if err := cmd.Run(); err != nil {
+		// Update the row with the child's actual PID so stale cleanup
+		// tracks the right process going forward.
+		if _, err := a.DB.ExecContext(r.Context(),
+			`UPDATE builds SET pid = ? WHERE id = ?`,
+			cmd.Process.Pid, buildID); err != nil {
+			a.Logger.Warn("failed to update build PID", "build_id", buildID, "error", err)
+		}
+
+		// Reap the child in the background. If the child exits with an
+		// error and the row is still in "running" state (i.e. the child
+		// never got far enough to record its own outcome), mark it failed
+		// here so the slot is freed.
+		go func() {
+			if err := cmd.Wait(); err != nil {
 				a.Logger.Error("triggered pipeline failed", "error", err)
+				now := time.Now().UTC().Format(time.RFC3339)
+				_, _ = a.DB.ExecContext(context.Background(), `
+					UPDATE builds SET status = 'failed', finished_at = ?,
+						error_message = ? WHERE id = ? AND status = 'running'`,
+					now, err.Error(), buildID)
 			} else {
 				a.Logger.Info("triggered pipeline completed")
 			}
 		}()
 
 		http.Redirect(w, r, "/admin/builds?triggered=1", http.StatusSeeOther)
+	}
+}
+
+// markStaleBuildsCancelled finds builds with status "running" whose PID is no
+// longer alive and marks them as "cancelled".
+func markStaleBuildsCancelled(ctx context.Context, db *sql.DB, logger *slog.Logger) {
+	rows, err := db.QueryContext(ctx,
+		`SELECT id, pid FROM builds WHERE status = 'running' AND pid IS NOT NULL`)
+	if err != nil {
+		return
+	}
+
+	var staleIDs []string
+	for rows.Next() {
+		var id string
+		var pid int
+		if err := rows.Scan(&id, &pid); err != nil {
+			continue
+		}
+		if err := syscall.Kill(pid, 0); err != nil {
+			if errors.Is(err, syscall.ESRCH) {
+				staleIDs = append(staleIDs, id)
+			} else {
+				logger.Warn("stale build check: unexpected kill(0) error", "build_id", id, "pid", pid, "error", err)
+			}
+		}
+	}
+	_ = rows.Close()
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	for _, id := range staleIDs {
+		_, _ = db.ExecContext(ctx, `UPDATE builds SET status = 'cancelled', finished_at = ? WHERE id = ?`, now, id)
 	}
 }
 

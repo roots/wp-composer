@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -26,41 +25,8 @@ func acquirePipelineLock() error {
 	return acquireLock(pipelineLockPath)
 }
 
-// acquireLock acquires an exclusive file lock at lockPath. If PIPELINE_LOCK_FD is
-// set, the lock is expected to have been inherited from the parent process via fd
-// passing; the inherited fd is validated for both inode identity and lock ownership.
+// acquireLock acquires an exclusive file lock at lockPath.
 func acquireLock(lockPath string) error {
-	if v := os.Getenv("PIPELINE_LOCK_FD"); v != "" {
-		fd, err := strconv.Atoi(v)
-		if err != nil {
-			return fmt.Errorf("invalid PIPELINE_LOCK_FD: %w", err)
-		}
-		pipelineLockFile = os.NewFile(uintptr(fd), lockPath)
-		if pipelineLockFile == nil {
-			return fmt.Errorf("PIPELINE_LOCK_FD=%d: invalid file descriptor", fd)
-		}
-
-		// Verify the inherited fd points to the actual lock file (inode match).
-		var fdStat, pathStat syscall.Stat_t
-		if err := syscall.Fstat(fd, &fdStat); err != nil {
-			return fmt.Errorf("PIPELINE_LOCK_FD=%d: fstat failed: %w", fd, err)
-		}
-		if err := syscall.Stat(lockPath, &pathStat); err != nil {
-			return fmt.Errorf("pipeline lock stat: %w", err)
-		}
-		if fdStat.Dev != pathStat.Dev || fdStat.Ino != pathStat.Ino {
-			return fmt.Errorf("PIPELINE_LOCK_FD=%d does not refer to %s", fd, lockPath)
-		}
-
-		// Verify this fd actually holds the lock. Re-locking our own fd is a
-		// no-op in flock, so LOCK_EX|LOCK_NB succeeds if we hold it, and fails
-		// with EWOULDBLOCK if a different open file description holds it.
-		if err := syscall.Flock(fd, syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-			return fmt.Errorf("PIPELINE_LOCK_FD=%d does not hold the pipeline lock", fd)
-		}
-		return nil
-	}
-
 	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
 		return fmt.Errorf("pipeline lock: %w", err)
@@ -85,8 +51,6 @@ var pipelineBuildID string
 
 func runPipeline(cmd *cobra.Command, args []string) error {
 	// Acquire a system-wide file lock so only one pipeline runs at a time.
-	// When triggered from the admin UI, the parent process passes the already-locked
-	// fd via PIPELINE_LOCK_FD so the lock transfers atomically with no TOCTOU gap.
 	if err := acquirePipelineLock(); err != nil {
 		return err
 	}
@@ -94,6 +58,7 @@ func runPipeline(cmd *cobra.Command, args []string) error {
 	skipDiscover, _ := cmd.Flags().GetBool("skip-discover")
 	skipDeploy, _ := cmd.Flags().GetBool("skip-deploy")
 	discoverSource, _ := cmd.Flags().GetString("discover-source")
+	buildIDFlag, _ := cmd.Flags().GetString("build-id")
 
 	ctx := cmd.Context()
 	started := time.Now().UTC()
@@ -101,22 +66,38 @@ func runPipeline(cmd *cobra.Command, args []string) error {
 	// Mark any stale "running" builds (dead PID) as cancelled.
 	markStaleBuildsCancelled(ctx, application.DB)
 
-	// Record this build as "running" before doing any work.
-	buildID := started.Format("20060102-150405")
+	// When triggered from the admin UI, a "running" row already exists —
+	// claim it by updating the PID to our own and verify it exists. When
+	// invoked from the CLI, insert a new row.
+	var buildID string
+	if buildIDFlag != "" {
+		buildID = buildIDFlag
+		res, err := application.DB.ExecContext(ctx, `
+			UPDATE builds SET pid = ? WHERE id = ? AND status = 'running'`,
+			os.Getpid(), buildID)
+		if err != nil {
+			return fmt.Errorf("claiming build %s: %w", buildID, err)
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return fmt.Errorf("build %s not found or not in running state", buildID)
+		}
+	} else {
+		buildID = started.Format("20060102-150405")
+		_, err := application.DB.ExecContext(ctx, `
+			INSERT INTO builds (id, started_at, status, pid,
+				packages_total, packages_changed, packages_skipped,
+				provider_groups, artifact_count, root_hash, manifest_json)
+			VALUES (?, ?, 'running', ?, 0, 0, 0, 0, 0, '', '{}')`,
+			buildID,
+			started.Format(time.RFC3339),
+			os.Getpid(),
+		)
+		if err != nil {
+			return fmt.Errorf("recording running build: %w", err)
+		}
+	}
 	pipelineBuildID = buildID
 	defer func() { pipelineBuildID = "" }()
-	_, err := application.DB.ExecContext(ctx, `
-		INSERT INTO builds (id, started_at, status, pid,
-			packages_total, packages_changed, packages_skipped,
-			provider_groups, artifact_count, root_hash, manifest_json)
-		VALUES (?, ?, 'running', ?, 0, 0, 0, 0, 0, '', '{}')`,
-		buildID,
-		started.Format(time.RFC3339),
-		os.Getpid(),
-	)
-	if err != nil {
-		return fmt.Errorf("recording running build: %w", err)
-	}
 
 	if err := executePipelineSteps(cmd, ctx, skipDiscover, skipDeploy, discoverSource); err != nil {
 		recordFailedBuild(cmd, started, err)
@@ -222,7 +203,8 @@ func recordFailedBuild(cmd *cobra.Command, started time.Time, pipelineErr error)
 // markStaleBuildsCancelled finds builds with status "running" whose PID is no
 // longer alive and marks them as "cancelled".
 func markStaleBuildsCancelled(ctx context.Context, db *sql.DB) {
-	rows, err := db.QueryContext(ctx, `SELECT id, pid FROM builds WHERE status = 'running' AND pid IS NOT NULL`)
+	rows, err := db.QueryContext(ctx,
+		`SELECT id, pid FROM builds WHERE status = 'running' AND pid IS NOT NULL`)
 	if err != nil {
 		return
 	}
@@ -259,5 +241,6 @@ func init() {
 	pipelineCmd.Flags().String("discover-source", "config", "discovery source (config or svn)")
 	pipelineCmd.Flags().Bool("skip-discover", false, "skip the discover step")
 	pipelineCmd.Flags().Bool("skip-deploy", false, "skip the deploy step")
+	pipelineCmd.Flags().String("build-id", "", "pre-allocated build ID (set by admin UI trigger)")
 	rootCmd.AddCommand(pipelineCmd)
 }
