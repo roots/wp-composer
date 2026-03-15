@@ -106,7 +106,7 @@ Two deployment targets:
 
 Periodic tasks run via systemd timers or cron (no in-process scheduler required):
 
-- `wpcomposer pipeline` — hourly
+- `wpcomposer pipeline` — every 5 minutes
 - `wpcomposer aggregate-installs` — hourly
 - `wpcomposer cleanup-sessions` — daily
 

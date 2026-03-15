@@ -42,6 +42,6 @@ repository_path: "{{ app_root }}/shared/storage/repository"
 seeds_file: "{{ app_root }}/current/seeds.yaml"
 
 # Scheduling
-pipeline_schedule: hourly
+pipeline_schedule: "*:0/5"
 aggregate_schedule: hourly
 cleanup_sessions_schedule: daily

@@ -1,9 +1,9 @@
 [Unit]
-Description=Run WP Composer pipeline hourly
+Description=Run WP Composer pipeline every 5 minutes
 
 [Timer]
-OnCalendar=hourly
-RandomizedDelaySec=300
+OnCalendar=*:0/5
+RandomizedDelaySec=30
 Persistent=true
 
 [Install]
