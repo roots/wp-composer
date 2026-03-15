@@ -357,7 +357,7 @@ func TestCleanupDeletesLegacyFilesWhenRootIsVersioned(t *testing.T) {
 			"releases/" + liveID + "/p2/wp-plugin/a.json": []byte(`{}`),
 			// Legacy flat files — should be deleted.
 			"p2/wp-plugin/akismet.json": []byte(`{}`),
-			"manifest.json":            []byte(`{}`),
+			"manifest.json":             []byte(`{}`),
 			// Shared content-addressed p/ file — should NOT be deleted.
 			"p/wp-plugin/akismet$abc.json": []byte(`{}`),
 		},
