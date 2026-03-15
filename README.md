@@ -1,6 +1,6 @@
 # WP Composer
 
-[![Build status]( https://img.shields.io/github/actions/workflow/status/roots/wp-composer/ci.yml?branch=master&style=flat-square)](https://github.com/roots/wp-composer/actions)
+[![Build status](https://img.shields.io/github/actions/workflow/status/roots/wp-composer/ci.yml?branch=main&style=flat-square)](https://github.com/roots/wp-composer/actions)
 [![Follow Roots](https://img.shields.io/badge/follow%20@rootswp-1da1f2?logo=twitter&logoColor=ffffff&message=&style=flat-square)](https://twitter.com/rootswp)
 [![Sponsor Roots](https://img.shields.io/badge/sponsor%20roots-525ddc?logo=github&style=flat-square&logoColor=ffffff&message=)](https://github.com/sponsors/roots)
 
