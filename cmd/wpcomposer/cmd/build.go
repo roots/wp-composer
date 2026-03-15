@@ -41,32 +41,57 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		Force:            force,
 		PackageName:      pkg,
 		PreviousBuildDir: previousBuildDir,
+		BuildID:          pipelineBuildID,
 		Logger:           application.Logger,
 	})
 	if err != nil {
 		return err
 	}
 
-	// Record build in database
-	_, dbErr := application.DB.ExecContext(cmd.Context(), `
-		INSERT INTO builds (id, started_at, finished_at, duration_seconds,
-			packages_total, packages_changed, packages_skipped,
-			provider_groups, artifact_count, root_hash, sync_run_id, status, manifest_json)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		result.BuildID,
-		result.StartedAt.Format(time.RFC3339),
-		result.FinishedAt.Format(time.RFC3339),
-		result.DurationSeconds,
-		result.PackagesTotal,
-		result.PackagesChanged,
-		result.PackagesSkipped,
-		result.ProviderGroups,
-		result.ArtifactCount,
-		result.RootHash,
-		result.SyncRunID,
-		"completed",
-		fmt.Sprintf(`{"root_hash":"%s"}`, result.RootHash),
-	)
+	// Record build in database. When running inside a pipeline, the row already
+	// exists with status "running" — update it. Otherwise insert a new row.
+	var dbErr error
+	if pipelineBuildID != "" {
+		_, dbErr = application.DB.ExecContext(cmd.Context(), `
+			UPDATE builds SET finished_at = ?, duration_seconds = ?,
+				packages_total = ?, packages_changed = ?, packages_skipped = ?,
+				provider_groups = ?, artifact_count = ?, root_hash = ?,
+				sync_run_id = ?, status = 'completed',
+				manifest_json = ?
+			WHERE id = ?`,
+			result.FinishedAt.Format(time.RFC3339),
+			result.DurationSeconds,
+			result.PackagesTotal,
+			result.PackagesChanged,
+			result.PackagesSkipped,
+			result.ProviderGroups,
+			result.ArtifactCount,
+			result.RootHash,
+			result.SyncRunID,
+			fmt.Sprintf(`{"root_hash":"%s"}`, result.RootHash),
+			pipelineBuildID,
+		)
+	} else {
+		_, dbErr = application.DB.ExecContext(cmd.Context(), `
+			INSERT INTO builds (id, started_at, finished_at, duration_seconds,
+				packages_total, packages_changed, packages_skipped,
+				provider_groups, artifact_count, root_hash, sync_run_id, status, manifest_json)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			result.BuildID,
+			result.StartedAt.Format(time.RFC3339),
+			result.FinishedAt.Format(time.RFC3339),
+			result.DurationSeconds,
+			result.PackagesTotal,
+			result.PackagesChanged,
+			result.PackagesSkipped,
+			result.ProviderGroups,
+			result.ArtifactCount,
+			result.RootHash,
+			result.SyncRunID,
+			"completed",
+			fmt.Sprintf(`{"root_hash":"%s"}`, result.RootHash),
+		)
+	}
 	if dbErr != nil {
 		application.Logger.Warn("failed to record build in database", "error", dbErr)
 	}

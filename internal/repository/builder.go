@@ -21,6 +21,7 @@ type BuildOpts struct {
 	PackageName      string   // optional: build single package
 	PackageNames     []string // optional: build only these slugs
 	PreviousBuildDir string   // optional: previous build dir for incremental builds
+	BuildID          string   // optional: pre-generated build ID (used by pipeline)
 	Logger           *slog.Logger
 }
 
@@ -43,7 +44,10 @@ type BuildResult struct {
 // Build generates all Composer repository artifacts.
 func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error) {
 	started := time.Now().UTC()
-	buildID := started.Format("20060102-150405")
+	buildID := opts.BuildID
+	if buildID == "" {
+		buildID = started.Format("20060102-150405")
+	}
 	buildDir := filepath.Join(opts.OutputDir, buildID)
 
 	// Guard against build ID collision

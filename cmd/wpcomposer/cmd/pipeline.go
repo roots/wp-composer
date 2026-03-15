@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -77,6 +79,10 @@ var pipelineCmd = &cobra.Command{
 	RunE:  runPipeline,
 }
 
+// pipelineBuildID is set by runPipeline so that runBuild can UPDATE the
+// existing "running" row instead of INSERTing a new one.
+var pipelineBuildID string
+
 func runPipeline(cmd *cobra.Command, args []string) error {
 	// Acquire a system-wide file lock so only one pipeline runs at a time.
 	// When triggered from the admin UI, the parent process passes the already-locked
@@ -91,6 +97,26 @@ func runPipeline(cmd *cobra.Command, args []string) error {
 
 	ctx := cmd.Context()
 	started := time.Now().UTC()
+
+	// Mark any stale "running" builds (dead PID) as cancelled.
+	markStaleBuildsCancelled(ctx, application.DB)
+
+	// Record this build as "running" before doing any work.
+	buildID := started.Format("20060102-150405")
+	pipelineBuildID = buildID
+	defer func() { pipelineBuildID = "" }()
+	_, err := application.DB.ExecContext(ctx, `
+		INSERT INTO builds (id, started_at, status, pid,
+			packages_total, packages_changed, packages_skipped,
+			provider_groups, artifact_count, root_hash, manifest_json)
+		VALUES (?, ?, 'running', ?, 0, 0, 0, 0, 0, '', '{}')`,
+		buildID,
+		started.Format(time.RFC3339),
+		os.Getpid(),
+	)
+	if err != nil {
+		return fmt.Errorf("recording running build: %w", err)
+	}
 
 	if err := executePipelineSteps(cmd, ctx, skipDiscover, skipDeploy, discoverSource); err != nil {
 		recordFailedBuild(cmd, started, err)
@@ -152,20 +178,45 @@ func executePipelineSteps(cmd *cobra.Command, ctx context.Context, skipDiscover,
 
 func recordFailedBuild(cmd *cobra.Command, started time.Time, pipelineErr error) {
 	now := time.Now().UTC()
-	buildID := now.Format("20060102-150405") + "-failed"
 	_, dbErr := application.DB.ExecContext(cmd.Context(), `
-		INSERT INTO builds (id, started_at, finished_at, duration_seconds,
-			packages_total, packages_changed, packages_skipped,
-			provider_groups, artifact_count, root_hash, sync_run_id, status, manifest_json, error_message)
-		VALUES (?, ?, ?, ?, 0, 0, 0, 0, 0, '', NULL, 'failed', '{}', ?)`,
-		buildID,
-		started.Format(time.RFC3339),
+		UPDATE builds SET status = 'failed', finished_at = ?, duration_seconds = ?, error_message = ?
+		WHERE id = ?`,
 		now.Format(time.RFC3339),
 		int(now.Sub(started).Seconds()),
 		pipelineErr.Error(),
+		pipelineBuildID,
 	)
 	if dbErr != nil {
 		application.Logger.Warn("failed to record failed build in database", "error", dbErr)
+	}
+}
+
+// markStaleBuildsCancelled finds builds with status "running" whose PID is no
+// longer alive and marks them as "cancelled".
+func markStaleBuildsCancelled(ctx context.Context, db *sql.DB) {
+	rows, err := db.QueryContext(ctx, `SELECT id, pid FROM builds WHERE status = 'running' AND pid IS NOT NULL`)
+	if err != nil {
+		return
+	}
+	defer func() { _ = rows.Close() }()
+
+	for rows.Next() {
+		var id string
+		var pid int
+		if err := rows.Scan(&id, &pid); err != nil {
+			continue
+		}
+		// Signal 0 checks if the process exists without sending a real signal.
+		// ESRCH = no such process (safe to cancel). EPERM = process exists but
+		// we lack permission (do not cancel). Any other error is unexpected.
+		if err := syscall.Kill(pid, 0); err != nil {
+			if errors.Is(err, syscall.ESRCH) {
+				_, _ = db.ExecContext(ctx, `UPDATE builds SET status = 'cancelled', finished_at = ? WHERE id = ?`,
+					time.Now().UTC().Format(time.RFC3339), id)
+			} else {
+				application.Logger.Warn("stale build check: unexpected kill(0) error", "build_id", id, "pid", pid, "error", err)
+			}
+		}
 	}
 }
 

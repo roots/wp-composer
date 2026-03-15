@@ -38,6 +38,8 @@
 <td class="px-4 py-2 text-right">{{.ArtifactCount}}</td>
 <td class="px-4 py-2">
 {{if .IsCurrent}}<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Current</span>
+{{else if eq .Status "running"}}<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full animate-pulse">Running</span>
+{{else if eq .Status "cancelled"}}<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Cancelled</span>
 {{else if eq .Status "failed"}}<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full" title="{{.ErrorMessage}}">Failed</span>
 {{else}}<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{{.Status}}</span>{{end}}
 </td>
@@ -51,4 +53,5 @@
 </table>
 </div>
 {{end}}
+{{if or .Triggered .Error}}<script>history.replaceState(null, "", location.pathname)</script>{{end}}
 {{end}}
