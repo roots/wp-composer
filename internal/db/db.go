@@ -15,7 +15,7 @@ func Open(dbPath string) (*sql.DB, error) {
 		return nil, fmt.Errorf("creating db directory: %w", err)
 	}
 
-	dsn := fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=foreign_keys(ON)&_pragma=busy_timeout(5000)", dbPath)
+	dsn := fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=foreign_keys(ON)&_pragma=busy_timeout(5000)&_pragma=mmap_size(268435456)&_pragma=cache_size(-65536)", dbPath)
 
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {

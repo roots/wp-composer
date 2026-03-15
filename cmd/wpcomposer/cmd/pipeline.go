@@ -127,34 +127,58 @@ func runPipeline(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// stepDurations holds per-step timing recorded during pipeline execution.
+type stepDurations struct {
+	Discover *int
+	Update   *int
+	Build    *int
+	Deploy   *int
+}
+
+// pipelineStepDurations is set by executePipelineSteps so that recordFailedBuild
+// and runBuild can persist whatever step timings were captured before failure.
+var pipelineStepDurations stepDurations
+
+func intPtr(v int) *int { return &v }
+
 func executePipelineSteps(cmd *cobra.Command, ctx context.Context, skipDiscover, skipDeploy bool, discoverSource string) error {
+	pipelineStepDurations = stepDurations{}
+
 	if !skipDiscover {
 		application.Logger.Info("pipeline: running discover")
 		discoverCmd.SetContext(ctx)
 		_ = discoverCmd.Flags().Set("source", discoverSource)
+		stepStart := time.Now()
 		if err := runDiscover(discoverCmd, nil); err != nil {
 			return fmt.Errorf("discover: %w", err)
 		}
+		pipelineStepDurations.Discover = intPtr(int(time.Since(stepStart).Seconds()))
 	}
 
 	application.Logger.Info("pipeline: running update")
 	updateCmd.SetContext(ctx)
+	stepStart := time.Now()
 	if err := runUpdate(updateCmd, nil); err != nil {
 		return fmt.Errorf("update: %w", err)
 	}
+	pipelineStepDurations.Update = intPtr(int(time.Since(stepStart).Seconds()))
 
 	application.Logger.Info("pipeline: running build")
 	buildCmd.SetContext(ctx)
+	stepStart = time.Now()
 	if err := runBuild(buildCmd, nil); err != nil {
 		return fmt.Errorf("build: %w", err)
 	}
+	pipelineStepDurations.Build = intPtr(int(time.Since(stepStart).Seconds()))
 
 	if !skipDeploy {
 		application.Logger.Info("pipeline: running deploy")
 		deployCmd.SetContext(ctx)
+		stepStart = time.Now()
 		if err := runDeploy(deployCmd, nil); err != nil {
 			return fmt.Errorf("deploy: %w", err)
 		}
+		pipelineStepDurations.Deploy = intPtr(int(time.Since(stepStart).Seconds()))
 
 		// Clean up old builds after a successful deploy.
 		repoDir := filepath.Join("storage", "repository")
@@ -178,12 +202,16 @@ func executePipelineSteps(cmd *cobra.Command, ctx context.Context, skipDiscover,
 
 func recordFailedBuild(cmd *cobra.Command, started time.Time, pipelineErr error) {
 	now := time.Now().UTC()
+	d := pipelineStepDurations
 	_, dbErr := application.DB.ExecContext(cmd.Context(), `
-		UPDATE builds SET status = 'failed', finished_at = ?, duration_seconds = ?, error_message = ?
+		UPDATE builds SET status = 'failed', finished_at = ?, duration_seconds = ?,
+			error_message = ?, discover_seconds = ?, update_seconds = ?,
+			build_seconds = ?, deploy_seconds = ?
 		WHERE id = ?`,
 		now.Format(time.RFC3339),
 		int(now.Sub(started).Seconds()),
 		pipelineErr.Error(),
+		d.Discover, d.Update, d.Build, d.Deploy,
 		pipelineBuildID,
 	)
 	if dbErr != nil {

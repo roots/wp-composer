@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	sentryhttp "github.com/getsentry/sentry-go/http"
@@ -13,6 +14,27 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/roots/wp-composer/internal/app"
 )
+
+// cacheControl wraps an http.Handler and sets the Cache-Control header.
+func cacheControl(value string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", value)
+		next.ServeHTTP(w, r)
+	})
+}
+
+// hashPattern matches the content hash inserted by assetPath (e.g. ".a1b2c3d4e5f6").
+var hashPattern = regexp.MustCompile(`\.[0-9a-f]{12}(\.[^.]+)$`)
+
+// stripAssetHash removes the content hash from the URL path so the embedded
+// file server can find the original file.
+// e.g. "/assets/styles/app.a1b2c3d4e5f6.css" → "/assets/styles/app.css"
+func stripAssetHash(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.URL.Path = hashPattern.ReplaceAllString(r.URL.Path, "$1")
+		next.ServeHTTP(w, r)
+	})
+}
 
 func NewRouter(a *app.App) chi.Router {
 	r := chi.NewRouter()
@@ -36,10 +58,11 @@ func NewRouter(a *app.App) chi.Router {
 
 	staticSub, _ := fs.Sub(staticFS, "static")
 	staticServer := http.FileServer(http.FS(staticSub))
+	cachedStatic := cacheControl("public, max-age=31536000, immutable", stripAssetHash(staticServer))
 	for _, f := range []string{"/favicon.ico", "/icon.svg", "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png", "/manifest.webmanifest"} {
-		r.Get(f, staticServer.ServeHTTP)
+		r.Get(f, cachedStatic.ServeHTTP)
 	}
-	r.Get("/assets/*", staticServer.ServeHTTP)
+	r.Get("/assets/*", cachedStatic.ServeHTTP)
 
 	// Ensure fallback OG image exists (uploads to R2 in production)
 	ensureLocalFallbackOG(a.Config)
