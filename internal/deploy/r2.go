@@ -266,8 +266,9 @@ func CleanupR2(ctx context.Context, cfg config.R2Config, graceHours, retainCount
 }
 
 func cleanupR2(ctx context.Context, client r2API, bucket string, graceHours, retainCount int, logger *slog.Logger) (int, error) {
-	if retainCount < 1 {
-		retainCount = 3
+	if retainCount < 5 {
+		logger.Warn("retain count below minimum, clamping to 5", "requested", retainCount)
+		retainCount = 5
 	}
 	if graceHours < 0 {
 		graceHours = 24

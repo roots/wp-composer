@@ -139,7 +139,7 @@ func init() {
 	f.Lookup("rollback").NoOptDefVal = " " // allows --rollback without =value
 	f.Bool("cleanup", false, "remove old builds beyond retention")
 	f.Bool("r2-cleanup", false, "also clean stale files from R2 during cleanup")
-	f.Int("retain", 3, "number of recent builds to retain (beyond current)")
+	f.Int("retain", 5, "number of recent builds to retain (beyond current)")
 	f.Int("grace-hours", 24, "hours to keep old releases on R2 after deploy")
 	f.Bool("to-r2", false, "sync build to R2")
 	rootCmd.AddCommand(deployCmd)

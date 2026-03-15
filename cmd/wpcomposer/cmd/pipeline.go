@@ -3,8 +3,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
 
+	"github.com/roots/wp-composer/internal/deploy"
 	"github.com/spf13/cobra"
 )
 
@@ -58,6 +60,22 @@ func executePipelineSteps(cmd *cobra.Command, ctx context.Context, skipDiscover,
 		deployCmd.SetContext(ctx)
 		if err := runDeploy(deployCmd, nil); err != nil {
 			return fmt.Errorf("deploy: %w", err)
+		}
+
+		// Clean up old builds after a successful deploy.
+		repoDir := filepath.Join("storage", "repository")
+		if removed, err := deploy.Cleanup(repoDir, 5, application.Logger); err != nil {
+			application.Logger.Warn("pipeline: local cleanup failed", "error", err)
+		} else if removed > 0 {
+			application.Logger.Info("pipeline: local cleanup done", "removed", removed)
+		}
+
+		if application.Config.R2.Enabled {
+			if removed, err := deploy.CleanupR2(ctx, application.Config.R2, 24, 5, application.Logger); err != nil {
+				application.Logger.Warn("pipeline: R2 cleanup failed", "error", err)
+			} else if removed > 0 {
+				application.Logger.Info("pipeline: R2 cleanup done", "objects_removed", removed)
+			}
 		}
 	}
 

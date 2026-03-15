@@ -77,9 +77,9 @@ wpcomposer deploy --cleanup --r2-cleanup --grace-hours 6
 - Validates build artifacts before any sync or promotion.
 - `--to-r2` uploads to a versioned release prefix (`releases/<build-id>/`), rewrites root `packages.json` as the atomic pointer swap, then promotes locally. If R2 sync fails, the local symlink is not updated.
 - Rollback validates target build, syncs to R2 if enabled, then promotes.
-- `--cleanup` removes old local builds beyond retention (default: 3 beyond current).
+- `--cleanup` removes old local builds beyond retention (default: 5 beyond current).
 - `--r2-cleanup` removes stale release prefixes from R2 (must be combined with `--cleanup`). Reads R2 state directly — no local filesystem dependency.
-- `--retain N` controls how many releases to keep beyond current.
+- `--retain N` controls how many releases to keep beyond current (minimum: 5).
 - `--grace-hours N` keeps releases younger than N hours (default: 24).
 
 ### Full Pipeline
@@ -91,7 +91,7 @@ wpcomposer pipeline --skip-deploy
 wpcomposer pipeline --discover-source=config
 ```
 
-Runs discover → update → build → deploy sequentially, stopping on failure.
+Runs discover → update → build → deploy sequentially, stopping on failure. After a successful deploy, automatically cleans up old local builds and stale R2 releases (keeps live + 5 most recent + 24h grace window). Cleanup is best-effort — failures are logged as warnings but do not fail the pipeline.
 
 ### Aggregate Installs
 

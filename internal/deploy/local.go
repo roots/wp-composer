@@ -69,8 +69,9 @@ func Rollback(repoDir, targetID string, logger *slog.Logger) (string, error) {
 
 // Cleanup removes old builds, keeping the current build and up to retainCount others.
 func Cleanup(repoDir string, retainCount int, logger *slog.Logger) (int, error) {
-	if retainCount < 1 {
-		retainCount = 3
+	if retainCount < 5 {
+		logger.Warn("retain count below minimum, clamping to 5", "requested", retainCount)
+		retainCount = 5
 	}
 
 	currentID, _ := CurrentBuildID(repoDir)

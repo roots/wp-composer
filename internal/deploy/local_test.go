@@ -89,15 +89,19 @@ func TestRollbackToSpecific(t *testing.T) {
 
 func TestCleanup(t *testing.T) {
 	repoDir := t.TempDir()
+	createTestBuild(t, repoDir, "20260313-080000")
+	createTestBuild(t, repoDir, "20260313-090000")
 	createTestBuild(t, repoDir, "20260313-100000")
 	createTestBuild(t, repoDir, "20260313-110000")
 	createTestBuild(t, repoDir, "20260313-120000")
 	createTestBuild(t, repoDir, "20260313-130000")
 	createTestBuild(t, repoDir, "20260313-140000")
+	createTestBuild(t, repoDir, "20260313-150000")
 
-	_ = Promote(repoDir, "20260313-140000", slog.Default())
+	_ = Promote(repoDir, "20260313-150000", slog.Default())
 
-	removed, err := Cleanup(repoDir, 2, slog.Default())
+	// retainCount is clamped to a minimum of 5
+	removed, err := Cleanup(repoDir, 5, slog.Default())
 	if err != nil {
 		t.Fatalf("cleanup: %v", err)
 	}
@@ -106,8 +110,8 @@ func TestCleanup(t *testing.T) {
 	}
 
 	builds, _ := ListBuilds(repoDir)
-	if len(builds) != 3 {
-		t.Errorf("remaining builds = %d, want 3 (current + 2 retained)", len(builds))
+	if len(builds) != 6 {
+		t.Errorf("remaining builds = %d, want 6 (current + 5 retained)", len(builds))
 	}
 }
 

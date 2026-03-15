@@ -126,14 +126,13 @@ aws s3 ls s3://wp-composer-repo/releases/ --profile r2 --endpoint-url https://<a
 
 ### Cleanup stale R2 releases
 
-Old release prefixes accumulate on R2 across deploys. Use the built-in cleanup:
+The `wpcomposer pipeline` command automatically cleans up old R2 releases after each successful deploy, keeping the live release + 5 most recent + releases within a 24-hour grace window. Cleanup is best-effort — failures are logged as warnings but do not fail the pipeline. If cleanup errors persist, run manual cleanup to investigate.
+
+For manual cleanup:
 
 ```bash
-# Remove R2 releases beyond retention (keeps live + 3 most recent + within grace period)
+# Remove R2 releases beyond retention (keeps live + 5 most recent + within grace period)
 wpcomposer deploy --cleanup --r2-cleanup
-
-# Keep more releases (current + 5 recent)
-wpcomposer deploy --cleanup --r2-cleanup --retain 5
 
 # Shorter grace period (default 24 hours)
 wpcomposer deploy --cleanup --r2-cleanup --grace-hours 6
@@ -141,7 +140,7 @@ wpcomposer deploy --cleanup --r2-cleanup --grace-hours 6
 
 `--r2-cleanup` is required — plain `--cleanup` only removes local build directories. The cleanup reads R2 state directly (no local filesystem dependency), identifies release prefixes, and deletes those outside the keep set. It also deletes legacy flat files (anything not under `releases/` except root `packages.json`).
 
-The keep set is: live release (from root `packages.json`) + releases within `--grace-hours` + top `--retain` most recent.
+The keep set is: live release (from root `packages.json`) + releases within `--grace-hours` + top `--retain` most recent. The retain count has a hard minimum of 5 — even if `--retain` is set lower, at least 5 recent releases are always preserved.
 
 ## Rollback
 
