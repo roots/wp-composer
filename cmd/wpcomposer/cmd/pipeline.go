@@ -198,8 +198,9 @@ func markStaleBuildsCancelled(ctx context.Context, db *sql.DB) {
 	if err != nil {
 		return
 	}
-	defer func() { _ = rows.Close() }()
 
+	// Collect stale IDs first — writing while iterating deadlocks SQLite.
+	var staleIDs []string
 	for rows.Next() {
 		var id string
 		var pid int
@@ -211,12 +212,17 @@ func markStaleBuildsCancelled(ctx context.Context, db *sql.DB) {
 		// we lack permission (do not cancel). Any other error is unexpected.
 		if err := syscall.Kill(pid, 0); err != nil {
 			if errors.Is(err, syscall.ESRCH) {
-				_, _ = db.ExecContext(ctx, `UPDATE builds SET status = 'cancelled', finished_at = ? WHERE id = ?`,
-					time.Now().UTC().Format(time.RFC3339), id)
+				staleIDs = append(staleIDs, id)
 			} else {
 				application.Logger.Warn("stale build check: unexpected kill(0) error", "build_id", id, "pid", pid, "error", err)
 			}
 		}
+	}
+	_ = rows.Close()
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	for _, id := range staleIDs {
+		_, _ = db.ExecContext(ctx, `UPDATE builds SET status = 'cancelled', finished_at = ? WHERE id = ?`, now, id)
 	}
 }
 
