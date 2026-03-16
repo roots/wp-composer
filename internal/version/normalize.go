@@ -20,7 +20,10 @@ func Normalize(v string) string {
 	if v == "" {
 		return ""
 	}
-	if strings.EqualFold(v, "trunk") {
+	// Strip leading v/V to match Composer's VersionParser behavior.
+	v = strings.TrimPrefix(v, "v")
+	v = strings.TrimPrefix(v, "V")
+	if strings.EqualFold(v, "trunk") || v == "dev-trunk" {
 		return "dev-trunk"
 	}
 	if !IsValid(v) {
@@ -35,7 +38,7 @@ func IsValid(v string) bool {
 	if v == "" {
 		return false
 	}
-	if strings.EqualFold(v, "trunk") {
+	if strings.EqualFold(v, "trunk") || v == "dev-trunk" {
 		return true
 	}
 	return validVersion.MatchString(v)

@@ -17,6 +17,9 @@ func TestNormalize(t *testing.T) {
 		{"trunk", "dev-trunk"},
 		{"Trunk", "dev-trunk"},
 		{"TRUNK", "dev-trunk"},
+		{"dev-trunk", "dev-trunk"},
+		{"vtrunk", "dev-trunk"},
+		{"Vtrunk", "dev-trunk"},
 
 		// Valid pre-release suffixes
 		{"1.0-beta1", "1.0-beta1"},
@@ -48,8 +51,14 @@ func TestNormalize(t *testing.T) {
 		{"latest", ""},
 		{"not a version", ""},
 
+		// Leading v stripped (Composer VersionParser compatibility, issue #19)
+		{"v1.0", "1.0"},
+		{"v1.0.0", "1.0.0"},
+		{"V2.0.0", "2.0.0"},
+		{"v1.13.11-beta.0", "1.13.11-beta.0"},
+		{"v20100102", "20100102"},
+
 		// Invalid: structural
-		{"v1.0", ""},      // leading v
 		{"1.0.0.0.1", ""}, // 5+ parts
 
 		// Invalid: non-Composer pre-release suffixes (issue #17)
@@ -90,7 +99,7 @@ func TestNormalize(t *testing.T) {
 
 func TestIsValid(t *testing.T) {
 	valid := []string{
-		"1.0", "1.0.0", "1.0.0.0", "trunk",
+		"1.0", "1.0.0", "1.0.0.0", "trunk", "dev-trunk",
 		"1.0-beta1", "1.0-RC2", "1.0-alpha",
 		"1.0-dev", "1.0-dev.1", "1.0-stable",
 	}
@@ -101,7 +110,7 @@ func TestIsValid(t *testing.T) {
 	}
 
 	invalid := []string{
-		"", "stable", "1.0.0.0.1", "not valid", "v1.0",
+		"", "stable", "1.0.0.0.1", "not valid",
 		"3.1.0-dev1", "3.1.0-dev2", "3.1.0-free",
 		"1.0f", "1.0-foo",
 		"1.0-beta.", "1.0-rc.", "1.0-alpha.", "1.0-dev.", "1.0-stable.",
@@ -117,21 +126,25 @@ func TestNormalizeVersions(t *testing.T) {
 	input := map[string]string{
 		"1.0":        "https://example.com/1.0.zip",
 		"2.0":        "https://example.com/2.0.zip",
-		"trunk":      "https://example.com/trunk.zip",
+		"dev-trunk":  "https://example.com/trunk.zip",
+		"v3.0":       "https://example.com/v3.0.zip",
 		"":           "https://example.com/empty.zip",
 		"bad!":       "https://example.com/bad.zip",
 		"3.1.0-dev1": "https://example.com/dev1.zip",
 	}
 
 	got := NormalizeVersions(input)
-	if len(got) != 3 {
-		t.Fatalf("NormalizeVersions returned %d entries, want 3", len(got))
+	if len(got) != 4 {
+		t.Fatalf("NormalizeVersions returned %d entries, want 4", len(got))
 	}
 	if got["1.0"] != "https://example.com/1.0.zip" {
 		t.Error("missing 1.0")
 	}
 	if got["dev-trunk"] != "https://example.com/trunk.zip" {
 		t.Error("missing dev-trunk")
+	}
+	if got["3.0"] != "https://example.com/v3.0.zip" {
+		t.Error("v3.0 should have been normalized to 3.0")
 	}
 	if _, ok := got["3.1.0-dev1"]; ok {
 		t.Error("3.1.0-dev1 should have been filtered out")
