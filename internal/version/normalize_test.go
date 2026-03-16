@@ -49,15 +49,15 @@ func TestNormalize(t *testing.T) {
 		{"not a version", ""},
 
 		// Invalid: structural
-		{"v1.0", ""},          // leading v
-		{"1.0.0.0.1", ""},    // 5+ parts
+		{"v1.0", ""},      // leading v
+		{"1.0.0.0.1", ""}, // 5+ parts
 
 		// Invalid: non-Composer pre-release suffixes (issue #17)
-		{"3.1.0-dev1", ""},   // dev + bare number
+		{"3.1.0-dev1", ""}, // dev + bare number
 		{"3.1.0-dev2", ""},
-		{"3.1.0-free", ""},   // not a Composer keyword
-		{"1.0f", ""},         // trailing letter, no hyphen
-		{"1.0-foo", ""},      // arbitrary suffix
+		{"3.1.0-free", ""}, // not a Composer keyword
+		{"1.0f", ""},       // trailing letter, no hyphen
+		{"1.0-foo", ""},    // arbitrary suffix
 
 		// Invalid: trailing dot with no digits
 		{"1.0-beta.", ""},
@@ -67,15 +67,15 @@ func TestNormalize(t *testing.T) {
 		{"1.0-stable.", ""},
 
 		// Invalid: Wordfence corpus samples
-		{"1.0 12319", ""},    // space in version
+		{"1.0 12319", ""}, // space in version
 		{"1.0.1 Lite", ""},
 		{"1.1(Beta)", ""},
-		{"1.3..4", ""},       // double dot
-		{"08-03-2018", ""},   // date format
+		{"1.3..4", ""},     // double dot
+		{"08-03-2018", ""}, // date format
 		{"2.24080000-WP6.6.1", ""},
 		{"2025r1", ""},
 		{"3.0 (Beta r7)", ""},
-		{"3.1.37.11.L", ""},  // 5 parts + letter
+		{"3.1.37.11.L", ""}, // 5 parts + letter
 	}
 
 	for _, tt := range tests {
