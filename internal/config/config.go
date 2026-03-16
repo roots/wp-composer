@@ -30,8 +30,7 @@ type DBConfig struct {
 }
 
 type ServerConfig struct {
-	Addr       string `yaml:"addr"`
-	TrustProxy bool   `yaml:"trust_proxy"`
+	Addr string `yaml:"addr"`
 }
 
 type R2Config struct {
@@ -153,9 +152,6 @@ func applyEnv(cfg *Config) {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.Telemetry.DedupeWindowSeconds = n
 		}
-	}
-	if v := os.Getenv("TRUST_PROXY"); v != "" {
-		cfg.Server.TrustProxy = strings.EqualFold(v, "true") || v == "1"
 	}
 	if v := os.Getenv("SEEDS_FILE"); v != "" {
 		cfg.Discovery.SeedsFile = v

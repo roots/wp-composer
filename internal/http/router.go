@@ -124,9 +124,7 @@ func NewRouter(a *app.App) http.Handler {
 	handler = http.TimeoutHandler(handler, 60*time.Second, "")
 	handler = Recoverer(handler, a.Logger)
 	handler = sentryMiddleware.Handle(handler)
-	if a.Config.Server.TrustProxy {
-		handler = RealIP(handler)
-	}
+	handler = RealIP(handler)
 
 	return handler
 }

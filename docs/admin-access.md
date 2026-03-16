@@ -4,15 +4,7 @@
 
 Admin access is protected by in-app authentication. Email/password login and admin authorization are required for all protected `/admin/*` routes.
 
-## Proxy Trust
-
-When behind a reverse proxy (Caddy, nginx), enable proxy header trust so the app sees the real client IP (used for login rate limiting and telemetry dedupe):
-
-```env
-TRUST_PROXY=true
-```
-
-This reads `X-Real-IP` / `X-Forwarded-For` headers to determine the client IP. **Only enable this when the app is behind a trusted proxy** — otherwise clients can spoof their IP.
+**Note:** The app always trusts `X-Real-IP` / `X-Forwarded-For` headers for client IP resolution (used for login rate limiting and telemetry dedupe). It must be deployed behind a trusted reverse proxy (Caddy) — never exposed directly to the internet.
 
 ## Admin Bootstrap
 

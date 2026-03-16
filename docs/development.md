@@ -68,7 +68,6 @@ Env-first with optional YAML config file (env overrides YAML).
 | `R2_SECRET_ACCESS_KEY` | — | R2 credentials |
 | `R2_BUCKET` | — | R2 bucket name |
 | `R2_ENDPOINT` | — | R2 S3-compatible endpoint |
-| `TRUST_PROXY` | `false` | Trust `X-Forwarded-For` for client IP (enable behind proxy) |
 | `SESSION_LIFETIME_MINUTES` | `7200` | Admin session lifetime |
 
 ## Technical Decisions
