@@ -118,6 +118,7 @@ Configure via systemd timers or cron:
 | `wpcomposer pipeline` | Every 5 minutes | Main data refresh cycle |
 | `wpcomposer aggregate-installs` | Hourly | Telemetry counter rollups |
 | `wpcomposer cleanup-sessions` | Daily | Expired session cleanup |
+| `wpcomposer generate-og` | Daily | Regenerate OG images where install counts changed |
 
 Alternatively, run `wpcomposer serve --with-scheduler` to handle scheduling in-process.
 

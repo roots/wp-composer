@@ -71,6 +71,24 @@
     mode: "0644"
   notify: Reload systemd
 
+- name: Deploy generate-og timer
+  template:
+    src: wpcomposer-generate-og.service.j2
+    dest: /etc/systemd/system/wpcomposer-generate-og.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy generate-og timer unit
+  template:
+    src: wpcomposer-generate-og.timer.j2
+    dest: /etc/systemd/system/wpcomposer-generate-og.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
 - name: Flush handlers
   meta: flush_handlers
 
@@ -101,3 +119,4 @@
     - wpcomposer-pipeline.timer
     - wpcomposer-aggregate.timer
     - wpcomposer-cleanup.timer
+    - wpcomposer-generate-og.timer
