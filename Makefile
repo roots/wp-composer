@@ -30,9 +30,9 @@ build: tailwind
 install:
 	go install ./cmd/wpcomposer
 
-# Build and start dev server (migrations, seed data, serve)
-dev: build
-	ADMIN_ALLOW_CIDR= ./wpcomposer dev --addr :8080
+# Live-reload dev server (migrations, seed data, serve)
+dev: tailwind-install
+	air
 
 # Run all tests
 test:

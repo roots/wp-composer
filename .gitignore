@@ -7,3 +7,4 @@ storage/
 *.db-shm
 .env
 benchmarks/results/
+tmp/

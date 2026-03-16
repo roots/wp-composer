@@ -3,6 +3,8 @@
 ## Prerequisites
 
 - Go 1.26+
+- [air](https://github.com/air-verse/air) — `go install github.com/air-verse/air@latest`
+- [golangci-lint](https://github.com/golangci/golangci-lint) — `go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest` (for `make lint`)
 
 ## Quick Start
 
@@ -87,7 +89,7 @@ Env-first with optional YAML config file (env overrides YAML).
 ## Make Targets
 
 ```bash
-make dev    # Build + bootstrap + serve
+make dev    # Build + bootstrap + serve (live-reload via air)
 make test   # Run all tests
 make build  # Build binary
 make clean  # Remove artifacts
