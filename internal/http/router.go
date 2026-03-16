@@ -2,16 +2,18 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime/debug"
+	"strings"
 	"time"
 
 	sentryhttp "github.com/getsentry/sentry-go/http"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/roots/wp-composer/internal/app"
 )
 
@@ -36,22 +38,22 @@ func stripAssetHash(next http.Handler) http.Handler {
 	})
 }
 
-func NewRouter(a *app.App) chi.Router {
-	r := chi.NewRouter()
+func NewRouter(a *app.App) http.Handler {
+	mux := http.NewServeMux()
 	tmpl := loadTemplates(a.Config.Env)
 
-	r.Use(middleware.RequestID)
-	if a.Config.Server.TrustProxy {
-		r.Use(middleware.RealIP)
+	// route registers a handler on the mux, wrapping it with routeMarker so
+	// appHandler can distinguish matched routes from mux-internal 404/405.
+	route := func(pattern string, handler http.Handler) {
+		mux.Handle(pattern, routeMarker(handler))
+	}
+	routeFunc := func(pattern string, handler http.HandlerFunc) {
+		route(pattern, handler)
 	}
 
-	r.Use(middleware.Recoverer)
-
 	sentryMiddleware := sentryhttp.New(sentryhttp.Options{Repanic: true})
-	r.Use(sentryMiddleware.Handle)
-	r.Use(middleware.Timeout(60 * time.Second))
 
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+	routeFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
@@ -60,72 +62,183 @@ func NewRouter(a *app.App) chi.Router {
 	staticServer := http.FileServer(http.FS(staticSub))
 	cachedStatic := cacheControl("public, max-age=31536000, immutable", stripAssetHash(staticServer))
 	for _, f := range []string{"/favicon.ico", "/icon.svg", "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png", "/manifest.webmanifest"} {
-		r.Get(f, cachedStatic.ServeHTTP)
+		route("GET "+f, cachedStatic)
 	}
-	r.Get("/assets/*", cachedStatic.ServeHTTP)
+	route("GET /assets/", cachedStatic)
 
 	// Ensure fallback OG image exists (uploads to R2 in production)
 	ensureLocalFallbackOG(a.Config)
 
 	// Serve OG images from local disk (dev mode — production uses CDN)
 	if a.Config.R2.CDNPublicURL == "" {
-		r.Get("/og/*", handleOGImage())
+		routeFunc("GET /og/", handleOGImage())
 	}
 
-	r.Get("/feed.xml", handleFeed(a))
-	r.Get("/robots.txt", handleRobotsTxt(a))
+	routeFunc("GET /feed.xml", handleFeed(a))
+	routeFunc("GET /robots.txt", handleRobotsTxt(a))
 	sitemaps := &sitemapData{}
-	r.Get("/sitemap.xml", handleSitemapIndex(a, sitemaps))
-	r.Get("/sitemap-pages.xml", handleSitemapPages(a, sitemaps))
-	r.Get("/sitemap-packages-{page}.xml", handleSitemapPackages(a, sitemaps))
+	routeFunc("GET /sitemap.xml", handleSitemapIndex(a, sitemaps))
+	routeFunc("GET /sitemap-pages.xml", handleSitemapPages(a, sitemaps))
+	// sitemap-packages routes are handled in appHandler (prefix can't be a ServeMux pattern)
+	sitemapPackagesHandler := handleSitemapPackages(a, sitemaps)
 
-	r.Get("/", handleIndex(a, tmpl))
-	r.Get("/packages-partial", handleIndexPartial(a, tmpl))
-	r.Get("/packages/{type}/{name}", handleDetail(a, tmpl))
-	r.Get("/wp-composer-vs-wpackagist", handleCompare(a, tmpl))
-	r.Get("/roots-wordpress", handleRootsWordpress(a, tmpl))
+	routeFunc("GET /{$}", handleIndex(a, tmpl))
+	routeFunc("GET /packages-partial", handleIndexPartial(a, tmpl))
+	routeFunc("GET /packages/{type}/{name}", handleDetail(a, tmpl))
+	routeFunc("GET /wp-composer-vs-wpackagist", handleCompare(a, tmpl))
+	routeFunc("GET /roots-wordpress", handleRootsWordpress(a, tmpl))
 
-	r.Post("/downloads", handleDownloads(a))
+	routeFunc("POST /downloads", handleDownloads(a))
 
 	// Serve static repository files from current build (local/dev mode)
 	repoRoot := filepath.Join("storage", "repository", "current")
 	if _, err := os.Stat(repoRoot); err == nil {
 		fileServer := http.FileServer(http.Dir(repoRoot))
-		r.Get("/packages.json", func(w http.ResponseWriter, r *http.Request) {
+		routeFunc("GET /packages.json", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			fileServer.ServeHTTP(w, r)
 		})
-		r.Handle("/p/*", fileServer)
-		r.Handle("/p2/*", fileServer)
+		route("/p/", fileServer)
+		route("/p2/", fileServer)
 	}
 
-	// Admin subrouter — network-restricted, login is public within that, rest requires auth
-	admin := chi.NewRouter()
-	admin.Use(RequireAllowedIP(a.Config.Server.AdminAllowCIDR, a.Logger))
+	// Admin subrouter — all admin handlers are behind routeMarker via StripPrefix
+	adminMux := http.NewServeMux()
+	adminMux.HandleFunc("GET /login", handleLoginPage(a))
+	adminMux.HandleFunc("POST /login", handleLogin(a))
+	adminMux.HandleFunc("POST /logout", handleLogout(a))
 
-	admin.Get("/login", handleLoginPage(a))
-	admin.Post("/login", handleLogin(a))
-	admin.Post("/logout", handleLogout(a))
+	protectedMux := http.NewServeMux()
+	protectedMux.HandleFunc("GET /{$}", handleAdminDashboard(a, tmpl))
+	protectedMux.HandleFunc("GET /packages", handleAdminPackages(a, tmpl))
+	protectedMux.HandleFunc("GET /builds", handleAdminBuilds(a, tmpl))
+	protectedMux.HandleFunc("POST /builds/trigger", handleTriggerBuild(a))
+	protectedMux.HandleFunc("GET /logs", handleAdminLogs(tmpl))
+	protectedMux.HandleFunc("GET /logs/stream", noTimeout(handleAdminLogStream(a)))
+	adminMux.Handle("/", Chain(protectedMux, SessionAuth(a.DB), RequireAdmin))
 
-	admin.Group(func(r chi.Router) {
-		r.Use(SessionAuth(a.DB))
-		r.Use(RequireAdmin)
+	route("/admin/", http.StripPrefix("/admin", adminMux))
 
-		r.Get("/", handleAdminDashboard(a, tmpl))
-		r.Get("/packages", handleAdminPackages(a, tmpl))
-		r.Get("/builds", handleAdminBuilds(a, tmpl))
-		r.Post("/builds/trigger", handleTriggerBuild(a))
-		r.Get("/logs", handleAdminLogs(tmpl))
+	// Build handler chain
+	handler := appHandler(mux, tmpl, a, sitemapPackagesHandler)
+	handler = http.TimeoutHandler(handler, 60*time.Second, "")
+	handler = Recoverer(handler, a.Logger)
+	handler = sentryMiddleware.Handle(handler)
+	if a.Config.Server.TrustProxy {
+		handler = RealIP(handler)
+	}
 
-		r.Get("/logs/stream", noTimeout(handleAdminLogStream(a)))
+	return handler
+}
+
+// appHandler routes requests that ServeMux can't express (mid-segment prefixes)
+// and renders a custom 404 template for unmatched routes. It preserves stdlib
+// 405 behavior and does not interfere with handler-generated 404s.
+//
+// The approach: record the status the mux writes. If it's 404 and no registered
+// handler touched the response (checked via a context flag set by routeMarker),
+// replace the default body with the custom template. 405s and handler-generated
+// 404s pass through untouched.
+func appHandler(mux *http.ServeMux, tmpl *templateSet, a *app.App, sitemapPackages http.HandlerFunc) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Sitemap-packages prefix can't be expressed as a ServeMux pattern
+		// (wildcards must be full path segments).
+		if r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/sitemap-packages-") {
+			sitemapPackages(w, r)
+			return
+		}
+
+		rec := &statusRecorder{ResponseWriter: w}
+		mux.ServeHTTP(rec, r)
+
+		// Only replace the default ServeMux 404 — not handler-generated ones.
+		// A registered handler sets the dispatched flag via routeMarker middleware,
+		// so rec.dispatched is false only when the mux itself returned 404/405/etc.
+		if rec.code == http.StatusNotFound && !rec.dispatched {
+			w.WriteHeader(http.StatusNotFound)
+			render(w, r, tmpl.notFound, "layout", map[string]any{"Gone": false, "CDNURL": a.Config.R2.CDNPublicURL})
+		}
 	})
+}
 
-	r.Mount("/admin", admin)
+type statusRecorder struct {
+	http.ResponseWriter
+	code       int
+	dispatched bool // true if a registered handler wrote the response
+}
 
-	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-		render(w, r, tmpl.notFound, "layout", map[string]any{"Gone": false, "CDNURL": a.Config.R2.CDNPublicURL})
+func (r *statusRecorder) WriteHeader(code int) {
+	r.code = code
+	if r.dispatched || code != http.StatusNotFound {
+		r.ResponseWriter.WriteHeader(code)
+	}
+}
+
+func (r *statusRecorder) Write(b []byte) (int, error) {
+	if !r.dispatched && r.code == http.StatusNotFound {
+		return len(b), nil // swallow default 404 body
+	}
+	return r.ResponseWriter.Write(b)
+}
+
+// markDispatched sets the dispatched flag on the statusRecorder, indicating
+// that a registered handler is handling this request (as opposed to the
+// mux's internal 404/405 handler).
+func (r *statusRecorder) markDispatched() {
+	r.dispatched = true
+}
+
+// routeMarker wraps a handler to mark the response as dispatched by a
+// registered route. This lets appHandler distinguish mux-generated 404s
+// from handler-generated 404s.
+func routeMarker(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if rec, ok := w.(*statusRecorder); ok {
+			rec.markDispatched()
+		}
+		h.ServeHTTP(w, r)
 	})
+}
 
-	return r
+// Chain applies middleware in order (first argument is innermost).
+func Chain(h http.Handler, mw ...func(http.Handler) http.Handler) http.Handler {
+	for i := len(mw) - 1; i >= 0; i-- {
+		h = mw[i](h)
+	}
+	return h
+}
+
+// Recoverer recovers from panics, logs the error, and returns 500.
+func Recoverer(next http.Handler, logger *slog.Logger) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				logger.Error("panic recovered",
+					"error", fmt.Sprintf("%v", err),
+					"stack", string(debug.Stack()),
+				)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
+}
+
+// RealIP sets r.RemoteAddr to the client IP from X-Forwarded-For or
+// X-Real-IP headers. Only enable behind a trusted reverse proxy.
+func RealIP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if ip := r.Header.Get("X-Real-IP"); ip != "" {
+			r.RemoteAddr = ip
+		} else if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			// First entry is the original client
+			if i := strings.IndexByte(xff, ','); i > 0 {
+				ip = strings.TrimSpace(xff[:i])
+			} else {
+				ip = strings.TrimSpace(xff)
+			}
+			r.RemoteAddr = ip
+		}
+		next.ServeHTTP(w, r)
+	})
 }

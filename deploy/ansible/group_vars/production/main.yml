@@ -32,9 +32,6 @@ r2_cdn_public_url: "https://cdn.wp-composer.com"
 # Sessions
 session_lifetime_minutes: 7200
 
-# Admin access (empty = no IP restriction, set Tailscale CIDRs when ready)
-admin_allow_cidr: ""
-
 # Repository
 repository_path: "{{ app_root }}/shared/storage/repository"
 

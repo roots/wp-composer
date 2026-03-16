@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/roots/wp-composer/internal/app"
 )
 
@@ -254,7 +253,8 @@ func handleSitemapPackages(a *app.App, data *sitemapData) http.HandlerFunc {
 			return
 		}
 
-		pageStr := strings.TrimSuffix(chi.URLParam(r, "page"), ".xml")
+		slug := strings.TrimPrefix(r.URL.Path, "/sitemap-packages-")
+		pageStr := strings.TrimSuffix(slug, ".xml")
 		page, err := strconv.Atoi(pageStr)
 		if err != nil || page < 0 {
 			http.NotFound(w, r)

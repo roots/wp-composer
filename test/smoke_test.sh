@@ -88,7 +88,7 @@ APP_URL="$APP_URL" "$BINARY" build --db "$DB_PATH" > /dev/null 2>&1
 
 echo ""
 echo "=== Starting server ==="
-ADMIN_ALLOW_CIDR= "$BINARY" serve --db "$DB_PATH" --addr ":${APP_PORT}" > /dev/null 2>&1 &
+"$BINARY" serve --db "$DB_PATH" --addr ":${APP_PORT}" > /dev/null 2>&1 &
 APP_PID=$!
 sleep 2
 
@@ -227,8 +227,8 @@ LOGIN_STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "${APP_URL}/admin/login")
 assert_eq "$LOGIN_STATUS" "200" "GET /admin/login returns 200"
 
 # Admin dashboard should redirect to login (no session)
-ADMIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${APP_URL}/admin")
-assert_eq "$ADMIN_STATUS" "303" "GET /admin without auth redirects (303)"
+ADMIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${APP_URL}/admin/")
+assert_eq "$ADMIN_STATUS" "303" "GET /admin/ without auth redirects (303)"
 
 # ─── Dedupe verification ──────────────────────────────────────────
 
@@ -349,8 +349,8 @@ fi
 # Access admin with session cookie
 if [ -n "$SESSION_COOKIE" ]; then
   AUTHED_STATUS=$(curl -sf -o /dev/null -w "%{http_code}" \
-    -b "session=${SESSION_COOKIE}" "${APP_URL}/admin")
-  assert_eq "$AUTHED_STATUS" "200" "GET /admin with session returns 200"
+    -b "session=${SESSION_COOKIE}" "${APP_URL}/admin/")
+  assert_eq "$AUTHED_STATUS" "200" "GET /admin/ with session returns 200"
 
   AUTHED_PACKAGES=$(curl -sf -o /dev/null -w "%{http_code}" \
     -b "session=${SESSION_COOKIE}" "${APP_URL}/admin/packages")
@@ -378,7 +378,7 @@ if [ -n "$SESSION_COOKIE" ]; then
   else
     # Check if session is invalidated by trying to access admin
     POST_LOGOUT=$(curl -s -o /dev/null -w "%{http_code}" \
-      -b "session=${SESSION_COOKIE}" "${APP_URL}/admin")
+      -b "session=${SESSION_COOKIE}" "${APP_URL}/admin/")
     assert_eq "$POST_LOGOUT" "303" "admin inaccessible after logout"
   fi
 fi

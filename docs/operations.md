@@ -165,12 +165,7 @@ echo 'new-password' | wpcomposer admin reset-password --email admin@example.com 
 
 ## Admin Access Model
 
-Admin access uses defense in depth:
-
-1. **Network layer** — Tailscale restricts access to `/admin/*` routes to authorized devices on the tailnet.
-2. **Application layer** — in-app authentication and admin authorization required for all `/admin/*` routes.
-
-Both layers must pass. A valid Tailscale connection without app auth (or vice versa) is denied.
+Admin access is protected by in-app authentication (email/password) and admin authorization for all `/admin/*` routes.
 
 ## Server Provisioning
 

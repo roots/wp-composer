@@ -29,7 +29,7 @@ WP Composer has two primary runtime concerns:
 ### Web UI
 
 - Public package browser/detail pages via server-rendered Go templates + Tailwind.
-- Admin panel at `/admin` with Tailscale network gating + in-app auth (defense in depth).
+- Admin panel at `/admin` with in-app auth (email/password + session).
 
 ## Module Layout
 
@@ -43,7 +43,7 @@ internal/
 ├── repository/         artifact generation, hashing, integrity validation
 ├── deploy/             local promote/rollback/cleanup + R2 sync
 ├── telemetry/          event ingestion, dedupe, rollups
-└── http/               Chi router, handlers, templates, static assets
+└── http/               stdlib router, handlers, templates, static assets
 ```
 
 ## Data Flow
@@ -93,7 +93,7 @@ storage/repository/
 - `GET /admin/packages` — package management
 - `GET /admin/builds` — build history/status
 - Admin-triggered sync/build/deploy actions
-- Access: Tailscale network gating + in-app auth/authorization required
+- Access: in-app auth/authorization required
 
 ## Static Repository Deployment
 
