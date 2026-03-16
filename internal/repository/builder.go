@@ -194,12 +194,14 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 					return nil, fmt.Errorf("writing %s: %w", pkgFile, err)
 				}
 				changedPkgs++
+				opts.Logger.Info("package changed", "package", composerName)
 			}
 		} else {
 			if err := os.WriteFile(pkgFile, data, 0644); err != nil {
 				return nil, fmt.Errorf("writing %s: %w", pkgFile, err)
 			}
 			changedPkgs++
+			opts.Logger.Info("package changed", "package", composerName)
 		}
 		packageHashes[composerName] = hash
 		artifactCount++
