@@ -2,8 +2,24 @@
 
 TAILWIND ?= ./bin/tailwindcss
 
+# Download Tailwind standalone CLI if missing
+tailwind-install:
+	@if [ ! -f $(TAILWIND) ]; then \
+		mkdir -p bin; \
+		ARCH=$$(uname -m); \
+		OS=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
+		case "$$OS" in darwin) OS=macos ;; esac; \
+		case "$$ARCH" in \
+			x86_64) ARCH=x64 ;; \
+			aarch64|arm64) ARCH=arm64 ;; \
+		esac; \
+		echo "Downloading tailwindcss for $$OS-$$ARCH..."; \
+		curl -sLo $(TAILWIND) "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-$$OS-$$ARCH"; \
+		chmod +x $(TAILWIND); \
+	fi
+
 # Generate CSS from templates
-tailwind:
+tailwind: tailwind-install
 	$(TAILWIND) -i internal/http/tailwind-input.css -o internal/http/static/assets/styles/app.css --minify
 
 # Build the binary
