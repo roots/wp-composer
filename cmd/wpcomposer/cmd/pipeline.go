@@ -188,13 +188,9 @@ func executePipelineSteps(cmd *cobra.Command, ctx context.Context, skipDiscover,
 			application.Logger.Info("pipeline: local cleanup done", "removed", removed)
 		}
 
-		if application.Config.R2.Enabled {
-			if removed, err := deploy.CleanupR2(ctx, application.Config.R2, 24, 5, application.Logger); err != nil {
-				application.Logger.Warn("pipeline: R2 cleanup failed", "error", err)
-			} else if removed > 0 {
-				application.Logger.Info("pipeline: R2 cleanup done", "objects_removed", removed)
-			}
-		}
+		// R2 cleanup disabled — old release prefixes with full file sets make
+		// listing too slow. Run manually via: wpcomposer deploy --cleanup --r2-cleanup
+		// TODO: re-enable after old fat release prefixes are purged.
 	}
 
 	return nil
