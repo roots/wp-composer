@@ -114,14 +114,14 @@ func NewRouter(a *app.App) http.Handler {
 	protectedMux.HandleFunc("GET /builds", handleAdminBuilds(a, tmpl))
 	protectedMux.HandleFunc("POST /builds/trigger", handleTriggerBuild(a))
 	protectedMux.HandleFunc("GET /logs", handleAdminLogs(tmpl))
-	protectedMux.HandleFunc("GET /logs/stream", noTimeout(handleAdminLogStream(a)))
+	protectedMux.HandleFunc("GET /logs/stream", handleAdminLogStream(a))
 	adminMux.Handle("/", Chain(protectedMux, SessionAuth(a.DB), RequireAdmin))
 
 	route("/admin/", http.StripPrefix("/admin", adminMux))
 
 	// Build handler chain
 	handler := appHandler(mux, tmpl, a, sitemapPackagesHandler)
-	handler = http.TimeoutHandler(handler, 60*time.Second, "")
+	handler = timeoutBypass(handler, 60*time.Second)
 	handler = Recoverer(handler, a.Logger)
 	handler = sentryMiddleware.Handle(handler)
 	handler = RealIP(handler)
@@ -172,6 +172,16 @@ func (r *statusRecorder) WriteHeader(code int) {
 	}
 }
 
+func (r *statusRecorder) Flush() {
+	if f, ok := r.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+func (r *statusRecorder) Unwrap() http.ResponseWriter {
+	return r.ResponseWriter
+}
+
 func (r *statusRecorder) Write(b []byte) (int, error) {
 	if !r.dispatched && r.code == http.StatusNotFound {
 		return len(b), nil // swallow default 404 body
@@ -219,6 +229,27 @@ func Recoverer(next http.Handler, logger *slog.Logger) http.Handler {
 			}
 		}()
 		next.ServeHTTP(w, r)
+	})
+}
+
+// Paths that bypass the global http.TimeoutHandler because they are
+// long-lived streaming connections (SSE). http.TimeoutHandler replaces the
+// ResponseWriter with a buffering writer that doesn't implement
+// http.Flusher, so these paths must be excluded before TimeoutHandler runs.
+var noTimeoutPaths = map[string]bool{
+	"/admin/logs/stream": true,
+}
+
+// timeoutBypass applies http.TimeoutHandler to all requests except those
+// whose path is in noTimeoutPaths.
+func timeoutBypass(next http.Handler, dt time.Duration) http.Handler {
+	th := http.TimeoutHandler(next, dt, "")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if noTimeoutPaths[r.URL.Path] {
+			next.ServeHTTP(w, r)
+			return
+		}
+		th.ServeHTTP(w, r)
 	})
 }
 

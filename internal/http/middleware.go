@@ -12,15 +12,6 @@ type contextKey string
 
 const userContextKey contextKey = "user"
 
-// noTimeout wraps a handler to bypass the global timeout middleware.
-// Client disconnects are detected via failed writes in the handler.
-func noTimeout(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := context.WithoutCancel(r.Context())
-		h.ServeHTTP(w, r.WithContext(ctx))
-	}
-}
-
 func UserFromContext(ctx context.Context) *auth.User {
 	u, _ := ctx.Value(userContextKey).(*auth.User)
 	return u
