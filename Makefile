@@ -1,4 +1,4 @@
-.PHONY: build install dev test smoke lint clean tailwind
+.PHONY: build install dev test smoke lint clean tailwind db-restore
 
 TAILWIND ?= ./bin/tailwindcss
 
@@ -48,6 +48,10 @@ lint:
 	@if [ -n "$$(gofmt -s -l .)" ]; then echo "gofmt needed:"; gofmt -s -l .; exit 1; fi
 	go vet ./...
 	@go mod tidy && if [ -n "$$(git diff --name-only -- go.mod go.sum)" ]; then echo "go mod tidy needed"; exit 1; fi
+
+# Restore production database from R2
+db-restore:
+	go run ./cmd/wpcomposer db restore --force
 
 # Remove build artifacts
 clean:
