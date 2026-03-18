@@ -23,6 +23,13 @@ func NewDownloadsCache(logger *slog.Logger) *DownloadsCache {
 	return c
 }
 
+// NewStubCache returns a DownloadsCache that never fetches, for use in tests.
+func NewStubCache() *DownloadsCache {
+	c := &DownloadsCache{logger: slog.Default()}
+	c.value.Store(0)
+	return c
+}
+
 func (c *DownloadsCache) Total() int64 {
 	return c.value.Load()
 }

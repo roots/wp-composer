@@ -1,0 +1,24 @@
+{
+  "name": "Contact Form 7",
+  "slug": "contact-form-7",
+  "version": "6.0.2",
+  "author": "<a href=\"https://ideasilo.wordpress.com/\">Takayuki Miyoshi</a>",
+  "requires": "6.2",
+  "tested": "6.7.2",
+  "requires_php": "7.4",
+  "download_link": "https://downloads.wordpress.org/plugin/contact-form-7.6.0.2.zip",
+  "added": "2007-11-11",
+  "last_updated": "2024-12-14 22:20:00",
+  "homepage": "https://contactform7.com/",
+  "short_description": "Just another contact form plugin. Simple but flexible.",
+  "downloaded": 400000000,
+  "active_installs": 5000000,
+  "rating": 88,
+  "num_ratings": 2200,
+  "versions": {
+    "6.0": "https://downloads.wordpress.org/plugin/contact-form-7.6.0.zip",
+    "6.0.1": "https://downloads.wordpress.org/plugin/contact-form-7.6.0.1.zip",
+    "6.0.2": "https://downloads.wordpress.org/plugin/contact-form-7.6.0.2.zip",
+    "dev-trunk": "https://downloads.wordpress.org/plugin/contact-form-7.zip"
+  }
+}

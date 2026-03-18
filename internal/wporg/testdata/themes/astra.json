@@ -1,0 +1,20 @@
+{
+  "name": "Astra",
+  "slug": "astra",
+  "version": "4.8.4",
+  "author": "Starter Templates",
+  "homepage": "https://wpastra.com/",
+  "last_updated": "2024-12-16 10:00:00",
+  "active_installs": 2000000,
+  "downloaded": 100000000,
+  "rating": 98,
+  "num_ratings": 5800,
+  "sections": {
+    "description": "Starter Templates lets you build beautiful WordPress websites with starter templates."
+  },
+  "versions": {
+    "4.8.2": "https://downloads.wordpress.org/theme/astra.4.8.2.zip",
+    "4.8.3": "https://downloads.wordpress.org/theme/astra.4.8.3.zip",
+    "4.8.4": "https://downloads.wordpress.org/theme/astra.4.8.4.zip"
+  }
+}

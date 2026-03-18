@@ -1,0 +1,25 @@
+{
+  "name": "Classic Editor",
+  "slug": "classic-editor",
+  "version": "1.6.6",
+  "author": "<a href=\"https://developer.wordpress.org/\">WordPress Contributors</a>",
+  "requires": "4.9",
+  "tested": "6.7.2",
+  "requires_php": "5.2.4",
+  "download_link": "https://downloads.wordpress.org/plugin/classic-editor.1.6.6.zip",
+  "added": "2018-03-08",
+  "last_updated": "2024-11-11 20:45:00",
+  "homepage": "https://wordpress.org/plugins/classic-editor/",
+  "short_description": "Enables the previous \"classic\" editor and the old-style Edit Post screen.",
+  "downloaded": 68000000,
+  "active_installs": 5000000,
+  "rating": 98,
+  "num_ratings": 1200,
+  "versions": {
+    "1.6.3": "https://downloads.wordpress.org/plugin/classic-editor.1.6.3.zip",
+    "1.6.4": "https://downloads.wordpress.org/plugin/classic-editor.1.6.4.zip",
+    "1.6.5": "https://downloads.wordpress.org/plugin/classic-editor.1.6.5.zip",
+    "1.6.6": "https://downloads.wordpress.org/plugin/classic-editor.1.6.6.zip",
+    "dev-trunk": "https://downloads.wordpress.org/plugin/classic-editor.zip"
+  }
+}

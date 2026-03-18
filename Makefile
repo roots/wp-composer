@@ -1,4 +1,4 @@
-.PHONY: build install dev test smoke lint clean tailwind db-restore
+.PHONY: build install dev test integration lint clean tailwind db-restore
 
 TAILWIND ?= ./bin/tailwindcss
 
@@ -38,9 +38,9 @@ dev: tailwind-install
 test:
 	go test ./...
 
-# End-to-end smoke test (requires composer, sqlite3)
-smoke: build
-	./test/smoke_test.sh
+# Integration tests (requires composer)
+integration:
+	go test -tags=integration -count=1 -timeout=5m -v ./internal/integration/...
 
 # Lint (matches CI: golangci-lint + gofmt + go vet + go mod tidy)
 lint:
