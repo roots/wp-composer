@@ -54,13 +54,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Check if go.mod/go.sum are tidy
-        run: |
-          go mod tidy
-          if [ -n "$(git diff --name-only -- go.mod go.sum)" ]; then
-            echo "go.mod/go.sum are not tidy. Please run 'go mod tidy'"
-            git diff -- go.mod go.sum
-            exit 1
-          fi
+        run: go mod tidy -diff
 
   vet:
     name: Go Vet
