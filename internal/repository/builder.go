@@ -270,6 +270,8 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 		"providers-url":              "/p/%package%$%hash%.json",
 		"provider-includes":          providerIncludes,
 		"available-package-patterns": []string{"wp-plugin/*", "wp-theme/*"},
+		"warning":                    "Support for Composer 1 will be shut down in the near future. You should upgrade to Composer 2.",
+		"warning-versions":           "<1.999",
 	}
 
 	rootHash, rootData, err := HashJSON(packagesJSON)
