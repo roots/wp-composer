@@ -50,6 +50,7 @@ func writeComposerJSON(t *testing.T, dir, repoURL string, require map[string]str
 			"allow-plugins": map[string]any{
 				"composer/installers": true,
 			},
+			"secure-http": false,
 		},
 	}
 	jsonData, err := json.MarshalIndent(data, "", "  ")
