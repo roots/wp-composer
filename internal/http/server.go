@@ -50,12 +50,13 @@ func ListenAndServe(a *app.App) error {
 		close(errCh)
 	}()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	sigCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	select {
-	case sig := <-quit:
-		a.Logger.Info("shutting down", "signal", sig.String())
+	case <-sigCtx.Done():
+		a.Logger.Info("shutting down", "cause", context.Cause(sigCtx))
+		stop()
 	case err := <-errCh:
 		if err != nil {
 			sentry.CaptureException(err)
