@@ -30,7 +30,12 @@ import (
 const perPage = 12
 
 // captureError reports a non-panic error to Sentry with the request's hub.
+// It silently ignores context cancellation errors (timeouts, client disconnects)
+// since these are expected during normal operation.
 func captureError(r *http.Request, err error) {
+	if r.Context().Err() != nil {
+		return
+	}
 	if hub := sentry.GetHubFromContext(r.Context()); hub != nil {
 		hub.CaptureException(err)
 	} else {
