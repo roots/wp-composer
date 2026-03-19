@@ -1,6 +1,6 @@
 # Application
 app_name: wp-composer
-app_domain: wp-composer.com
+app_domain: wp-packages.org
 app_root: /srv/wp-composer
 app_env: production
 app_debug: "false"

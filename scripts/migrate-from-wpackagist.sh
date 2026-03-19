@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Migrate composer.json from WPackagist to WP Composer
-# https://wp-composer.com/wp-composer-vs-wpackagist
+# https://wp-packages.org/wp-composer-vs-wpackagist
 
 # --dry-run / -n: show a diff of what would change without modifying the file.
 DRY_RUN=false
