@@ -49,29 +49,17 @@ func runDBRestore(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("litestream binary not found in PATH: %w", err)
 	}
 
-	// Build the replica URL.
-	bucket := cfg.Litestream.Bucket
-	if bucket == "" {
-		return fmt.Errorf("LITESTREAM_BUCKET is not set")
-	}
-	path := cfg.Litestream.Path
-	if path == "" {
-		path = "db"
-	}
-	endpoint := cfg.R2.Endpoint
-	if endpoint == "" {
-		return fmt.Errorf("R2_ENDPOINT is not set")
+	// Locate litestream config file (next to the binary or in working dir).
+	litestreamConfig := "litestream.yml"
+	if _, err := os.Stat(litestreamConfig); err != nil {
+		return fmt.Errorf("litestream.yml not found in working directory")
 	}
 
-	replicaURL := fmt.Sprintf("s3://%s/%s", bucket, path)
+	dbPath := cfg.DB.Path
 
 	// Run litestream restore.
-	restoreCmd := exec.CommandContext(cmd.Context(), litestreamPath, "restore", "-o", output, replicaURL)
-	restoreCmd.Env = append(os.Environ(),
-		"LITESTREAM_ACCESS_KEY_ID="+cfg.R2.AccessKeyID,
-		"LITESTREAM_SECRET_ACCESS_KEY="+cfg.R2.SecretAccessKey,
-		"LITESTREAM_ENDPOINT="+endpoint,
-	)
+	restoreCmd := exec.CommandContext(cmd.Context(), litestreamPath, "restore", "-config", litestreamConfig, "-o", output, dbPath)
+	restoreCmd.Env = os.Environ()
 	restoreCmd.Stdout = os.Stdout
 	restoreCmd.Stderr = os.Stderr
 
