@@ -47,15 +47,12 @@ generate_composer_json() {
   # Remove trailing comma+newline, add newline
   require="${require%,$'\n'}"
 
-  local only_pattern="${prefix}/*"
-
   cat <<EOF
 {
   "repositories": [
     {
       "type": "composer",
-      "url": "${repo_url}",
-      "only": ["${only_pattern}"]
+      "url": "${repo_url}"
     }
   ],
   "require": {

@@ -88,8 +88,7 @@ jq --indent "$INDENT" '
     {
       "name": "wp-packages",
       "type": "composer",
-      "url": "https://repo.wp-packages.org",
-      "only": ["wp-plugin/*", "wp-theme/*"]
+      "url": "https://repo.wp-packages.org"
     };
 
   # Replace wpackagist repository with wp-packages (handles both array and object formats)
