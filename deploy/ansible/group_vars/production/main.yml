@@ -1,7 +1,7 @@
 # Application
-app_name: wp-composer
+app_name: wp-packages
 app_domain: wp-packages.org
-app_root: /srv/wp-composer
+app_root: /srv/wp-packages
 app_env: production
 app_debug: "false"
 app_url: "https://{{ app_domain }}"
@@ -14,19 +14,19 @@ users:
   - qwp6t
 
 # Go binary
-go_binary_name: wpcomposer
+go_binary_name: wppackages
 go_listen_addr: "127.0.0.1:8080"
 go_upstream_addr: "127.0.0.1:8080"
 go_log_level: info
 
 # SQLite
-db_path: "{{ app_root }}/shared/storage/wpcomposer.db"
+db_path: "{{ app_root }}/shared/storage/wppackages.db"
 
 # Caddy
 caddy_email: "team@roots.io"
 
 # R2
-wp_composer_deploy_r2: "true"
+wp_packages_deploy_r2: "true"
 r2_cdn_public_url: "https://cdn.wp-packages.org"
 
 # Litestream
