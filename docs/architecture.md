@@ -1,13 +1,13 @@
 # Architecture
 
-WP Composer has two primary runtime concerns:
+WP Packages has two primary runtime concerns:
 
 1. Build and serve a static Composer repository.
 2. Provide web/admin interfaces for package browsing and operations.
 
 ## System Components
 
-- **Single binary** (`wpcomposer`) provides CLI commands and HTTP server.
+- **Single binary** (`wppackages`) provides CLI commands and HTTP server.
 - **SQLite** (WAL mode) as the sole runtime data store.
 - **R2/CDN** serves Composer metadata artifacts (`packages.json`, `p2/`).
 - **Caddy** reverse proxies app routes to the Go HTTP server.
@@ -15,11 +15,11 @@ WP Composer has two primary runtime concerns:
 
 ### Build Pipeline Commands
 
-- `wpcomposer discover` — discovers package slugs (config list or SVN).
-- `wpcomposer update` — fetches and stores package metadata from WordPress.org.
-- `wpcomposer build` — generates static Composer JSON artifacts.
-- `wpcomposer deploy` — promotes a completed build, supports rollback/cleanup.
-- `wpcomposer pipeline` — orchestrates discover → update → build → deploy.
+- `wppackages discover` — discovers package slugs (config list or SVN).
+- `wppackages update` — fetches and stores package metadata from WordPress.org.
+- `wppackages build` — generates static Composer JSON artifacts.
+- `wppackages deploy` — promotes a completed build, supports rollback/cleanup.
+- `wppackages pipeline` — orchestrates discover → update → build → deploy.
 
 ### Static Repository Storage
 
@@ -34,7 +34,7 @@ WP Composer has two primary runtime concerns:
 ## Module Layout
 
 ```
-cmd/wpcomposer/         CLI entrypoint (Cobra)
+cmd/wppackages/         CLI entrypoint (Cobra)
 internal/
 ├── config/             env-first loading + optional YAML config
 ├── db/                 SQLite connection, pragmas, Goose migrations
@@ -59,8 +59,8 @@ internal/
 
 ## Snapshot Consistency
 
-- `wpcomposer update` stamps updated rows with `last_sync_run_id`.
-- `wpcomposer build` snapshots `max(last_sync_run_id)` and only includes rows at or below that value.
+- `wppackages update` stamps updated rows with `last_sync_run_id`.
+- `wppackages build` snapshots `max(last_sync_run_id)` and only includes rows at or below that value.
 - This prevents mixed-state builds when updates are running concurrently.
 
 ## Static Repository Layout
@@ -97,15 +97,15 @@ storage/repository/
 
 Two deployment targets:
 
-- **R2/CDN (production)** — `wpcomposer deploy --to-r2` syncs the build to Cloudflare R2 with appropriate `Cache-Control` headers. R2 custom domain + Cloudflare CDN serves the static files. See `docs/r2-deployment.md`.
-- **Local (development)** — `wpcomposer deploy` updates the `current` symlink only.
+- **R2/CDN (production)** — `wppackages deploy --to-r2` syncs the build to Cloudflare R2 with appropriate `Cache-Control` headers. R2 custom domain + Cloudflare CDN serves the static files. See `docs/r2-deployment.md`.
+- **Local (development)** — `wppackages deploy` updates the `current` symlink only.
 
 ## Scheduling
 
 Periodic tasks run via systemd timers or cron (no in-process scheduler required):
 
-- `wpcomposer pipeline` — every 5 minutes
-- `wpcomposer aggregate-installs` — hourly
-- `wpcomposer cleanup-sessions` — daily
+- `wppackages pipeline` — every 5 minutes
+- `wppackages aggregate-installs` — hourly
+- `wppackages cleanup-sessions` — daily
 
-Optional: `wpcomposer serve --with-scheduler` for in-process scheduling.
+Optional: `wppackages serve --with-scheduler` for in-process scheduling.

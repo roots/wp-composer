@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	wpcomposergo "github.com/roots/wp-packages"
+	wppackagesgo "github.com/roots/wp-packages"
 	"github.com/roots/wp-packages/internal/config"
 	"github.com/roots/wp-packages/internal/db"
 	"github.com/roots/wp-packages/internal/packages"
@@ -23,7 +23,7 @@ func OpenTestDB(t *testing.T) *sql.DB {
 	}
 	t.Cleanup(func() { _ = database.Close() })
 
-	if err := db.Migrate(database, wpcomposergo.Migrations); err != nil {
+	if err := db.Migrate(database, wppackagesgo.Migrations); err != nil {
 		t.Fatalf("running migrations: %v", err)
 	}
 	return database

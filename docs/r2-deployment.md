@@ -1,6 +1,6 @@
 # R2 Deployment
 
-WP Composer deploys built repository artifacts to Cloudflare R2 for serving via CDN. Builds are generated locally (fast filesystem I/O), then synced to R2 on deploy.
+WP Packages deploys built repository artifacts to Cloudflare R2 for serving via CDN. Builds are generated locally (fast filesystem I/O), then synced to R2 on deploy.
 
 ## Deploy Model
 
@@ -17,7 +17,7 @@ The deploy diffs the current build against the previous build locally. Mutable `
 ## Prerequisites
 
 1. A Cloudflare account with R2 enabled.
-2. An R2 bucket created for the repository (e.g., `wp-composer-repo`).
+2. An R2 bucket created for the repository (e.g., `wp-packages-repo`).
 3. An R2 API token with read/write access to the bucket.
 4. AWS CLI v2 installed (for manual operations and debugging).
 
@@ -25,7 +25,7 @@ The deploy diffs the current build against the previous build locally. Mutable `
 
 ### Create the bucket
 
-In the Cloudflare dashboard: **R2 > Create bucket**. Pick a name (e.g., `wp-composer-repo`), choose a location hint close to your server.
+In the Cloudflare dashboard: **R2 > Create bucket**. Pick a name (e.g., `wp-packages-repo`), choose a location hint close to your server.
 
 ### Create API credentials
 
@@ -47,18 +47,18 @@ Without a custom domain, R2 provides a `.r2.dev` URL, but it has rate limits and
 # R2 credentials
 R2_ACCESS_KEY_ID=your-access-key-id
 R2_SECRET_ACCESS_KEY=your-secret-access-key
-R2_BUCKET=wp-composer-repo
+R2_BUCKET=wp-packages-repo
 R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
 
 # Enable R2 deploy
-WP_COMPOSER_DEPLOY_R2=true
+WP_PACKAGES_DEPLOY_R2=true
 ```
 
 Find your account ID in the Cloudflare dashboard under **R2 > Overview**.
 
 ## How Deploy Works
 
-When deploying to R2 (`wpcomposer deploy --to-r2`):
+When deploying to R2 (`wppackages deploy --to-r2`):
 
 1. Validates the build (packages.json and manifest.json must exist).
 2. Uploads `p2/` files in parallel — skips unchanged files (byte-compared against previous build). Each upload retries up to 3 times with exponential backoff.
@@ -103,13 +103,13 @@ Enter:
 ### Verify access
 
 ```bash
-aws s3 ls s3://wp-composer-repo/ --profile r2 --endpoint-url https://<account-id>.r2.cloudflarestorage.com
+aws s3 ls s3://wp-packages-repo/ --profile r2 --endpoint-url https://<account-id>.r2.cloudflarestorage.com
 ```
 
 ### List bucket contents
 
 ```bash
-aws s3 ls s3://wp-composer-repo/p2/ --profile r2 --endpoint-url https://<account-id>.r2.cloudflarestorage.com
+aws s3 ls s3://wp-packages-repo/p2/ --profile r2 --endpoint-url https://<account-id>.r2.cloudflarestorage.com
 ```
 
 ### Cleanup legacy R2 objects
@@ -122,26 +122,26 @@ After dropping Composer v1 support, the following R2 prefixes are orphaned and c
 Use the AWS CLI to delete these when ready:
 
 ```bash
-aws s3 rm s3://wp-composer-repo/p/ --recursive --profile r2 --endpoint-url https://<account-id>.r2.cloudflarestorage.com
-aws s3 rm s3://wp-composer-repo/releases/ --recursive --profile r2 --endpoint-url https://<account-id>.r2.cloudflarestorage.com
+aws s3 rm s3://wp-packages-repo/p/ --recursive --profile r2 --endpoint-url https://<account-id>.r2.cloudflarestorage.com
+aws s3 rm s3://wp-packages-repo/releases/ --recursive --profile r2 --endpoint-url https://<account-id>.r2.cloudflarestorage.com
 ```
 
-Local build cleanup is handled by `wpcomposer deploy --cleanup`.
+Local build cleanup is handled by `wppackages deploy --cleanup`.
 
 ## Rollback
 
 Rollback deploys the target build to R2 — it diffs the target build's `p2/` files against the currently deployed build and uploads only changed files:
 
 ```bash
-wpcomposer deploy --rollback --to-r2
-wpcomposer deploy --rollback=20260313-130000 --to-r2
+wppackages deploy --rollback --to-r2
+wppackages deploy --rollback=20260313-130000 --to-r2
 ```
 
 Rollback takes roughly the same time as a normal deploy (proportional to the number of changed files).
 
 ## Local-Only Mode
 
-When `WP_COMPOSER_DEPLOY_R2` is unset or `false`, deploy only updates the local `current` symlink. Use this for development or when serving directly from the local filesystem.
+When `WP_PACKAGES_DEPLOY_R2` is unset or `false`, deploy only updates the local `current` symlink. Use this for development or when serving directly from the local filesystem.
 
 ## Monitoring
 
