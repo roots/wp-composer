@@ -3,7 +3,7 @@
   systemd:
     daemon_reload: yes
 
-- name: Restart wpcomposer
+- name: Restart wppackages
   service:
-    name: wpcomposer
+    name: wppackages
     state: restarted
