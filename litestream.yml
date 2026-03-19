@@ -7,3 +7,5 @@ dbs:
         access-key-id: ${R2_ACCESS_KEY_ID}
         secret-access-key: ${R2_SECRET_ACCESS_KEY}
         force-path-style: true
+        retention: 24h
+        snapshot-interval: 24h
