@@ -14,7 +14,7 @@ RESULTS_DIR="${SCRIPT_DIR}/results"
 mkdir -p "$RESULTS_DIR"
 
 RUNS=5
-WPC_BASE="https://repo.wp-composer.com"
+WPC_BASE="https://repo.wp-packages.org"
 WPKG_BASE="https://wpackagist.org"
 
 while [[ $# -gt 0 ]]; do

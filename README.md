@@ -31,7 +31,7 @@ Add the repository to your `composer.json`:
     {
       "name": "wp-composer",
       "type": "composer",
-      "url": "https://repo.wp-composer.com",
+      "url": "https://repo.wp-packages.org",
       "only": ["wp-plugin/*", "wp-theme/*"]
     }
   ],
@@ -80,7 +80,7 @@ A typical [Bedrock](https://roots.io/bedrock/) project uses `roots/wordpress` fo
     {
       "name": "wp-composer",
       "type": "composer",
-      "url": "https://repo.wp-composer.com",
+      "url": "https://repo.wp-packages.org",
       "only": ["wp-plugin/*", "wp-theme/*"]
     }
   ],

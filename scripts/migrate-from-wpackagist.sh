@@ -88,7 +88,7 @@ jq --indent "$INDENT" '
     {
       "name": "wp-composer",
       "type": "composer",
-      "url": "https://repo.wp-composer.com",
+      "url": "https://repo.wp-packages.org",
       "only": ["wp-plugin/*", "wp-theme/*"]
     };
 
@@ -179,7 +179,7 @@ if $DRY_RUN; then
       echo "  - $url  (removed)"
     done <<< "$REMOVED_REPOS"
   fi
-  echo "  + https://repo.wp-composer.com  (wp-composer added)"
+  echo "  + https://repo.wp-packages.org  (wp-composer added)"
 
   echo ""
   echo "Dry run complete. Run without --dry-run to apply these changes."

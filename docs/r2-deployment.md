@@ -37,7 +37,7 @@ Save the **Access Key ID** and **Secret Access Key**.
 
 ### Connect a custom domain (recommended)
 
-**R2 > your bucket > Settings > Custom Domains > Connect Domain**. This gives you a URL like `https://repo.wp-composer.com` backed by Cloudflare's CDN.
+**R2 > your bucket > Settings > Custom Domains > Connect Domain**. This gives you a URL like `https://repo.wp-packages.org` backed by Cloudflare's CDN.
 
 Without a custom domain, R2 provides a `.r2.dev` URL, but it has rate limits and no caching.
 
@@ -149,8 +149,8 @@ After deploy, verify the bucket:
 
 ```bash
 # Check root packages.json has metadata-url
-curl -s https://repo.wp-composer.com/packages.json | jq '.["metadata-url"]'
+curl -s https://repo.wp-packages.org/packages.json | jq '.["metadata-url"]'
 
 # Check a specific package
-curl -s https://repo.wp-composer.com/p2/wp-plugin/akismet.json | head -c 200
+curl -s https://repo.wp-packages.org/p2/wp-plugin/akismet.json | head -c 200
 ```

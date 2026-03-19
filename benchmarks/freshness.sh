@@ -16,7 +16,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 RESULTS_DIR="${SCRIPT_DIR}/results"
 mkdir -p "$RESULTS_DIR"
 
-WPC_BASE="https://repo.wp-composer.com"
+WPC_BASE="https://repo.wp-packages.org"
 WPKG_BASE="https://wpackagist.org"
 PLUGIN_COUNT=20
 

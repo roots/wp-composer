@@ -15,7 +15,7 @@ mkdir -p "$RESULTS_DIR"
 
 RUNS=5
 SIZE="all"
-WPC_URL="https://repo.wp-composer.com"
+WPC_URL="https://repo.wp-packages.org"
 WPKG_URL="https://wpackagist.org"
 
 while [[ $# -gt 0 ]]; do
