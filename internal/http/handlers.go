@@ -227,8 +227,15 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 
 		ogKey := "social/" + pkg.Type + "/" + pkg.Name + ".png"
 		if pkg.OGImageGeneratedAt == nil {
-			// Generate on demand in background
-			go generatePackageOG(a, pkg)
+			// Generate on demand in background (skip if at capacity)
+			select {
+			case ogSem <- struct{}{}:
+				go func() {
+					defer func() { <-ogSem }()
+					generatePackageOG(a, pkg)
+				}()
+			default:
+			}
 		}
 
 		displayName := pkg.Name
@@ -678,14 +685,6 @@ func ensureLocalFallbackOG(cfg *config.Config) {
 
 // generatePackageOG generates an OG image for a package and saves it.
 func generatePackageOG(a *app.App, pkg *packageDetail) {
-	select {
-	case ogSem <- struct{}{}:
-		defer func() { <-ogSem }()
-	default:
-		// Already at capacity — skip this one, it'll be generated on the next visit
-		return
-	}
-
 	data := og.PackageData{
 		DisplayName:        pkg.DisplayName,
 		Name:               pkg.Name,
