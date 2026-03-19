@@ -37,7 +37,6 @@ func FormatInstalls(n int64) string {
 // GetPackagesNeedingOG returns packages that need OG image generation:
 // - Never generated (og_image_generated_at IS NULL)
 // - Install counts changed since last generation
-// - Package metadata changed (current_version, display_name, description)
 func GetPackagesNeedingOG(ctx context.Context, db *sql.DB, limit int) ([]PackageOGRow, error) {
 	q := `SELECT id, type, name, COALESCE(display_name, ''), COALESCE(description, ''),
 		COALESCE(current_version, ''), active_installs, wp_composer_installs_total,

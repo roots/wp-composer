@@ -1,0 +1,12 @@
+[Unit]
+Description=WP Composer Generate OG Images
+
+[Service]
+Type=oneshot
+User=deploy
+Group=www-data
+WorkingDirectory={{ app_root }}/current
+ExecStart={{ app_root }}/current/{{ go_binary_name }} generate-og --db {{ db_path }}
+StandardOutput=append:{{ app_root }}/shared/storage/logs/generate-og.log
+StandardError=append:{{ app_root }}/shared/storage/logs/generate-og.log
+EnvironmentFile={{ app_root }}/shared/.env
