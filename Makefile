@@ -26,11 +26,11 @@ tailwind: tailwind-install
 
 # Build the binary
 build: tailwind
-	go build -o wpcomposer ./cmd/wpcomposer
+	go build -o wppackages ./cmd/wppackages
 
 # Install to $GOPATH/bin
 install:
-	go install ./cmd/wpcomposer
+	go install ./cmd/wppackages
 
 # Live-reload dev server (migrations, seed data, serve)
 dev: tailwind-install
@@ -55,14 +55,14 @@ lint:
 db-restore:
 	@eval $$(ansible-vault view --vault-password-file deploy/ansible/.vault_pass $(VAULT_FILE) | yq -r \
 		'"export LITESTREAM_BUCKET=\(.vault_r2_litestream_bucket) R2_ENDPOINT=\(.vault_r2_endpoint) R2_ACCESS_KEY_ID=\(.vault_r2_access_key_id) R2_SECRET_ACCESS_KEY=\(.vault_r2_secret_access_key)"') && \
-		export DB_PATH=./storage/wpcomposer.db && \
+		export DB_PATH=./storage/wppackages.db && \
 		echo "LITESTREAM_BUCKET=$$LITESTREAM_BUCKET" && \
 		echo "R2_ENDPOINT=$$R2_ENDPOINT" && \
 		echo "R2_ACCESS_KEY_ID=$$R2_ACCESS_KEY_ID" && \
 		echo "R2_SECRET_ACCESS_KEY=$$R2_SECRET_ACCESS_KEY" && \
-		go run ./cmd/wpcomposer db restore --force
+		go run ./cmd/wppackages db restore --force
 
 # Remove build artifacts
 clean:
-	rm -f wpcomposer
+	rm -f wppackages
 	rm -rf storage/
