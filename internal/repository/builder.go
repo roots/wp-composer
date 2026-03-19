@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -16,13 +17,14 @@ import (
 
 // BuildOpts configures a repository build.
 type BuildOpts struct {
-	OutputDir    string // base output dir (e.g. storage/repository/builds)
-	AppURL       string // absolute app URL for notify-batch
-	Force        bool
-	PackageName  string   // optional: build single package
-	PackageNames []string // optional: build only these slugs
-	BuildID      string   // optional: pre-generated build ID (used by pipeline)
-	Logger       *slog.Logger
+	OutputDir        string // base output dir (e.g. storage/repository/builds)
+	AppURL           string // absolute app URL for notify-batch
+	Force            bool
+	PackageName      string   // optional: build single package
+	PackageNames     []string // optional: build only these slugs
+	BuildID          string   // optional: pre-generated build ID (used by pipeline)
+	PreviousBuildDir string   // optional: compare against previous build to count changes
+	Logger           *slog.Logger
 }
 
 // BuildResult holds build metadata for manifest.json and the builds table.
@@ -175,12 +177,22 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 			return nil, fmt.Errorf("hashing %s: %w", composerName, err)
 		}
 
-		p2File := filepath.Join(buildDir, "p2", composerName+".json")
+		p2Rel := filepath.Join("p2", composerName+".json")
+		p2File := filepath.Join(buildDir, p2Rel)
 		if err := os.WriteFile(p2File, data, 0644); err != nil {
 			return nil, fmt.Errorf("writing %s: %w", p2File, err)
 		}
-		changedPkgs++
 		artifactCount++
+
+		// Compare against previous build to determine if this package changed
+		if opts.PreviousBuildDir != "" {
+			prevData, err := os.ReadFile(filepath.Join(opts.PreviousBuildDir, p2Rel))
+			if err != nil || !bytes.Equal(prevData, data) {
+				changedPkgs++
+			}
+		} else {
+			changedPkgs++
+		}
 
 		if totalPkgs%500 == 0 {
 			opts.Logger.Info("build progress", "packages", totalPkgs)

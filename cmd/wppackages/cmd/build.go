@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/roots/wp-packages/internal/deploy"
 	"github.com/roots/wp-packages/internal/repository"
 	"github.com/spf13/cobra"
 )
@@ -24,13 +25,21 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		output = filepath.Join("storage", "repository", "builds")
 	}
 
+	// Resolve previous build for change detection
+	repoDir := filepath.Dir(output) // storage/repository
+	prevBuildDir := ""
+	if id, err := deploy.CurrentBuildID(repoDir); err == nil && id != "" {
+		prevBuildDir = deploy.BuildDirFromID(repoDir, id)
+	}
+
 	result, err := repository.Build(cmd.Context(), application.DB, repository.BuildOpts{
-		OutputDir:   output,
-		AppURL:      application.Config.AppURL,
-		Force:       force,
-		PackageName: pkg,
-		BuildID:     pipelineBuildID,
-		Logger:      application.Logger,
+		OutputDir:        output,
+		AppURL:           application.Config.AppURL,
+		Force:            force,
+		PackageName:      pkg,
+		BuildID:          pipelineBuildID,
+		PreviousBuildDir: prevBuildDir,
+		Logger:           application.Logger,
 	})
 	if err != nil {
 		return err
