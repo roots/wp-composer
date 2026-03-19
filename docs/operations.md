@@ -140,6 +140,7 @@ All commands accept:
 | `R2_SECRET_ACCESS_KEY` | R2 API credentials |
 | `R2_BUCKET` | R2 bucket name |
 | `R2_ENDPOINT` | R2 S3-compatible endpoint URL |
+| `LITESTREAM_BUCKET` | R2 bucket for Litestream DB backup |
 
 ## Admin Bootstrap
 
@@ -190,6 +191,129 @@ Provisions: Go binary, SQLite, Caddy (reverse proxy + TLS), systemd service, sys
 
 ```bash
 ansible-playbook deploy.yml
+```
+
+### Inventory
+
+The production inventory defines the target server. It is gitignored.
+
+```bash
+cp inventory/hosts/production.example.yml inventory/hosts/production.yml
+```
+
+Edit `production.yml` and fill in `ansible_host` (server IP or hostname) and `ansible_user`.
+
+### Ansible Vault
+
+Secrets used by Ansible are stored in an encrypted vault file. The vault password file (`.vault_pass`) and decrypted vault (`vault.yml`) are gitignored.
+
+All `ansible-vault` commands require the venv:
+
+```bash
+cd deploy/ansible
+source .venv/bin/activate
+```
+
+**Decrypt** (to view or edit as plain YAML):
+
+```bash
+ansible-vault decrypt group_vars/production/vault.yml
+```
+
+**Encrypt** (after editing):
+
+```bash
+ansible-vault encrypt group_vars/production/vault.yml
+```
+
+**Edit in-place** (decrypts, opens in `$EDITOR`, re-encrypts on save):
+
+```bash
+ansible-vault edit group_vars/production/vault.yml
+```
+
+**View** (prints decrypted contents without modifying the file):
+
+```bash
+ansible-vault view group_vars/production/vault.yml
+```
+
+See `vault.example.yml` for the expected keys.
+
+### GitHub Secrets
+
+The deploy workflow materializes secrets at runtime. These are stored as environment secrets under the `production` environment:
+
+| Secret | Source |
+|--------|--------|
+| `ANSIBLE_VAULT_PASSWORD` | Contents of `.vault_pass` |
+| `PROD_INVENTORY_YML_B64` | Base64-encoded `inventory/hosts/production.yml` (contains server host/IP) |
+| `PROD_SSH_PRIVATE_KEY` | SSH private key for the deploy user |
+| `PROD_VAULT_YML_B64` | Base64-encoded encrypted `group_vars/production/vault.yml` |
+
+**Updating secrets after a vault change:**
+
+```bash
+# Re-encrypt vault first if decrypted
+ansible-vault encrypt group_vars/production/vault.yml
+
+# Update the base64-encoded vault secret
+base64 < group_vars/production/vault.yml | gh secret set PROD_VAULT_YML_B64 --env production
+```
+
+**Updating other secrets:**
+
+```bash
+# Vault password
+gh secret set ANSIBLE_VAULT_PASSWORD --env production < .vault_pass
+
+# Inventory (e.g. after server IP change)
+base64 < inventory/hosts/production.yml | gh secret set PROD_INVENTORY_YML_B64 --env production
+
+# SSH key
+gh secret set PROD_SSH_PRIVATE_KEY --env production < /path/to/private/key
+```
+
+## Litestream (SQLite Backup to R2)
+
+[Litestream](https://litestream.io/) continuously replicates the SQLite database to R2 by streaming WAL changes. In production it wraps `wpcomposer serve` as a sidecar process — if the child dies, Litestream exits and systemd restarts both.
+
+### How it works
+
+The systemd service runs:
+
+```
+litestream replicate -config /srv/wp-composer/shared/litestream.yml -exec "wpcomposer serve ..."
+```
+
+WAL segments are uploaded to R2 continuously. A full snapshot is taken every 24 hours (Litestream default).
+
+### Restore locally
+
+Pull a production snapshot to bootstrap your local database:
+
+```bash
+make db-restore
+```
+
+Or directly:
+
+```bash
+wpcomposer db restore --force
+```
+
+Requires `litestream` in PATH (`brew install litestream` on macOS) and the following env vars set:
+- `LITESTREAM_BUCKET`
+- `R2_ENDPOINT`
+- `R2_ACCESS_KEY_ID`
+- `R2_SECRET_ACCESS_KEY`
+
+The `--output`/`-o` flag overrides the restore path. The `--force` flag is required if the target DB already exists. Migrations run automatically after restore.
+
+### Check snapshots
+
+```bash
+litestream snapshots -config litestream.yml
 ```
 
 ## SQLite Operations

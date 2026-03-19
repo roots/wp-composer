@@ -17,12 +17,13 @@ type Config struct {
 
 	SentryDSN string `yaml:"sentry_dsn"`
 
-	DB        DBConfig        `yaml:"db"`
-	Server    ServerConfig    `yaml:"server"`
-	R2        R2Config        `yaml:"r2"`
-	Session   SessionConfig   `yaml:"session"`
-	Telemetry TelemetryConfig `yaml:"telemetry"`
-	Discovery DiscoveryConfig `yaml:"discovery"`
+	DB         DBConfig         `yaml:"db"`
+	Server     ServerConfig     `yaml:"server"`
+	R2         R2Config         `yaml:"r2"`
+	Session    SessionConfig    `yaml:"session"`
+	Telemetry  TelemetryConfig  `yaml:"telemetry"`
+	Discovery  DiscoveryConfig  `yaml:"discovery"`
+	Litestream LitestreamConfig `yaml:"litestream"`
 }
 
 type DBConfig struct {
@@ -51,6 +52,11 @@ type TelemetryConfig struct {
 	DedupeWindowSeconds int `yaml:"dedupe_window_seconds"`
 }
 
+type LitestreamConfig struct {
+	Bucket string `yaml:"bucket"`
+	Path   string `yaml:"path"`
+}
+
 type DiscoveryConfig struct {
 	SeedsFile    string `yaml:"seeds_file"`
 	Concurrency  int    `yaml:"concurrency"`
@@ -72,6 +78,7 @@ func defaults() *Config {
 		Telemetry: TelemetryConfig{
 			DedupeWindowSeconds: 3600,
 		},
+		Litestream: LitestreamConfig{Path: "db"},
 		Discovery: DiscoveryConfig{
 			SeedsFile:    "./seeds.yaml",
 			Concurrency:  10,
@@ -152,6 +159,12 @@ func applyEnv(cfg *Config) {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.Telemetry.DedupeWindowSeconds = n
 		}
+	}
+	if v := os.Getenv("LITESTREAM_BUCKET"); v != "" {
+		cfg.Litestream.Bucket = v
+	}
+	if v := os.Getenv("LITESTREAM_PATH"); v != "" {
+		cfg.Litestream.Path = v
 	}
 	if v := os.Getenv("SEEDS_FILE"); v != "" {
 		cfg.Discovery.SeedsFile = v
