@@ -1,21 +1,36 @@
-name: smoke-test
+name: canary
 
 on:
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "0 6 * * *" # daily at 6am UTC
   workflow_dispatch:
 
 jobs:
-  install:
-    name: Composer Install
+  live:
+    name: Live wp.org Canary
     runs-on: ubuntu-latest
     steps:
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.2"
           tools: composer:v2
+      - name: Create stub CSS for embed
+        run: touch internal/http/static/assets/styles/app.css
+      - name: Live Canary Test
+        run: go test -tags=wporg_live -count=1 -timeout=5m -v ./internal/integration/...
 
+  production:
+    name: Production Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer:v2
       - name: Create composer.json
         run: |
           cat > composer.json <<'EOF'
@@ -40,6 +55,5 @@ jobs:
             }
           }
           EOF
-
       - name: Composer install
         run: composer install --no-interaction --no-progress

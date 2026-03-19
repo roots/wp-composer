@@ -91,3 +91,20 @@ jobs:
         run: make tailwind
       - name: Test
         run: go test -v ./...
+
+  integration:
+    name: Integration Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer:v2
+      - name: Create stub CSS for embed
+        run: touch internal/http/static/assets/styles/app.css
+      - name: Integration Test
+        run: go test -tags=integration -count=1 -timeout=5m -v ./internal/integration/...

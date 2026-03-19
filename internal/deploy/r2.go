@@ -548,6 +548,7 @@ func newS3Client(cfg config.R2Config) *s3.Client {
 			"",
 		),
 		BaseEndpoint: aws.String(cfg.Endpoint),
+		UsePathStyle: true,
 	})
 }
 
