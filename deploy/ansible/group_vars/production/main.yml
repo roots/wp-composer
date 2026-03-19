@@ -30,7 +30,7 @@ wp_composer_deploy_r2: "true"
 r2_cdn_public_url: "https://cdn.wp-composer.com"
 
 # Litestream
-litestream_version: "0.5.8"
+litestream_version: "0.5.10"
 
 # Sessions
 session_lifetime_minutes: 7200
