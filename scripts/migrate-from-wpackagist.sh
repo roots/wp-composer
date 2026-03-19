@@ -4,7 +4,18 @@ set -euo pipefail
 # Migrate composer.json from WPackagist to WP Composer
 # https://wp-composer.com/wp-composer-vs-wpackagist
 
-COMPOSER_FILE="${1:-composer.json}"
+# --dry-run / -n: show a diff of what would change without modifying the file.
+DRY_RUN=false
+COMPOSER_FILE=""
+
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run|-n) DRY_RUN=true ;;
+    *) COMPOSER_FILE="$arg" ;;
+  esac
+done
+
+COMPOSER_FILE="${COMPOSER_FILE:-composer.json}"
 
 if ! command -v jq &>/dev/null; then
   echo "Error: jq is required. Install it with:"
@@ -18,6 +29,9 @@ if [[ ! -f "$COMPOSER_FILE" ]]; then
   exit 1
 fi
 
+if $DRY_RUN; then
+  echo "Dry run — no files will be modified."
+fi
 echo "Migrating $COMPOSER_FILE from WPackagist to WP Composer..."
 
 # Detect indent: find first indented line and count leading spaces
@@ -92,13 +106,91 @@ jq --indent "$INDENT" '
       | .repositories["wp-composer"] = (wp_composer_repo | del(.name))
     end
   else . end)
-' "$COMPOSER_FILE" > "${COMPOSER_FILE}.tmp" && mv "${COMPOSER_FILE}.tmp" "$COMPOSER_FILE"
+' "$COMPOSER_FILE" > "${COMPOSER_FILE}.tmp"
 
-echo "Done! Changes made to $COMPOSER_FILE:"
-echo "  - Renamed wpackagist-plugin/* → wp-plugin/*"
-echo "  - Renamed wpackagist-theme/* → wp-theme/*"
-echo "  - Renamed wpackagist-plugin/*, wpackagist-theme/* in extra.patches"
-echo "  - Renamed wpackagist-plugin/*, wpackagist-theme/* in extra.installer-paths"
-echo "  - Replaced WPackagist repository with WP Composer"
-echo ""
-echo "Run 'composer update' to install packages from WP Composer."
+if $DRY_RUN; then
+  rm "${COMPOSER_FILE}.tmp"
+
+  # Collect all wpackagist package references across require, require-dev, and extra.patches
+  RENAMED=$(jq -r '
+    [
+      (.require // {} | to_entries[]),
+      (.["require-dev"] // {} | to_entries[]),
+      (.extra.patches // {} | to_entries[])
+    ][]
+    | select(.key | test("^wpackagist-(plugin|theme)/"))
+    | [
+        .key,
+        (if (.key | startswith("wpackagist-plugin/")) then
+          "wp-plugin/" + (.key | ltrimstr("wpackagist-plugin/"))
+        else
+          "wp-theme/" + (.key | ltrimstr("wpackagist-theme/"))
+        end)
+      ]
+    | @tsv
+  ' "$COMPOSER_FILE")
+
+  # Collect wpackagist references in extra.installer-paths
+  RENAMED_PATHS=$(jq -r '
+    (.extra["installer-paths"] // {} | to_entries[].value[])
+    | select(test("^wpackagist-(plugin|theme)/"))
+    | [
+        .,
+        (if startswith("wpackagist-plugin/") then
+          "wp-plugin/" + ltrimstr("wpackagist-plugin/")
+        else
+          "wp-theme/" + ltrimstr("wpackagist-theme/")
+        end)
+      ]
+    | @tsv
+  ' "$COMPOSER_FILE")
+
+  # Find wpackagist repository entries that would be removed
+  REMOVED_REPOS=$(jq -r '
+    (.repositories // {}) |
+    if type == "array" then
+      .[] | select((.url // "") | test("wpackagist\\.org")) | .url
+    else
+      to_entries[] | select(.value.url // "" | test("wpackagist\\.org")) | .value.url
+    end
+  ' "$COMPOSER_FILE")
+
+  echo ""
+
+  if [[ -n "$RENAMED" ]]; then
+    echo "Packages to be renamed:"
+    while IFS=$'\t' read -r from to; do
+      printf "  %s  →  %s\n" "$from" "$to"
+    done <<< "$RENAMED"
+  fi
+
+  if [[ -n "$RENAMED_PATHS" ]]; then
+    echo ""
+    echo "References in extra.installer-paths to be renamed:"
+    while IFS=$'\t' read -r from to; do
+      printf "  %s  →  %s\n" "$from" "$to"
+    done <<< "$RENAMED_PATHS"
+  fi
+
+  echo ""
+  echo "Repository changes:"
+  if [[ -n "$REMOVED_REPOS" ]]; then
+    while IFS= read -r url; do
+      echo "  - $url  (removed)"
+    done <<< "$REMOVED_REPOS"
+  fi
+  echo "  + https://repo.wp-composer.com  (wp-composer added)"
+
+  echo ""
+  echo "Dry run complete. Run without --dry-run to apply these changes."
+else
+  mv "${COMPOSER_FILE}.tmp" "$COMPOSER_FILE"
+  echo "Done! Changes made to $COMPOSER_FILE:"
+  echo "  - Renamed wpackagist-plugin/* → wp-plugin/*"
+  echo "  - Renamed wpackagist-theme/* → wp-theme/*"
+  echo "  - Renamed wpackagist-plugin/*, wpackagist-theme/* in extra.patches"
+  echo "  - Renamed wpackagist-plugin/*, wpackagist-theme/* in extra.installer-paths"
+  echo "  - Replaced WPackagist repository with WP Composer"
+  echo ""
+  echo "Run 'composer update' to install packages from WP Composer."
+fi
