@@ -201,6 +201,8 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 		"metadata-url":               "/p2/%package%.json",
 		"notify-batch":               notifyBatch,
 		"available-package-patterns": []string{"wp-plugin/*", "wp-theme/*"},
+		"warning":                    "Support for Composer 1 is no longer available. Upgrade to Composer 2. See https://blog.packagist.com/shutting-down-packagist-org-support-for-composer-1-x/",
+		"warning-versions":           "<1.999",
 	}
 
 	rootHash, rootData, err := HashJSON(packagesJSON)
