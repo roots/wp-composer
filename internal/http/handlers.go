@@ -29,6 +29,10 @@ import (
 
 const perPage = 12
 
+// ogSem limits concurrent OG image generation to avoid starving the pipeline
+// of DB write access under heavy crawler traffic.
+var ogSem = make(chan struct{}, 2)
+
 // captureError reports a non-panic error to Sentry with the request's hub.
 // It silently ignores context cancellation errors (timeouts, client disconnects)
 // since these are expected during normal operation.
@@ -674,6 +678,14 @@ func ensureLocalFallbackOG(cfg *config.Config) {
 
 // generatePackageOG generates an OG image for a package and saves it.
 func generatePackageOG(a *app.App, pkg *packageDetail) {
+	select {
+	case ogSem <- struct{}{}:
+		defer func() { <-ogSem }()
+	default:
+		// Already at capacity — skip this one, it'll be generated on the next visit
+		return
+	}
+
 	data := og.PackageData{
 		DisplayName:        pkg.DisplayName,
 		Name:               pkg.Name,
