@@ -13,7 +13,7 @@ func TestGeneratePackageImage(t *testing.T) {
 		CurrentVersion:     "9.6.2",
 		Description:        "An open-source eCommerce plugin for WordPress. Build any commerce solution with the customizability and flexibility of WordPress.",
 		ActiveInstalls:     "5M+",
-		WpComposerInstalls: "1.2K",
+		WpPackagesInstalls: "1.2K",
 	}
 
 	pngBytes, err := GeneratePackageImage(data)
@@ -40,7 +40,7 @@ func TestGeneratePackageImageLongDesc(t *testing.T) {
 		CurrentVersion:     "3.4.6",
 		Description:        "Hello Elementor is a lightweight and minimalist WordPress theme that was built specifically to work seamlessly with the Elementor site builder plugin. The theme is free, open-source, and designed for users who want a flexible, easy-to-use, and customizable website. The theme, which is optimized for performance, provides a solid foundation for users to build their own unique designs using the Elementor drag-and-drop site builder.",
 		ActiveInstalls:     "1.0M",
-		WpComposerInstalls: "0",
+		WpPackagesInstalls: "0",
 	}
 
 	pngBytes, err := GeneratePackageImage(data)

@@ -71,7 +71,7 @@ type packageRow struct {
 	ActiveInstalls          int64
 	IsActive                bool
 	LastSyncedAt            string
-	WpComposerInstallsTotal int64
+	WpPackagesInstallsTotal int64
 }
 
 type versionRow struct {
@@ -681,7 +681,7 @@ func generatePackageOG(a *app.App, pkg *packageDetail) {
 		CurrentVersion:     pkg.CurrentVersion,
 		Description:        pkg.Description,
 		ActiveInstalls:     og.FormatInstalls(pkg.ActiveInstalls),
-		WpComposerInstalls: og.FormatInstalls(pkg.WpComposerInstallsTotal),
+		WpPackagesInstalls: og.FormatInstalls(pkg.WpPackagesInstallsTotal),
 	}
 
 	pngBytes, err := og.GeneratePackageImage(data)
@@ -699,7 +699,7 @@ func generatePackageOG(a *app.App, pkg *packageDetail) {
 		return
 	}
 
-	_ = og.MarkOGGeneratedBySlug(context.Background(), a.DB, pkg.Type, pkg.Name, pkg.ActiveInstalls, pkg.WpComposerInstallsTotal)
+	_ = og.MarkOGGeneratedBySlug(context.Background(), a.DB, pkg.Type, pkg.Name, pkg.ActiveInstalls, pkg.WpPackagesInstallsTotal)
 	a.Logger.Info("generated OG image", "package", pkg.Type+"/"+pkg.Name)
 }
 
@@ -788,7 +788,7 @@ func queryPackages(ctx context.Context, db *sql.DB, f publicFilters, page, limit
 	var pkgs []packageRow
 	for rows.Next() {
 		var p packageRow
-		if err := rows.Scan(&p.Type, &p.Name, &p.DisplayName, &p.Description, &p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpComposerInstallsTotal); err != nil {
+		if err := rows.Scan(&p.Type, &p.Name, &p.DisplayName, &p.Description, &p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpPackagesInstallsTotal); err != nil {
 			return nil, 0, fmt.Errorf("scanning package row: %w", err)
 		}
 		pkgs = append(pkgs, p)
@@ -818,7 +818,7 @@ func queryPackageDetail(ctx context.Context, db *sql.DB, pkgType, name string) (
 		COALESCE(updated_at,'')
 		FROM packages WHERE type = ? AND name = ? AND is_active = 1`, pkgType, name,
 	).Scan(&p.Type, &p.Name, &p.DisplayName, &p.Description, &p.Author, &p.Homepage,
-		&p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpComposerInstallsTotal,
+		&p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpPackagesInstallsTotal,
 		&p.VersionsJSON, &p.OGImageGeneratedAt, &p.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -917,7 +917,7 @@ func queryAdminPackages(ctx context.Context, db *sql.DB, f adminFilters, page, l
 	for rows.Next() {
 		var p packageRow
 		var isActive int
-		_ = rows.Scan(&p.Type, &p.Name, &p.DisplayName, &p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpComposerInstallsTotal, &isActive, &p.LastSyncedAt)
+		_ = rows.Scan(&p.Type, &p.Name, &p.DisplayName, &p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpPackagesInstallsTotal, &isActive, &p.LastSyncedAt)
 		p.IsActive = isActive == 1
 		pkgs = append(pkgs, p)
 	}

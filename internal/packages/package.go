@@ -30,8 +30,8 @@ type Package struct {
 	LastCommitted           *time.Time
 	LastSyncedAt            *time.Time
 	LastSyncRunID           *int64
-	WpComposerInstallsTotal int
-	WpComposerInstalls30d   int
+	WpPackagesInstallsTotal int
+	WpPackagesInstalls30d   int
 	LastInstalledAt         *time.Time
 	CreatedAt               time.Time
 	UpdatedAt               time.Time

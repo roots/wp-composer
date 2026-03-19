@@ -192,8 +192,8 @@ func TestRefreshSiteStats(t *testing.T) {
 		VersionsJSON:            "{}",
 		CurrentVersion:          &cur,
 		IsActive:                true,
-		WpComposerInstallsTotal: 100,
-		WpComposerInstalls30d:   25,
+		WpPackagesInstallsTotal: 100,
+		WpPackagesInstalls30d:   25,
 	}
 	p2 := &Package{
 		Type:                    "plugin",
@@ -201,8 +201,8 @@ func TestRefreshSiteStats(t *testing.T) {
 		VersionsJSON:            "{}",
 		CurrentVersion:          &cur,
 		IsActive:                false,
-		WpComposerInstallsTotal: 999,
-		WpComposerInstalls30d:   999,
+		WpPackagesInstallsTotal: 999,
+		WpPackagesInstalls30d:   999,
 	}
 	t1 := &Package{
 		Type:                    "theme",
@@ -210,8 +210,8 @@ func TestRefreshSiteStats(t *testing.T) {
 		VersionsJSON:            "{}",
 		CurrentVersion:          &cur,
 		IsActive:                true,
-		WpComposerInstallsTotal: 50,
-		WpComposerInstalls30d:   5,
+		WpPackagesInstallsTotal: 50,
+		WpPackagesInstalls30d:   5,
 	}
 
 	if err := UpsertPackage(ctx, database, p1); err != nil {

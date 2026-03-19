@@ -87,7 +87,7 @@ this.textContent = showing ? 'Show all {{len .Versions}} versions' : 'Show fewer
 <div class="px-4">
 {{if .Package.CurrentVersion}}<div class="flex justify-between items-center py-2.5 border-b border-gray-200/30"><span class="text-gray-500 text-sm">Version</span><span class="text-sm text-gray-900 font-medium font-mono">{{.Package.CurrentVersion}}</span></div>{{end}}
 <div class="flex justify-between items-center py-2.5 border-b border-gray-200/30"><span class="text-gray-500 text-sm">Active Installs</span><span class="text-sm text-gray-900 font-medium">{{formatNumber .Package.ActiveInstalls}}</span></div>
-<div class="flex justify-between items-center py-2.5 border-b border-gray-200/30"><span class="text-gray-500 text-sm">Composer Installs</span><span class="text-sm text-gray-900 font-medium">{{formatNumber .Package.WpComposerInstallsTotal}}</span></div>
+<div class="flex justify-between items-center py-2.5 border-b border-gray-200/30"><span class="text-gray-500 text-sm">Composer Installs</span><span class="text-sm text-gray-900 font-medium">{{formatNumber .Package.WpPackagesInstallsTotal}}</span></div>
 {{if .Package.Author}}<div class="flex justify-between items-center py-2.5 border-b border-gray-200/30"><span class="text-gray-500 text-sm">Author</span><span class="text-sm text-gray-900">{{.Package.Author}}</span></div>{{end}}
 </div>
 <div class="px-4 py-3 border-t border-gray-200/40 flex flex-col gap-2">

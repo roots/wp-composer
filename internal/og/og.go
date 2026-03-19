@@ -44,7 +44,7 @@ type PackageData struct {
 	CurrentVersion     string
 	Description        string
 	ActiveInstalls     string // pre-formatted, e.g. "1.2M"
-	WpComposerInstalls string // pre-formatted, e.g. "350"
+	WpPackagesInstalls string // pre-formatted, e.g. "350"
 }
 
 var (
@@ -204,7 +204,7 @@ func GeneratePackageImage(pkg PackageData) ([]byte, error) {
 	drawTerminalIcon(dc, composerX, footerCenterY-7, 14, colorGray400)
 	dc.SetFontFace(fontFace(fontSansRegular, 15))
 	dc.SetColor(colorGray400)
-	drawTextVCenter(dc, pkg.WpComposerInstalls+" composer installs", composerX+22, footerCenterY)
+	drawTextVCenter(dc, pkg.WpPackagesInstalls+" composer installs", composerX+22, footerCenterY)
 
 	// "by [icon] roots.io" (bottom right)
 	drawByRootsFooter(dc, cx+contentMaxW, footerCenterY, 16, 15)
