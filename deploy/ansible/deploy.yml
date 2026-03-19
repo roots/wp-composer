@@ -1,5 +1,5 @@
 ---
-- name: Deploy WP Composer (Go)
+- name: Deploy WP Packages (Go)
   hosts: all
   become: true
   tasks:
