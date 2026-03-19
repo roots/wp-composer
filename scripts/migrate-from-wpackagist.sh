@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Migrate composer.json from WPackagist to WP Composer
+# Migrate composer.json from WPackagist to WP Packages
 # https://wp-packages.org/wp-packages-vs-wpackagist
 
 # --dry-run / -n: show a diff of what would change without modifying the file.
@@ -32,7 +32,7 @@ fi
 if $DRY_RUN; then
   echo "Dry run — no files will be modified."
 fi
-echo "Migrating $COMPOSER_FILE from WPackagist to WP Composer..."
+echo "Migrating $COMPOSER_FILE from WPackagist to WP Packages..."
 
 # Detect indent: find first indented line and count leading spaces
 INDENT=$(awk '/^[ \t]+[^ \t]/ { match($0, /^[ \t]+/); print RLENGTH; exit }' "$COMPOSER_FILE")
@@ -83,27 +83,27 @@ jq --indent "$INDENT" '
   def is_wpackagist:
     (.url // "" | test("wpackagist\\.org")) or ((.name // "") == "wpackagist");
 
-  # WP Composer repo entry
-  def wp_composer_repo:
+  # WP Packages repo entry
+  def wp_packages_repo:
     {
-      "name": "wp-composer",
+      "name": "wp-packages",
       "type": "composer",
       "url": "https://repo.wp-packages.org",
       "only": ["wp-plugin/*", "wp-theme/*"]
     };
 
-  # Replace wpackagist repository with wp-composer (handles both array and object formats)
+  # Replace wpackagist repository with wp-packages (handles both array and object formats)
   (if .repositories then
     if (.repositories | type) == "array" then
-      .repositories = [(.repositories[] | select(is_wpackagist | not)), wp_composer_repo]
+      .repositories = [(.repositories[] | select(is_wpackagist | not)), wp_packages_repo]
     else
-      # Object format: remove wpackagist entries by key, add wp-composer
+      # Object format: remove wpackagist entries by key, add wp-packages
       .repositories |= (
         to_entries
         | map(select(.value | is_wpackagist | not))
         | from_entries
       )
-      | .repositories["wp-composer"] = (wp_composer_repo | del(.name))
+      | .repositories["wp-packages"] = (wp_packages_repo | del(.name))
     end
   else . end)
 ' "$COMPOSER_FILE" > "${COMPOSER_FILE}.tmp"
@@ -179,7 +179,7 @@ if $DRY_RUN; then
       echo "  - $url  (removed)"
     done <<< "$REMOVED_REPOS"
   fi
-  echo "  + https://repo.wp-packages.org  (wp-composer added)"
+  echo "  + https://repo.wp-packages.org  (wp-packages added)"
 
   echo ""
   echo "Dry run complete. Run without --dry-run to apply these changes."
@@ -190,7 +190,7 @@ else
   echo "  - Renamed wpackagist-theme/* → wp-theme/*"
   echo "  - Renamed wpackagist-plugin/*, wpackagist-theme/* in extra.patches"
   echo "  - Renamed wpackagist-plugin/*, wpackagist-theme/* in extra.installer-paths"
-  echo "  - Replaced WPackagist repository with WP Composer"
+  echo "  - Replaced WPackagist repository with WP Packages"
   echo ""
-  echo "Run 'composer update' to install packages from WP Composer."
+  echo "Run 'composer update' to install packages from WP Packages."
 fi

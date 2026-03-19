@@ -3,7 +3,7 @@
 # Benchmark: Version freshness — compare available versions between repos
 #
 # For a set of popular plugins, fetches the version list from both
-# WP Composer and WPackagist and compares:
+# WP Packages and WPackagist and compares:
 #   - Latest version available
 #   - Total version count
 #   - Missing versions in either repo
@@ -82,7 +82,7 @@ get_packages_json() {
 
 # ── Helpers ───────────────────────────────────────────────────────
 
-# Fetch version list via p2 metadata-url (WP Composer)
+# Fetch version list via p2 metadata-url (WP Packages)
 get_versions_p2() {
   local base="$1"
   local package="$2"
@@ -255,7 +255,7 @@ wpc_current=$(awk -F',' 'NR>1 && $7=="yes" {n++} END {print n+0}' "$CSV")
 wpkg_current=$(awk -F',' 'NR>1 && $8=="yes" {n++} END {print n+0}' "$CSV")
 total=${#PLUGINS[@]}
 
-echo "  WP Composer:  ${wpc_current}/${total} plugins have latest version"
+echo "  WP Packages:  ${wpc_current}/${total} plugins have latest version"
 echo "  WPackagist:   ${wpkg_current}/${total} plugins have latest version"
 echo ""
 echo "Raw CSV: ${CSV}"

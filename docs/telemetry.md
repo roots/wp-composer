@@ -90,8 +90,8 @@ Rollups written to `packages`:
 
 | Column | Description |
 |--------|-------------|
-| `wp_composer_installs_total` | All-time install count |
-| `wp_composer_installs_30d` | Installs in the last 30 days |
+| `wp_packages_installs_total` | All-time install count |
+| `wp_packages_installs_30d` | Installs in the last 30 days |
 | `last_installed_at` | Timestamp of most recent install |
 
 ## UI Integration

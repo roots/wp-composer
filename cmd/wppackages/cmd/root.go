@@ -17,8 +17,8 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "wpcomposer",
-	Short: "WP Composer - Composer repository for WordPress packages",
+	Use:   "wppackages",
+	Short: "WP Packages - Composer repository for WordPress packages",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if cmd.Annotations["requires_app"] != "true" {
 			return nil
@@ -56,7 +56,7 @@ func Execute() error {
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file path")
-	rootCmd.PersistentFlags().StringVar(&dbPath, "db", "", "database path (default ./storage/wpcomposer.db)")
+	rootCmd.PersistentFlags().StringVar(&dbPath, "db", "", "database path (default ./storage/wppackages.db)")
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "", "log level (debug, info, warn, error)")
 }
 

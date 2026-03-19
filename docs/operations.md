@@ -1,6 +1,6 @@
 # Operations
 
-Day-to-day operation of WP Composer in production-like environments.
+Day-to-day operation of WP Packages in production-like environments.
 
 ## Prerequisites
 
@@ -95,7 +95,7 @@ Runs discover → update → build → deploy sequentially, stopping on failure.
 wppackages aggregate-installs
 ```
 
-Recomputes `wp_composer_installs_total`, `wp_composer_installs_30d`, and `last_installed_at` on all packages.
+Recomputes `wp_packages_installs_total`, `wp_packages_installs_30d`, and `last_installed_at` on all packages.
 
 ### Cleanup Sessions
 
@@ -280,7 +280,7 @@ gh secret set PROD_SSH_PRIVATE_KEY --env production < /path/to/private/key
 The systemd service runs:
 
 ```
-litestream replicate -config /srv/wp-composer/shared/litestream.yml -exec "wppackages serve ..."
+litestream replicate -config /srv/wp-packages/shared/litestream.yml -exec "wppackages serve ..."
 ```
 
 WAL segments are uploaded to R2 continuously. A full snapshot is taken every 24 hours (Litestream default).

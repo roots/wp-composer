@@ -1,4 +1,4 @@
-package wpcomposergo
+package wppackagesgo
 
 import "embed"
 

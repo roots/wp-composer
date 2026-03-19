@@ -111,7 +111,7 @@ func handleIndex(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		jsonLDData := map[string]any{
 			"@context": "https://schema.org",
 			"@type":    "WebSite",
-			"name":     "WP Composer",
+			"name":     "WP Packages",
 			"url":      a.Config.AppURL + "/",
 			"potentialAction": map[string]any{
 				"@type":       "SearchAction",
