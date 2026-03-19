@@ -165,7 +165,7 @@ func TestSmoke(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GET p/ endpoint: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode == 200 {
 			t.Error("p/ directory should not exist after dropping Composer v1 support")
 		}
@@ -176,7 +176,7 @@ func TestSmoke(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GET package detail: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode != 200 {
 			t.Errorf("package detail status: got %d, want 200", resp.StatusCode)
 		}
@@ -191,7 +191,7 @@ func TestSmoke(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GET nonexistent package: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode != 404 {
 			t.Errorf("nonexistent package status: got %d, want 404", resp.StatusCode)
 		}

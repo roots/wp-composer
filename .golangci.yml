@@ -2,6 +2,9 @@ version: "2"
 
 run:
   timeout: 5m
+  build-tags:
+    - integration
+    - wporg_live
 
 linters:
   default: none
