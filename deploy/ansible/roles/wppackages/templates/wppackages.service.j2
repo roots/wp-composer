@@ -1,5 +1,5 @@
 [Unit]
-Description=WP Composer
+Description=WP Packages
 After=network.target
 
 [Service]
@@ -10,8 +10,8 @@ WorkingDirectory={{ app_root }}/current
 ExecStart=/usr/bin/litestream replicate -config {{ app_root }}/shared/litestream.yml -exec "{{ app_root }}/current/{{ go_binary_name }} serve --db {{ db_path }}"
 Restart=always
 RestartSec=1s
-StandardOutput=append:{{ app_root }}/shared/storage/logs/wpcomposer.log
-StandardError=append:{{ app_root }}/shared/storage/logs/wpcomposer.log
+StandardOutput=append:{{ app_root }}/shared/storage/logs/wppackages.log
+StandardError=append:{{ app_root }}/shared/storage/logs/wppackages.log
 EnvironmentFile={{ app_root }}/shared/.env
 
 [Install]
