@@ -107,7 +107,7 @@ func generateFeed(ctx context.Context, db *sql.DB, appURL string) ([]byte, error
 
 		pkgURL := appURL + "/packages/wp-" + pkgType + "/" + name
 
-		summary := "Install " + displayName + " with WP Composer: composer require wp-" + pkgType + "/" + name
+		summary := "Install " + displayName + " with WP Packages: composer require wp-" + pkgType + "/" + name
 		if version != "" {
 			summary = displayName + " " + version + " — " + summary
 		}
@@ -135,7 +135,7 @@ func generateFeed(ctx context.Context, db *sql.DB, appURL string) ([]byte, error
 
 	feed := atomFeed{
 		XMLNS:   "http://www.w3.org/2005/Atom",
-		Title:   "WP Composer — Recently Updated Packages",
+		Title:   "WP Packages — Recently Updated Packages",
 		ID:      appURL + "/feed.xml",
 		Updated: latestUpdated,
 		Link: []atomLink{

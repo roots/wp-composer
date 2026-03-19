@@ -122,10 +122,10 @@ func GeneratePackageImage(pkg PackageData) ([]byte, error) {
 	contentMaxW := cardW - 96
 	y := cardY + 52
 
-	// --- "WP Composer" header ---
+	// --- "WP Packages" header ---
 	dc.SetFontFace(fontFace(fontSansBold, 18))
 	dc.SetColor(colorBrandPrimary)
-	dc.DrawString("WP Composer", cx, y)
+	dc.DrawString("WP Packages", cx, y)
 	y += 44
 
 	// --- Package name (large, bold) ---
@@ -243,7 +243,7 @@ func GenerateFallbackImage() ([]byte, error) {
 	// Title
 	dc.SetFontFace(fontFace(fontSansBold, 36))
 	dc.SetColor(colorGray900)
-	dc.DrawStringAnchored("WP Composer", centerX, centerY+logoSize/2+32, 0.5, 0.5)
+	dc.DrawStringAnchored("WP Packages", centerX, centerY+logoSize/2+32, 0.5, 0.5)
 
 	// Subtitle
 	dc.SetFontFace(fontFace(fontSansRegular, 18))

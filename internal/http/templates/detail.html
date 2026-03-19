@@ -1,19 +1,19 @@
 {{template "layout" .}}
-{{define "title"}}{{if .Package.DisplayName}}{{.Package.DisplayName}}{{else}}{{.Package.Name}}{{end}} — WP Composer{{end}}
+{{define "title"}}{{if .Package.DisplayName}}{{.Package.DisplayName}}{{else}}{{.Package.Name}}{{end}} — WP Packages{{end}}
 {{define "meta_seo"}}
-<meta name="description" content="Install {{if .Package.DisplayName}}{{.Package.DisplayName}}{{else}}{{.Package.Name}}{{end}} with WP Composer: composer require wp-{{.Package.Type}}/{{.Package.Name}}">
+<meta name="description" content="Install {{if .Package.DisplayName}}{{.Package.DisplayName}}{{else}}{{.Package.Name}}{{end}} with WP Packages: composer require wp-{{.Package.Type}}/{{.Package.Name}}">
 {{if .AppURL}}<link rel="canonical" href="{{.AppURL}}/packages/wp-{{.Package.Type}}/{{.Package.Name}}">{{end}}
 {{end}}
 {{define "json_ld"}}{{jsonLD .JSONLD}}{{end}}
 {{define "og_meta"}}
-<meta property="og:title" content="{{if .Package.DisplayName}}{{.Package.DisplayName}}{{else}}{{.Package.Name}}{{end}} — WP Composer">
-<meta property="og:description" content="Install {{if .Package.DisplayName}}{{.Package.DisplayName}}{{else}}{{.Package.Name}}{{end}} with WP Composer: composer require wp-{{.Package.Type}}/{{.Package.Name}}">
+<meta property="og:title" content="{{if .Package.DisplayName}}{{.Package.DisplayName}}{{else}}{{.Package.Name}}{{end}} — WP Packages">
+<meta property="og:description" content="Install {{if .Package.DisplayName}}{{.Package.DisplayName}}{{else}}{{.Package.Name}}{{end}} with WP Packages: composer require wp-{{.Package.Type}}/{{.Package.Name}}">
 {{if .OGImage}}<meta property="og:image" content="{{.OGImage}}">{{end}}
 {{if .AppURL}}<meta property="og:url" content="{{.AppURL}}/packages/wp-{{.Package.Type}}/{{.Package.Name}}">{{end}}
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{{if .Package.DisplayName}}{{.Package.DisplayName}}{{else}}{{.Package.Name}}{{end}} — WP Composer">
-<meta name="twitter:description" content="Install {{if .Package.DisplayName}}{{.Package.DisplayName}}{{else}}{{.Package.Name}}{{end}} with WP Composer: composer require wp-{{.Package.Type}}/{{.Package.Name}}">
+<meta name="twitter:title" content="{{if .Package.DisplayName}}{{.Package.DisplayName}}{{else}}{{.Package.Name}}{{end}} — WP Packages">
+<meta name="twitter:description" content="Install {{if .Package.DisplayName}}{{.Package.DisplayName}}{{else}}{{.Package.Name}}{{end}} with WP Packages: composer require wp-{{.Package.Type}}/{{.Package.Name}}">
 {{if .OGImage}}<meta name="twitter:image" content="{{.OGImage}}">{{end}}
 {{end}}
 {{define "content"}}

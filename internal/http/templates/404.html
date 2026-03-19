@@ -1,5 +1,5 @@
 {{template "layout" .}}
-{{define "title"}}Page Not Found — WP Composer{{end}}
+{{define "title"}}Page Not Found — WP Packages{{end}}
 {{define "meta_seo"}}
 <meta name="robots" content="noindex">
 {{end}}
@@ -8,7 +8,7 @@
 {{define "content"}}
 <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-24 text-center">
 <h1 class="text-4xl font-bold text-gray-900 mb-4">{{if .Gone}}Package Removed{{else}}Page Not Found{{end}}</h1>
-<p class="text-gray-500 mb-8">{{if .Gone}}This package has been removed from WP Composer.{{else}}The page you're looking for doesn't exist.{{end}}</p>
+<p class="text-gray-500 mb-8">{{if .Gone}}This package has been removed from WP Packages.{{else}}The page you're looking for doesn't exist.{{end}}</p>
 <a href="/" class="inline-flex items-center rounded-lg bg-brand-primary px-4 py-2 text-sm font-medium text-white hover:bg-brand-primary/85 transition-colors">Browse packages</a>
 </div>
 {{end}}
