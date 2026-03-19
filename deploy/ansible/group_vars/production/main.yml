@@ -29,6 +29,9 @@ caddy_email: "team@roots.io"
 wp_composer_deploy_r2: "true"
 r2_cdn_public_url: "https://cdn.wp-composer.com"
 
+# Litestream
+litestream_version: "0.3.13"
+
 # Sessions
 session_lifetime_minutes: 7200
 

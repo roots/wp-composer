@@ -1,4 +1,12 @@
 ---
+- name: Deploy Litestream config
+  template:
+    src: litestream.yml.j2
+    dest: "{{ app_root }}/shared/litestream.yml"
+    owner: deploy
+    group: www-data
+    mode: "0640"
+
 - name: Deploy wpcomposer socket
   template:
     src: wpcomposer.socket.j2

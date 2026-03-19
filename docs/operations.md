@@ -140,6 +140,7 @@ All commands accept:
 | `R2_SECRET_ACCESS_KEY` | R2 API credentials |
 | `R2_BUCKET` | R2 bucket name |
 | `R2_ENDPOINT` | R2 S3-compatible endpoint URL |
+| `LITESTREAM_BUCKET` | R2 bucket for Litestream DB backup |
 
 ## Admin Bootstrap
 
@@ -271,6 +272,48 @@ base64 < inventory/hosts/production.yml | gh secret set PROD_INVENTORY_YML_B64 -
 
 # SSH key
 gh secret set PROD_SSH_PRIVATE_KEY --env production < /path/to/private/key
+```
+
+## Litestream (SQLite Backup to R2)
+
+[Litestream](https://litestream.io/) continuously replicates the SQLite database to R2 by streaming WAL changes. In production it wraps `wpcomposer serve` as a sidecar process — if the child dies, Litestream exits and systemd restarts both.
+
+### How it works
+
+The systemd service runs:
+
+```
+litestream replicate -config /srv/wp-composer/shared/litestream.yml -exec "wpcomposer serve ..."
+```
+
+WAL segments are uploaded to R2 continuously. A full snapshot is taken every 24 hours (Litestream default).
+
+### Restore locally
+
+Pull a production snapshot to bootstrap your local database:
+
+```bash
+make db-restore
+```
+
+Or directly:
+
+```bash
+wpcomposer db restore --force
+```
+
+Requires `litestream` in PATH (`brew install litestream` on macOS) and the following env vars set:
+- `LITESTREAM_BUCKET`
+- `R2_ENDPOINT`
+- `R2_ACCESS_KEY_ID`
+- `R2_SECRET_ACCESS_KEY`
+
+The `--output`/`-o` flag overrides the restore path. The `--force` flag is required if the target DB already exists. Migrations run automatically after restore.
+
+### Check snapshots
+
+```bash
+litestream snapshots -config litestream.yml
 ```
 
 ## SQLite Operations
