@@ -197,7 +197,6 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 	}
 
 	packagesJSON := map[string]any{
-		"packages":                   []any{},
 		"metadata-url":               "/p2/%package%.json",
 		"notify-batch":               notifyBatch,
 		"available-package-patterns": []string{"wp-plugin/*", "wp-theme/*"},
