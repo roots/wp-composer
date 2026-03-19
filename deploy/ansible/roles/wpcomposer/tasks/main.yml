@@ -7,13 +7,10 @@
     group: www-data
     mode: "0640"
 
-- name: Deploy wpcomposer socket
-  template:
-    src: wpcomposer.socket.j2
-    dest: /etc/systemd/system/wpcomposer.socket
-    owner: root
-    group: root
-    mode: "0644"
+- name: Remove legacy wpcomposer socket unit
+  file:
+    path: /etc/systemd/system/wpcomposer.socket
+    state: absent
   notify: Reload systemd
 
 - name: Deploy wpcomposer service
@@ -81,18 +78,6 @@
 
 - name: Flush handlers
   meta: flush_handlers
-
-- name: Stop wpcomposer service before socket activation
-  service:
-    name: wpcomposer
-    state: stopped
-  ignore_errors: yes
-
-- name: Enable and start wpcomposer socket
-  service:
-    name: wpcomposer.socket
-    state: started
-    enabled: yes
 
 - name: Enable and start wpcomposer service
   service:
