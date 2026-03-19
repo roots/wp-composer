@@ -27,7 +27,7 @@ caddy_email: "team@roots.io"
 
 # R2
 wp_composer_deploy_r2: "true"
-r2_cdn_public_url: "https://cdn.wp-composer.com"
+r2_cdn_public_url: "https://cdn.wp-packages.org"
 
 # Litestream
 litestream_version: "0.5.10"
