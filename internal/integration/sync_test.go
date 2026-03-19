@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http/httptest"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -90,8 +89,15 @@ func TestR2Sync(t *testing.T) {
 	if err := json.Unmarshal(rootData, &rootJSON); err != nil {
 		t.Fatalf("invalid packages.json: %v", err)
 	}
-	if rootJSON["build-id"] != result.BuildID {
-		t.Errorf("root packages.json build-id = %v, want %s", rootJSON["build-id"], result.BuildID)
+	// packages.json should have metadata-url but no v1 fields
+	if _, ok := rootJSON["metadata-url"]; !ok {
+		t.Error("packages.json missing metadata-url")
+	}
+	if _, ok := rootJSON["provider-includes"]; ok {
+		t.Error("packages.json should not contain provider-includes")
+	}
+	if _, ok := rootJSON["providers-url"]; ok {
+		t.Error("packages.json should not contain providers-url")
 	}
 
 	// Verify p2/ files exist
@@ -105,7 +111,7 @@ func TestR2Sync(t *testing.T) {
 	}
 	_ = p2Obj.Body.Close()
 
-	// Verify p/ content-addressed files exist
+	// Verify p/ content-addressed files do NOT exist
 	listResp, err := s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 		Bucket: aws.String("test-bucket"),
 		Prefix: aws.String("p/"),
@@ -113,27 +119,9 @@ func TestR2Sync(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listing p/ objects: %v", err)
 	}
-	pFileCount := 0
-	for _, obj := range listResp.Contents {
-		key := aws.ToString(obj.Key)
-		if strings.Contains(key, "$") {
-			pFileCount++
-		}
+	if len(listResp.Contents) > 0 {
+		t.Errorf("expected no p/ files after v1 removal, found %d", len(listResp.Contents))
 	}
-	if pFileCount == 0 {
-		t.Error("no content-addressed p/ files found after sync")
-	}
-
-	// Verify release-prefixed index files exist
-	releaseKey := "releases/" + result.BuildID + "/packages.json"
-	relObj, err := s3Client.GetObject(ctx, &s3.GetObjectInput{
-		Bucket: aws.String("test-bucket"),
-		Key:    aws.String(releaseKey),
-	})
-	if err != nil {
-		t.Fatalf("release packages.json not found: %v", err)
-	}
-	_ = relObj.Body.Close()
 
 	// Count total uploaded objects for the idempotency check
 	allResp, err := s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{

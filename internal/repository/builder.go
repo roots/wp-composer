@@ -299,7 +299,8 @@ func validateIntegrityInMemory(buildDir string, expectedPackages int) []string {
 	return errs
 }
 
-// ValidateIntegrity checks that packages.json exists and p2/ files are present.
+// ValidateIntegrity checks that packages.json exists, is valid, and p2/ files
+// match the count declared in manifest.json.
 func ValidateIntegrity(buildDir string) []string {
 	packagesPath := filepath.Join(buildDir, "packages.json")
 	data, err := os.ReadFile(packagesPath)
@@ -310,6 +311,28 @@ func ValidateIntegrity(buildDir string) []string {
 	var root map[string]any
 	if err := json.Unmarshal(data, &root); err != nil {
 		return []string{fmt.Sprintf("packages.json invalid: %v", err)}
+	}
+
+	// Count p2/ files on disk.
+	var p2Count int
+	p2Dir := filepath.Join(buildDir, "p2")
+	_ = filepath.Walk(p2Dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		p2Count++
+		return nil
+	})
+
+	// Cross-check against manifest if available.
+	manifestData, err := os.ReadFile(filepath.Join(buildDir, "manifest.json"))
+	if err == nil {
+		var manifest map[string]any
+		if json.Unmarshal(manifestData, &manifest) == nil {
+			if expected, ok := manifest["packages_total"].(float64); ok && int(expected) != p2Count {
+				return []string{fmt.Sprintf("manifest says %d packages but found %d p2/ files", int(expected), p2Count)}
+			}
+		}
 	}
 
 	return nil

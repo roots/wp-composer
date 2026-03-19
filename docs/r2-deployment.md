@@ -112,23 +112,21 @@ aws s3 ls s3://wp-composer-repo/ --profile r2 --endpoint-url https://<account-id
 aws s3 ls s3://wp-composer-repo/p2/ --profile r2 --endpoint-url https://<account-id>.r2.cloudflarestorage.com
 ```
 
-### Cleanup stale R2 releases
+### Cleanup legacy R2 objects
 
-The `wpcomposer pipeline` command automatically cleans up old R2 releases after each successful deploy, keeping the live release + 5 most recent + releases within a 24-hour grace window. Cleanup is best-effort — failures are logged as warnings but do not fail the pipeline. If cleanup errors persist, run manual cleanup to investigate.
+After dropping Composer v1 support, the following R2 prefixes are orphaned and can be manually deleted:
 
-For manual cleanup:
+- `p/` — content-addressed v1 package files and provider group files
+- `releases/` — per-release snapshots from the old deploy model
+
+Use the AWS CLI to delete these when ready:
 
 ```bash
-# Remove R2 releases beyond retention (keeps live + 5 most recent + within grace period)
-wpcomposer deploy --cleanup --r2-cleanup
-
-# Shorter grace period (default 24 hours)
-wpcomposer deploy --cleanup --r2-cleanup --grace-hours 6
+aws s3 rm s3://wp-composer-repo/p/ --recursive --profile r2 --endpoint-url https://<account-id>.r2.cloudflarestorage.com
+aws s3 rm s3://wp-composer-repo/releases/ --recursive --profile r2 --endpoint-url https://<account-id>.r2.cloudflarestorage.com
 ```
 
-`--r2-cleanup` is required — plain `--cleanup` only removes local build directories. The cleanup reads R2 state directly (no local filesystem dependency), identifies release prefixes, and deletes those outside the keep set.
-
-The keep set is: live release (from root `packages.json` `build-id` field) + releases within `--grace-hours` + top `--retain` most recent. The retain count has a hard minimum of 5 — even if `--retain` is set lower, at least 5 recent releases are always preserved.
+Local build cleanup is handled by `wpcomposer deploy --cleanup`.
 
 ## Rollback
 

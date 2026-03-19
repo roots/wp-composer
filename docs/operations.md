@@ -69,18 +69,14 @@ wpcomposer deploy --rollback
 wpcomposer deploy --rollback=20260313-130000
 wpcomposer deploy --to-r2
 wpcomposer deploy --cleanup
-wpcomposer deploy --cleanup --r2-cleanup
-wpcomposer deploy --cleanup --r2-cleanup --retain 5
-wpcomposer deploy --cleanup --r2-cleanup --grace-hours 6
+wpcomposer deploy --cleanup --retain 10
 ```
 
 - Validates build artifacts before any sync or promotion.
 - `--to-r2` uploads `p2/` files and `packages.json` to R2, then promotes locally. If R2 sync fails, the local symlink is not updated.
 - Rollback validates target build, syncs to R2 if enabled, then promotes.
 - `--cleanup` removes old local builds beyond retention (default: 5 beyond current).
-- `--r2-cleanup` removes stale release prefixes from R2 (must be combined with `--cleanup`). Reads R2 state directly — no local filesystem dependency.
-- `--retain N` controls how many releases to keep beyond current (minimum: 5).
-- `--grace-hours N` keeps releases younger than N hours (default: 24).
+- `--retain N` controls how many local builds to keep beyond current (minimum: 5).
 
 ### Full Pipeline
 
@@ -91,7 +87,7 @@ wpcomposer pipeline --skip-deploy
 wpcomposer pipeline --discover-source=config
 ```
 
-Runs discover → update → build → deploy sequentially, stopping on failure. After a successful deploy, automatically cleans up old local builds and stale R2 releases (keeps live + 5 most recent + 24h grace window). Cleanup is best-effort — failures are logged as warnings but do not fail the pipeline.
+Runs discover → update → build → deploy sequentially, stopping on failure. After a successful deploy, automatically cleans up old local builds (keeps 5 most recent). Cleanup is best-effort — failures are logged as warnings but do not fail the pipeline.
 
 ### Aggregate Installs
 
@@ -350,7 +346,6 @@ PRAGMA busy_timeout=5000;
 3. **R2 sync failed mid-upload:**
    - Local symlink was not updated, so local state is consistent.
    - Re-run `wpcomposer deploy --to-r2` to retry.
-   - To clean up stale releases: `wpcomposer deploy --cleanup --r2-cleanup`.
 
 4. **Telemetry counters stale:**
    - Run `wpcomposer aggregate-installs` manually.

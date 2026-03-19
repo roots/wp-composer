@@ -43,9 +43,7 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 	cleanup, _ := cmd.Flags().GetBool("cleanup")
 	toR2, _ := cmd.Flags().GetBool("to-r2")
 
-	r2Cleanup, _ := cmd.Flags().GetBool("r2-cleanup")
 	retainCount, _ := cmd.Flags().GetInt("retain")
-	graceHours, _ := cmd.Flags().GetInt("grace-hours")
 
 	if cleanup {
 		removed, err := deploy.Cleanup(repoDir, retainCount, application.Logger)
@@ -54,16 +52,6 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 		}
 		if removed == 0 {
 			application.Logger.Info("nothing to clean up locally")
-		}
-
-		if r2Cleanup {
-			r2Removed, err := deploy.CleanupR2(cmd.Context(), application.Config.R2, graceHours, retainCount, application.Logger)
-			if err != nil {
-				return fmt.Errorf("R2 cleanup failed: %w", err)
-			}
-			if r2Removed == 0 {
-				application.Logger.Info("nothing to clean up on R2")
-			}
 		}
 		return nil
 	}
@@ -176,9 +164,7 @@ func init() {
 	f.String("rollback", "", "rollback to previous build, or specify a build ID")
 	f.Lookup("rollback").NoOptDefVal = " " // allows --rollback without =value
 	f.Bool("cleanup", false, "remove old builds beyond retention")
-	f.Bool("r2-cleanup", false, "also clean stale files from R2 during cleanup")
 	f.Int("retain", 5, "number of recent builds to retain (beyond current)")
-	f.Int("grace-hours", 24, "hours to keep old releases on R2 after deploy")
 	f.Bool("to-r2", false, "sync build to R2")
 	rootCmd.AddCommand(deployCmd)
 }
