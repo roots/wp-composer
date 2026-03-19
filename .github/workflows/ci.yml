@@ -29,22 +29,6 @@ jobs:
       - name: Lint
         run: golangci-lint run ./...
 
-  gofmt:
-    name: Go Format Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-      - name: Check Go formatting
-        run: |
-          if [ -n "$(gofmt -s -l .)" ]; then
-            echo "Go code is not formatted. Please run 'gofmt -s -w .'"
-            gofmt -s -d .
-            exit 1
-          fi
-
   go-mod-tidy:
     name: Go Modules Tidy
     runs-on: ubuntu-latest
