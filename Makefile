@@ -1,5 +1,7 @@
 .PHONY: build install dev test integration lint clean tailwind db-restore
 
+VAULT_FILE ?= deploy/ansible/group_vars/production/vault.yml
+
 TAILWIND ?= ./bin/tailwindcss
 
 # Download Tailwind standalone CLI if missing
@@ -49,9 +51,16 @@ lint:
 	go vet ./...
 	go mod tidy -diff
 
-# Restore production database from R2
+# Restore production database from R2 (reads secrets from Ansible vault)
 db-restore:
-	go run ./cmd/wpcomposer db restore --force
+	@eval $$(ansible-vault view --vault-password-file deploy/ansible/.vault_pass $(VAULT_FILE) | yq -r \
+		'"export LITESTREAM_BUCKET=\(.vault_r2_litestream_bucket) R2_ENDPOINT=\(.vault_r2_endpoint) R2_ACCESS_KEY_ID=\(.vault_r2_access_key_id) R2_SECRET_ACCESS_KEY=\(.vault_r2_secret_access_key)"') && \
+		export DB_PATH=./storage/wpcomposer.db && \
+		echo "LITESTREAM_BUCKET=$$LITESTREAM_BUCKET" && \
+		echo "R2_ENDPOINT=$$R2_ENDPOINT" && \
+		echo "R2_ACCESS_KEY_ID=$$R2_ACCESS_KEY_ID" && \
+		echo "R2_SECRET_ACCESS_KEY=$$R2_SECRET_ACCESS_KEY" && \
+		go run ./cmd/wpcomposer db restore --force
 
 # Remove build artifacts
 clean:

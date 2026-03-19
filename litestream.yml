@@ -1,9 +1,8 @@
 dbs:
-  - path: ${DB_PATH:-./storage/wpcomposer.db}
+  - path: ${DB_PATH}
     replicas:
       - type: s3
         bucket: ${LITESTREAM_BUCKET}
-        path: db
         endpoint: ${R2_ENDPOINT}
         access-key-id: ${R2_ACCESS_KEY_ID}
         secret-access-key: ${R2_SECRET_ACCESS_KEY}
