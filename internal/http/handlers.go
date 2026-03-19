@@ -754,7 +754,7 @@ func queryPackages(ctx context.Context, db *sql.DB, f publicFilters, page, limit
 		args = append(args, f.Type)
 	}
 
-	orderBy := "wp_composer_installs_total DESC"
+	orderBy := "wp_packages_installs_total DESC"
 	switch f.Sort {
 	case "active_installs":
 		orderBy = "active_installs DESC"
@@ -776,7 +776,7 @@ func queryPackages(ctx context.Context, db *sql.DB, f publicFilters, page, limit
 
 	offset := (page - 1) * limit
 	q := fmt.Sprintf(`SELECT type, name, COALESCE(display_name,''), COALESCE(description,''),
-		COALESCE(current_version,''), downloads, active_installs, wp_composer_installs_total
+		COALESCE(current_version,''), downloads, active_installs, wp_packages_installs_total
 		FROM packages WHERE %s ORDER BY %s LIMIT ? OFFSET ?`, where, orderBy)
 
 	rows, err := db.QueryContext(ctx, q, append(args, limit, offset)...)
@@ -814,7 +814,7 @@ func queryPackageDetail(ctx context.Context, db *sql.DB, pkgType, name string) (
 	var p packageDetail
 	err := db.QueryRowContext(ctx, `SELECT type, name, COALESCE(display_name,''), COALESCE(description,''),
 		COALESCE(author,''), COALESCE(homepage,''), COALESCE(current_version,''),
-		downloads, active_installs, wp_composer_installs_total, versions_json, og_image_generated_at,
+		downloads, active_installs, wp_packages_installs_total, versions_json, og_image_generated_at,
 		COALESCE(updated_at,'')
 		FROM packages WHERE type = ? AND name = ? AND is_active = 1`, pkgType, name,
 	).Scan(&p.Type, &p.Name, &p.DisplayName, &p.Description, &p.Author, &p.Homepage,
@@ -904,7 +904,7 @@ func queryAdminPackages(ctx context.Context, db *sql.DB, f adminFilters, page, l
 
 	offset := (page - 1) * limit
 	q := fmt.Sprintf(`SELECT type, name, COALESCE(display_name,''), COALESCE(current_version,''),
-		downloads, active_installs, wp_composer_installs_total, is_active, COALESCE(last_synced_at,'')
+		downloads, active_installs, wp_packages_installs_total, is_active, COALESCE(last_synced_at,'')
 		FROM packages WHERE %s ORDER BY downloads DESC LIMIT ? OFFSET ?`, where)
 
 	rows, err := db.QueryContext(ctx, q, append(args, limit, offset)...)

@@ -39,14 +39,14 @@ func FormatInstalls(n int64) string {
 // - Install counts changed since last generation
 func GetPackagesNeedingOG(ctx context.Context, db *sql.DB, limit int) ([]PackageOGRow, error) {
 	q := `SELECT id, type, name, COALESCE(display_name, ''), COALESCE(description, ''),
-		COALESCE(current_version, ''), active_installs, wp_composer_installs_total,
+		COALESCE(current_version, ''), active_installs, wp_packages_installs_total,
 		og_image_generated_at, og_image_installs, og_image_wp_installs
 		FROM packages
 		WHERE is_active = 1
 		AND (
 			og_image_generated_at IS NULL
 			OR active_installs != og_image_installs
-			OR wp_composer_installs_total != og_image_wp_installs
+			OR wp_packages_installs_total != og_image_wp_installs
 		)
 		ORDER BY active_installs DESC
 		LIMIT ?`

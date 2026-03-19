@@ -30,8 +30,8 @@ func setupTestDB(t *testing.T) *sql.DB {
 			num_ratings INTEGER NOT NULL DEFAULT 0,
 			is_active INTEGER NOT NULL DEFAULT 1,
 			last_committed TEXT, last_synced_at TEXT, last_sync_run_id INTEGER,
-			wp_composer_installs_total INTEGER NOT NULL DEFAULT 0,
-			wp_composer_installs_30d INTEGER NOT NULL DEFAULT 0,
+			wp_packages_installs_total INTEGER NOT NULL DEFAULT 0,
+			wp_packages_installs_30d INTEGER NOT NULL DEFAULT 0,
 			last_installed_at TEXT,
 			created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
 			UNIQUE(type, name)
@@ -240,7 +240,7 @@ func TestAggregateInstalls(t *testing.T) {
 
 	// Check akismet: total=3, 30d=2
 	var total, recent30d int
-	_ = database.QueryRow("SELECT wp_composer_installs_total, wp_composer_installs_30d FROM packages WHERE name='akismet'").Scan(&total, &recent30d)
+	_ = database.QueryRow("SELECT wp_packages_installs_total, wp_packages_installs_30d FROM packages WHERE name='akismet'").Scan(&total, &recent30d)
 	if total != 3 {
 		t.Errorf("akismet total = %d, want 3", total)
 	}
@@ -249,7 +249,7 @@ func TestAggregateInstalls(t *testing.T) {
 	}
 
 	// Check astra: total=1, 30d=1
-	_ = database.QueryRow("SELECT wp_composer_installs_total, wp_composer_installs_30d FROM packages WHERE name='astra'").Scan(&total, &recent30d)
+	_ = database.QueryRow("SELECT wp_packages_installs_total, wp_packages_installs_30d FROM packages WHERE name='astra'").Scan(&total, &recent30d)
 	if total != 1 {
 		t.Errorf("astra total = %d, want 1", total)
 	}
@@ -270,7 +270,7 @@ func TestAggregateInstalls_Resets30d(t *testing.T) {
 	ctx := context.Background()
 
 	// Set a stale 30d count with no recent events
-	_, _ = database.Exec("UPDATE packages SET wp_composer_installs_30d = 50 WHERE name='akismet'")
+	_, _ = database.Exec("UPDATE packages SET wp_packages_installs_30d = 50 WHERE name='akismet'")
 
 	// Only old events
 	old := time.Now().UTC().Add(-60 * 24 * time.Hour).Format(time.RFC3339)
@@ -285,7 +285,7 @@ func TestAggregateInstalls_Resets30d(t *testing.T) {
 	}
 
 	var recent30d int
-	_ = database.QueryRow("SELECT wp_composer_installs_30d FROM packages WHERE name='akismet'").Scan(&recent30d)
+	_ = database.QueryRow("SELECT wp_packages_installs_30d FROM packages WHERE name='akismet'").Scan(&recent30d)
 	if recent30d != 0 {
 		t.Errorf("30d should be reset to 0, got %d", recent30d)
 	}

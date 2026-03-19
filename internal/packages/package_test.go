@@ -39,8 +39,8 @@ func setupTestDB(t *testing.T) *sql.DB {
 			last_committed TEXT,
 			last_synced_at TEXT,
 			last_sync_run_id INTEGER,
-			wp_composer_installs_total INTEGER NOT NULL DEFAULT 0,
-			wp_composer_installs_30d INTEGER NOT NULL DEFAULT 0,
+			wp_packages_installs_total INTEGER NOT NULL DEFAULT 0,
+			wp_packages_installs_30d INTEGER NOT NULL DEFAULT 0,
 			last_installed_at TEXT,
 			created_at TEXT NOT NULL,
 			updated_at TEXT NOT NULL,
@@ -225,13 +225,13 @@ func TestRefreshSiteStats(t *testing.T) {
 	}
 
 	// Install counters are maintained by telemetry aggregation, not package upserts.
-	if _, err := database.Exec(`UPDATE packages SET wp_composer_installs_total = 100, wp_composer_installs_30d = 25 WHERE name = 'plugin-one'`); err != nil {
+	if _, err := database.Exec(`UPDATE packages SET wp_packages_installs_total = 100, wp_packages_installs_30d = 25 WHERE name = 'plugin-one'`); err != nil {
 		t.Fatalf("updating plugin-one counters: %v", err)
 	}
-	if _, err := database.Exec(`UPDATE packages SET wp_composer_installs_total = 999, wp_composer_installs_30d = 999 WHERE name = 'plugin-two'`); err != nil {
+	if _, err := database.Exec(`UPDATE packages SET wp_packages_installs_total = 999, wp_packages_installs_30d = 999 WHERE name = 'plugin-two'`); err != nil {
 		t.Fatalf("updating plugin-two counters: %v", err)
 	}
-	if _, err := database.Exec(`UPDATE packages SET wp_composer_installs_total = 50, wp_composer_installs_30d = 5 WHERE name = 'theme-one'`); err != nil {
+	if _, err := database.Exec(`UPDATE packages SET wp_packages_installs_total = 50, wp_packages_installs_30d = 5 WHERE name = 'theme-one'`); err != nil {
 		t.Fatalf("updating theme-one counters: %v", err)
 	}
 
