@@ -86,8 +86,8 @@ func runPipeline(cmd *cobra.Command, args []string) error {
 		_, err := application.DB.ExecContext(ctx, `
 			INSERT INTO builds (id, started_at, status, pid,
 				packages_total, packages_changed, packages_skipped,
-				provider_groups, artifact_count, root_hash, manifest_json)
-			VALUES (?, ?, 'running', ?, 0, 0, 0, 0, 0, '', '{}')`,
+				artifact_count, root_hash, manifest_json)
+			VALUES (?, ?, 'running', ?, 0, 0, 0, 0, '', '{}')`,
 			buildID,
 			started.Format(time.RFC3339),
 			os.Getpid(),

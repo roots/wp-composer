@@ -9,7 +9,7 @@ WP Composer has two primary runtime concerns:
 
 - **Single binary** (`wpcomposer`) provides CLI commands and HTTP server.
 - **SQLite** (WAL mode) as the sole runtime data store.
-- **R2/CDN** serves Composer metadata artifacts (`packages.json`, `p/`, `p2/`, `manifest.json`).
+- **R2/CDN** serves Composer metadata artifacts (`packages.json`, `p2/`).
 - **Caddy** reverse proxies app routes to the Go HTTP server.
 - **systemd** manages the `serve` process and periodic timers.
 
@@ -52,7 +52,6 @@ internal/
 2. **Update** fetches full package payloads, normalizes versions, stores to `packages.versions_json`.
 3. **Build** generates:
    - `packages.json` (with absolute `notify-batch` URL to app domain)
-   - Provider files under `p/`
    - Composer v2 metadata files under `p2/`
    - `manifest.json` with build metrics and snapshot metadata
 4. **Deploy** promotes a complete build by switching the `current` symlink and optionally syncing to R2.
@@ -73,7 +72,6 @@ storage/repository/
     ├── 20260313-140000/
     │   ├── packages.json
     │   ├── manifest.json
-    │   ├── p/
     │   └── p2/
     └── 20260313-130000/
 ```

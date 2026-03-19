@@ -3,7 +3,6 @@ package deploy
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -61,107 +60,14 @@ func (f *fakeR2) DeleteObjects(_ context.Context, input *s3.DeleteObjectsInput, 
 	return &s3.DeleteObjectsOutput{}, nil
 }
 
-// versionedRootJSON builds a root packages.json with the new shared layout.
-// Both metadata-url and providers-url are unprefixed (shared top-level).
-// build-id identifies the live release for cleanup.
-func versionedRootJSON(buildID string) []byte {
-	data, _ := json.Marshal(map[string]any{
-		"build-id":      buildID,
-		"metadata-url":  "/p2/%package%.json",
-		"providers-url": "/p/%package%$%hash%.json",
-	})
-	return data
+// rootJSONWithBuildID builds a root packages.json with a build-id field.
+func rootJSONWithBuildID(buildID string) []byte {
+	return []byte(fmt.Sprintf(`{"build-id":"%s","metadata-url":"/p2/%%package%%.json"}`, buildID))
 }
 
-// flatRootJSON builds a pre-versioned root packages.json (flat-path layout).
-func flatRootJSON() []byte {
-	data, _ := json.Marshal(map[string]any{
-		"metadata-url":  "/p2/%package%.json",
-		"providers-url": "/p/%package%$%hash%.json",
-	})
-	return data
-}
-
-// oldLayoutRootJSON builds a root packages.json using the old release-prefixed
-// layout where both metadata-url and providers-url point into releases/.
-func oldLayoutRootJSON(buildID string) []byte {
-	data, _ := json.Marshal(map[string]any{
-		"metadata-url":  "/releases/" + buildID + "/p2/%package%.json",
-		"providers-url": "/releases/" + buildID + "/p/%package%$%hash%.json",
-	})
-	return data
-}
-
-func TestUploadPriority(t *testing.T) {
-	tests := []struct {
-		path string
-		want int
-	}{
-		{"p/wp-plugin/akismet$abc.json", 0},
-		{"p2/wp-plugin/akismet.json", 0},
-		{"p/providers-this-week$abc.json", 0},
-		{"manifest.json", 2},
-		{"packages.json", 3},
-		// Release-prefixed paths should also sort correctly.
-		{"releases/20260314-150405/p2/wp-plugin/akismet.json", 0},
-		{"releases/20260314-150405/manifest.json", 2},
-		{"releases/20260314-150405/packages.json", 3},
-	}
-	for _, tt := range tests {
-		t.Run(tt.path, func(t *testing.T) {
-			got := uploadPriority(tt.path)
-			if got != tt.want {
-				t.Errorf("uploadPriority(%q) = %d, want %d", tt.path, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestUploadOrderPackagesJsonLast(t *testing.T) {
-	buildDir := t.TempDir()
-
-	_ = os.MkdirAll(filepath.Join(buildDir, "p", "wp-plugin"), 0755)
-	_ = os.MkdirAll(filepath.Join(buildDir, "p2", "wp-plugin"), 0755)
-
-	files := map[string]string{
-		"packages.json":                `{"packages":{}}`,
-		"manifest.json":                `{}`,
-		"p/providers-2026-03$abc.json": `{}`,
-		"p/wp-plugin/akismet$def.json": `{}`,
-		"p2/wp-plugin/akismet.json":    `{}`,
-	}
-	for name, content := range files {
-		path := filepath.Join(buildDir, filepath.FromSlash(name))
-		_ = os.WriteFile(path, []byte(content), 0644)
-	}
-
-	var collected []buildFile
-	err := WalkBuildFiles(buildDir, func(relPath string, data []byte) error {
-		collected = append(collected, buildFile{relPath: relPath, data: data})
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("WalkBuildFiles: %v", err)
-	}
-
-	sortBuildFiles(collected)
-
-	n := len(collected)
-	if n < 2 {
-		t.Fatalf("expected at least 2 files, got %d", n)
-	}
-	if collected[n-1].relPath != "packages.json" {
-		t.Errorf("last file = %q, want packages.json", collected[n-1].relPath)
-	}
-	if collected[n-2].relPath != "manifest.json" {
-		t.Errorf("second-to-last file = %q, want manifest.json", collected[n-2].relPath)
-	}
-
-	for i := 0; i < n-2; i++ {
-		if collected[i].relPath == "packages.json" || collected[i].relPath == "manifest.json" {
-			t.Errorf("index file %q found at position %d, expected after all data files", collected[i].relPath, i)
-		}
-	}
+// rootJSONNoBuildID builds a root packages.json without a build-id field.
+func rootJSONNoBuildID() []byte {
+	return []byte(`{"metadata-url":"/p2/%package%.json"}`)
 }
 
 func TestValidateBuildRejectsInvalid(t *testing.T) {
@@ -194,86 +100,12 @@ func TestValidateBuildRejectsInvalid(t *testing.T) {
 	}
 }
 
-func TestRewritePackagesJSON(t *testing.T) {
-	input := map[string]any{
-		"metadata-url":  "/p2/%package%.json",
-		"providers-url": "/p/%package%$%hash%.json",
-		"provider-includes": map[string]any{
-			"p/providers-this-week$abc123.json": map[string]any{
-				"sha256": "deadbeef",
-			},
-			"p/providers-last-week$def456.json": map[string]any{
-				"sha256": "cafebabe",
-			},
-		},
-		"notify-batch": "https://app.example.com/notify",
-	}
-
-	inputJSON, _ := json.Marshal(input)
-	buildID := "20260314-150405"
-
-	result, err := RewritePackagesJSON(inputJSON, buildID)
-	if err != nil {
-		t.Fatalf("RewritePackagesJSON: %v", err)
-	}
-
-	var got map[string]any
-	if err := json.Unmarshal(result, &got); err != nil {
-		t.Fatalf("unmarshal result: %v", err)
-	}
-
-	// Check metadata-url NOT rewritten (shared top-level p2/).
-	wantMeta := "/p2/%package%.json"
-	if got["metadata-url"] != wantMeta {
-		t.Errorf("metadata-url = %q, want %q", got["metadata-url"], wantMeta)
-	}
-
-	// Check providers-url NOT rewritten (shared top-level p/).
-	wantProv := "/p/%package%$%hash%.json"
-	if got["providers-url"] != wantProv {
-		t.Errorf("providers-url = %q, want %q", got["providers-url"], wantProv)
-	}
-
-	// Check provider-includes keys NOT rewritten.
-	pi, ok := got["provider-includes"].(map[string]any)
-	if !ok {
-		t.Fatal("provider-includes not a map")
-	}
-	for key := range pi {
-		if strings.HasPrefix(key, "releases/") {
-			t.Errorf("provider-includes key %q should not be prefixed", key)
-		}
-	}
-	if len(pi) != 2 {
-		t.Errorf("provider-includes has %d keys, want 2", len(pi))
-	}
-
-	// Check build-id embedded.
-	if got["build-id"] != buildID {
-		t.Errorf("build-id = %q, want %q", got["build-id"], buildID)
-	}
-
-	// Check notify-batch NOT rewritten.
-	if got["notify-batch"] != "https://app.example.com/notify" {
-		t.Errorf("notify-batch was modified: %v", got["notify-batch"])
-	}
-}
-
-func TestCacheControlForReleasePaths(t *testing.T) {
+func TestCacheControlForPaths(t *testing.T) {
 	tests := []struct {
 		path string
 		want string
 	}{
-		// Root packages.json — mutable pointer.
 		{"packages.json", "public, max-age=300"},
-		// Everything under releases/ is immutable.
-		{"releases/20260314-150405/packages.json", "public, max-age=31536000, immutable"},
-		{"releases/20260314-150405/manifest.json", "public, max-age=31536000, immutable"},
-		{"releases/20260314-150405/p2/wp-plugin/akismet.json", "public, max-age=31536000, immutable"},
-		{"releases/20260314-150405/p/wp-plugin/akismet$abc.json", "public, max-age=31536000, immutable"},
-		// Legacy flat paths still work.
-		{"manifest.json", "public, max-age=300"},
-		{"p/wp-plugin/akismet$abc.json", "public, max-age=31536000, immutable"},
 		{"p2/wp-plugin/akismet.json", "public, max-age=300"},
 	}
 	for _, tt := range tests {
@@ -288,17 +120,15 @@ func TestCacheControlForReleasePaths(t *testing.T) {
 
 // --- Safety-critical cleanup tests using fakeR2 ---
 
-func TestFetchLiveReleaseTransientError(t *testing.T) {
-	// A non-NoSuchKey error from GetObject must propagate as an error,
-	// not be silently treated as "no live release".
+func TestFetchLiveBuildIDTransientError(t *testing.T) {
 	fake := &fakeR2{
 		objects: map[string][]byte{},
 		getErr:  fmt.Errorf("connection reset by peer"),
 	}
 
-	_, err := fetchLiveRelease(context.Background(), fake, "test-bucket")
+	_, err := fetchLiveBuildID(context.Background(), fake, "test-bucket")
 	if err == nil {
-		t.Fatal("expected fetchLiveRelease to return error on transient GetObject failure")
+		t.Fatal("expected fetchLiveBuildID to return error on transient GetObject failure")
 	}
 	if !strings.Contains(err.Error(), "connection reset") {
 		t.Errorf("error should contain original cause, got: %v", err)
@@ -306,12 +136,9 @@ func TestFetchLiveReleaseTransientError(t *testing.T) {
 }
 
 func TestCleanupRefusesWhenLiveReleaseUnknown(t *testing.T) {
-	// Bucket has release prefixes but root packages.json uses flat-path layout
-	// (no releases/ in metadata-url) — cleanup must refuse to delete releases
-	// because it can't identify which one is live.
 	fake := &fakeR2{
 		objects: map[string][]byte{
-			"packages.json":                                      flatRootJSON(),
+			"packages.json":                                      rootJSONNoBuildID(),
 			"releases/20260314-100000/packages.json":             []byte(`{}`),
 			"releases/20260314-100000/p2/wp-plugin/akismet.json": []byte(`{}`),
 			"releases/20260314-110000/packages.json":             []byte(`{}`),
@@ -326,24 +153,18 @@ func TestCleanupRefusesWhenLiveReleaseUnknown(t *testing.T) {
 		t.Errorf("error should mention refusing to clean, got: %v", err)
 	}
 
-	// Nothing should have been deleted.
 	if len(fake.deletedKeys) > 0 {
 		t.Errorf("expected no deletions, got %d: %v", len(fake.deletedKeys), fake.deletedKeys)
 	}
 }
 
 func TestCleanupIgnoresNonReleaseFiles(t *testing.T) {
-	// Cleanup only lists releases/ prefix — shared p/, p2/, and other
-	// top-level files are never seen or deleted.
 	liveID := "20260314-150000"
 	fake := &fakeR2{
 		objects: map[string][]byte{
-			"packages.json":                         versionedRootJSON(liveID),
+			"packages.json":                         rootJSONWithBuildID(liveID),
 			"releases/" + liveID + "/packages.json": []byte(`{}`),
-			// These exist in the bucket but cleanup never lists them.
-			"p2/wp-plugin/akismet.json":    []byte(`{}`),
-			"p/wp-plugin/akismet$abc.json": []byte(`{}`),
-			"manifest.json":                []byte(`{}`),
+			"p2/wp-plugin/akismet.json":             []byte(`{}`),
 		},
 	}
 
@@ -354,75 +175,35 @@ func TestCleanupIgnoresNonReleaseFiles(t *testing.T) {
 	if deleted != 0 {
 		t.Errorf("expected 0 deletions (only live release exists), got %d", deleted)
 	}
-	if len(fake.deletedKeys) > 0 {
-		t.Errorf("nothing should be deleted: %v", fake.deletedKeys)
-	}
 }
 
-func TestFetchLiveReleaseDetectsSharedPrefix(t *testing.T) {
+func TestFetchLiveBuildID(t *testing.T) {
 	tests := []struct {
-		name            string
-		root            []byte
-		wantShared      bool
-		wantIsVersioned bool
+		name   string
+		root   []byte
+		wantID string
 	}{
 		{
-			name:            "new layout (shared p/)",
-			root:            versionedRootJSON("20260314-150000"),
-			wantShared:      true,
-			wantIsVersioned: true,
+			name:   "with build-id",
+			root:   rootJSONWithBuildID("20260314-150000"),
+			wantID: "20260314-150000",
 		},
 		{
-			name:            "old layout (release-prefixed p/)",
-			root:            oldLayoutRootJSON("20260314-150000"),
-			wantShared:      false,
-			wantIsVersioned: true,
-		},
-		{
-			name:            "flat layout (pre-versioned)",
-			root:            flatRootJSON(),
-			wantShared:      true, // providers-url = /p/... (not releases/), so shared
-			wantIsVersioned: false,
+			name:   "without build-id",
+			root:   rootJSONNoBuildID(),
+			wantID: "",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fake := &fakeR2{objects: map[string][]byte{"packages.json": tt.root}}
-			result, err := fetchLiveRelease(context.Background(), fake, "test-bucket")
+			got, err := fetchLiveBuildID(context.Background(), fake, "test-bucket")
 			if err != nil {
-				t.Fatalf("fetchLiveRelease: %v", err)
+				t.Fatalf("fetchLiveBuildID: %v", err)
 			}
-			if result.hasSharedPrefix != tt.wantShared {
-				t.Errorf("hasSharedPrefix = %v, want %v", result.hasSharedPrefix, tt.wantShared)
-			}
-			if result.isVersioned != tt.wantIsVersioned {
-				t.Errorf("isVersioned = %v, want %v", result.isVersioned, tt.wantIsVersioned)
+			if got != tt.wantID {
+				t.Errorf("buildID = %q, want %q", got, tt.wantID)
 			}
 		})
-	}
-}
-
-func TestCollectSharedFilesSkipsNonShared(t *testing.T) {
-	dir := t.TempDir()
-	_ = os.MkdirAll(filepath.Join(dir, "p", "wp-plugin"), 0755)
-	_ = os.MkdirAll(filepath.Join(dir, "p2", "wp-plugin"), 0755)
-
-	_ = os.WriteFile(filepath.Join(dir, "p", "wp-plugin", "akismet$abc.json"), []byte(`{}`), 0644)
-	_ = os.WriteFile(filepath.Join(dir, "p2", "wp-plugin", "akismet.json"), []byte(`{}`), 0644)
-	_ = os.WriteFile(filepath.Join(dir, "packages.json"), []byte(`{}`), 0644)
-
-	shared := collectSharedFiles(dir)
-	if len(shared) != 1 {
-		t.Fatalf("expected 1 shared file, got %d: %v", len(shared), shared)
-	}
-	if !shared["p/wp-plugin/akismet$abc.json"] {
-		t.Errorf("expected p/wp-plugin/akismet$abc.json in shared set")
-	}
-}
-
-func TestCollectSharedFilesEmptyDir(t *testing.T) {
-	shared := collectSharedFiles("")
-	if shared != nil {
-		t.Errorf("expected nil for empty dir, got %v", shared)
 	}
 }

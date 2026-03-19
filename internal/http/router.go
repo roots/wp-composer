@@ -98,7 +98,6 @@ func NewRouter(a *app.App) http.Handler {
 			w.Header().Set("Content-Type", "application/json")
 			fileServer.ServeHTTP(w, r)
 		})
-		route("/p/", fileServer)
 		route("/p2/", fileServer)
 	}
 

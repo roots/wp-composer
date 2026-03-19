@@ -138,16 +138,8 @@ func TestCacheControlForPath(t *testing.T) {
 		want string
 	}{
 		{"packages.json", "public, max-age=300"},
-		{"manifest.json", "public, max-age=300"},
-		{"p/providers-this-week$abc123.json", "public, max-age=31536000, immutable"},
-		{"p/wp-plugin/akismet$def456.json", "public, max-age=31536000, immutable"},
 		{"p2/wp-plugin/akismet.json", "public, max-age=300"},
 		{"p2/wp-theme/astra.json", "public, max-age=300"},
-		// Release-prefixed paths are all immutable.
-		{"releases/20260314-150405/packages.json", "public, max-age=31536000, immutable"},
-		{"releases/20260314-150405/manifest.json", "public, max-age=31536000, immutable"},
-		{"releases/20260314-150405/p2/wp-plugin/akismet.json", "public, max-age=31536000, immutable"},
-		{"releases/20260314-150405/p/wp-plugin/akismet$abc.json", "public, max-age=31536000, immutable"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {

@@ -59,12 +59,12 @@ func TestBuild(t *testing.T) {
 	database := setupTestDB(t)
 
 	// Insert test packages
-	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, provider_group, versions_json, is_active, last_sync_run_id, created_at, updated_at)
-		VALUES ('plugin', 'akismet', 'Akismet', 'this-week',
+	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, versions_json, is_active, last_sync_run_id, created_at, updated_at)
+		VALUES ('plugin', 'akismet', 'Akismet',
 			'{"5.0":"https://downloads.wordpress.org/plugin/akismet.5.0.zip","4.0":"https://downloads.wordpress.org/plugin/akismet.4.0.zip"}',
 			1, 1, datetime('now'), datetime('now'))`)
-	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, provider_group, versions_json, is_active, last_sync_run_id, created_at, updated_at)
-		VALUES ('theme', 'astra', 'Astra', '2025',
+	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, versions_json, is_active, last_sync_run_id, created_at, updated_at)
+		VALUES ('theme', 'astra', 'Astra',
 			'{"4.0":"https://downloads.wordpress.org/theme/astra.4.0.zip"}',
 			1, 1, datetime('now'), datetime('now'))`)
 
@@ -81,9 +81,6 @@ func TestBuild(t *testing.T) {
 
 	if result.PackagesTotal != 2 {
 		t.Errorf("packages_total = %d, want 2", result.PackagesTotal)
-	}
-	if result.ProviderGroups != 2 {
-		t.Errorf("provider_groups = %d, want 2", result.ProviderGroups)
 	}
 
 	// Verify packages.json exists and is valid
@@ -104,10 +101,17 @@ func TestBuild(t *testing.T) {
 		t.Errorf("notify-batch = %q, want https://app.example.com/downloads", notifyBatch)
 	}
 
-	// Check provider-includes
-	includes, ok := root["provider-includes"].(map[string]any)
-	if !ok || len(includes) != 2 {
-		t.Errorf("expected 2 provider-includes, got %v", includes)
+	// packages.json should NOT contain provider-includes or providers-url
+	if _, ok := root["provider-includes"]; ok {
+		t.Error("packages.json should not contain provider-includes")
+	}
+	if _, ok := root["providers-url"]; ok {
+		t.Error("packages.json should not contain providers-url")
+	}
+
+	// Check metadata-url
+	if root["metadata-url"] != "/p2/%package%.json" {
+		t.Errorf("metadata-url = %q, want /p2/%%package%%.json", root["metadata-url"])
 	}
 
 	// Check p2 files exist
@@ -115,6 +119,11 @@ func TestBuild(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(result.BuildDir, path)); err != nil {
 			t.Errorf("p2 file missing: %s", path)
 		}
+	}
+
+	// p/ directory should NOT exist
+	if _, err := os.Stat(filepath.Join(result.BuildDir, "p")); !os.IsNotExist(err) {
+		t.Error("p/ directory should not exist")
 	}
 
 	// Check manifest.json
@@ -135,50 +144,14 @@ func TestBuild(t *testing.T) {
 	}
 }
 
-func TestBuildReusesJSONForP2(t *testing.T) {
-	database := setupTestDB(t)
-
-	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, provider_group, versions_json, is_active, last_sync_run_id, created_at, updated_at)
-		VALUES ('plugin', 'akismet', 'Akismet', 'this-week',
-			'{"5.0":"https://downloads.wordpress.org/plugin/akismet.5.0.zip"}',
-			1, 1, datetime('now'), datetime('now'))`)
-
-	tmpDir := t.TempDir()
-	result, err := Build(context.Background(), database, BuildOpts{
-		OutputDir: tmpDir,
-		Logger:    slog.Default(),
-	})
-	if err != nil {
-		t.Fatalf("build failed: %v", err)
-	}
-
-	// Read p/ content-addressed file
-	pFiles, _ := filepath.Glob(filepath.Join(result.BuildDir, "p", "wp-plugin", "akismet$*.json"))
-	if len(pFiles) != 1 {
-		t.Fatalf("expected 1 p/ file, got %d", len(pFiles))
-	}
-	pData, _ := os.ReadFile(pFiles[0])
-
-	// Read p2/ file
-	p2Data, err := os.ReadFile(filepath.Join(result.BuildDir, "p2", "wp-plugin", "akismet.json"))
-	if err != nil {
-		t.Fatalf("reading p2 file: %v", err)
-	}
-
-	// p/ and p2/ should have identical content
-	if string(pData) != string(p2Data) {
-		t.Error("p/ and p2/ file contents should be identical")
-	}
-}
-
 func TestBuildParallelWrites(t *testing.T) {
 	database := setupTestDB(t)
 
 	// Insert many packages to exercise parallel writes
 	for i := 0; i < 20; i++ {
 		slug := fmt.Sprintf("plugin-%d", i)
-		_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, provider_group, versions_json, is_active, last_sync_run_id, created_at, updated_at)
-			VALUES ('plugin', ?, ?, 'this-week',
+		_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, versions_json, is_active, last_sync_run_id, created_at, updated_at)
+			VALUES ('plugin', ?, ?,
 				'{"1.0":"https://downloads.wordpress.org/plugin/test.1.0.zip"}',
 				1, 1, datetime('now'), datetime('now'))`, slug, slug)
 	}
@@ -196,107 +169,13 @@ func TestBuildParallelWrites(t *testing.T) {
 		t.Errorf("packages_total = %d, want 20", result.PackagesTotal)
 	}
 
-	// Verify integrity
-	// The in-memory validation already ran, but verify files exist on disk
+	// Verify p2 files exist on disk
 	for i := 0; i < 20; i++ {
 		slug := fmt.Sprintf("plugin-%d", i)
 		p2Path := filepath.Join(result.BuildDir, "p2", "wp-plugin", slug+".json")
 		if _, err := os.Stat(p2Path); err != nil {
 			t.Errorf("p2 file missing: %s", p2Path)
 		}
-	}
-}
-
-func TestBuildIncremental(t *testing.T) {
-	database := setupTestDB(t)
-
-	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, provider_group, versions_json, is_active, last_sync_run_id, created_at, updated_at)
-		VALUES ('plugin', 'akismet', 'Akismet', 'this-week',
-			'{"5.0":"https://downloads.wordpress.org/plugin/akismet.5.0.zip"}',
-			1, 1, datetime('now'), datetime('now'))`)
-	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, provider_group, versions_json, is_active, last_sync_run_id, created_at, updated_at)
-		VALUES ('theme', 'astra', 'Astra', '2025',
-			'{"4.0":"https://downloads.wordpress.org/theme/astra.4.0.zip"}',
-			1, 1, datetime('now'), datetime('now'))`)
-
-	tmpDir := t.TempDir()
-
-	// First build
-	result1, err := Build(context.Background(), database, BuildOpts{
-		OutputDir: tmpDir,
-		Logger:    slog.Default(),
-	})
-	if err != nil {
-		t.Fatalf("first build failed: %v", err)
-	}
-	if result1.PackagesChanged != 2 {
-		t.Errorf("first build should have changed 2, got %d", result1.PackagesChanged)
-	}
-
-	// Second build with previous build dir (same data, should skip)
-	// We need a new build ID, so sleep briefly
-	tmpDir2 := t.TempDir()
-	result2, err := Build(context.Background(), database, BuildOpts{
-		OutputDir:        tmpDir2,
-		PreviousBuildDir: result1.BuildDir,
-		Logger:           slog.Default(),
-	})
-	if err != nil {
-		t.Fatalf("second build failed: %v", err)
-	}
-
-	// With identical data, packages should be skipped via hard-link
-	if result2.PackagesSkipped != 2 {
-		t.Errorf("expected 2 skipped packages, got %d (changed=%d)", result2.PackagesSkipped, result2.PackagesChanged)
-	}
-}
-
-func TestBuildIncrementalWithRemovedPackage(t *testing.T) {
-	database := setupTestDB(t)
-
-	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, provider_group, versions_json, is_active, last_sync_run_id, created_at, updated_at)
-		VALUES ('plugin', 'akismet', 'Akismet', 'this-week',
-			'{"5.0":"https://downloads.wordpress.org/plugin/akismet.5.0.zip"}',
-			1, 1, datetime('now'), datetime('now'))`)
-	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, provider_group, versions_json, is_active, last_sync_run_id, created_at, updated_at)
-		VALUES ('plugin', 'removeme', 'RemoveMe', 'this-week',
-			'{"1.0":"https://downloads.wordpress.org/plugin/removeme.1.0.zip"}',
-			1, 1, datetime('now'), datetime('now'))`)
-
-	tmpDir := t.TempDir()
-	result1, err := Build(context.Background(), database, BuildOpts{
-		OutputDir: tmpDir,
-		Logger:    slog.Default(),
-	})
-	if err != nil {
-		t.Fatalf("first build failed: %v", err)
-	}
-	if result1.PackagesTotal != 2 {
-		t.Errorf("first build should have 2 packages, got %d", result1.PackagesTotal)
-	}
-
-	// Deactivate one package
-	_, _ = database.Exec("UPDATE packages SET is_active = 0 WHERE name = 'removeme'")
-
-	// Second build with previous build dir
-	tmpDir2 := t.TempDir()
-	result2, err := Build(context.Background(), database, BuildOpts{
-		OutputDir:        tmpDir2,
-		PreviousBuildDir: result1.BuildDir,
-		Logger:           slog.Default(),
-	})
-	if err != nil {
-		t.Fatalf("second build failed: %v", err)
-	}
-
-	if result2.PackagesTotal != 1 {
-		t.Errorf("second build should have 1 package, got %d", result2.PackagesTotal)
-	}
-
-	// Verify only akismet exists in p2/
-	p2Path := filepath.Join(result2.BuildDir, "p2", "wp-plugin", "removeme.json")
-	if _, err := os.Stat(p2Path); !os.IsNotExist(err) {
-		t.Error("removed package should not exist in second build")
 	}
 }
 

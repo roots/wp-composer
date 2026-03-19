@@ -150,14 +150,14 @@ func runDev(cmd *cobra.Command, args []string) error {
 	_, _ = application.DB.ExecContext(ctx, `
 		INSERT OR IGNORE INTO builds (id, started_at, finished_at, duration_seconds,
 			packages_total, packages_changed, packages_skipped,
-			provider_groups, artifact_count, root_hash, sync_run_id, status, manifest_json)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			artifact_count, root_hash, sync_run_id, status, manifest_json)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		result.BuildID,
 		result.StartedAt.Format(time.RFC3339),
 		result.FinishedAt.Format(time.RFC3339),
 		result.DurationSeconds,
 		result.PackagesTotal, result.PackagesChanged, result.PackagesSkipped,
-		result.ProviderGroups, result.ArtifactCount, result.RootHash,
+		result.ArtifactCount, result.RootHash,
 		result.SyncRunID, "completed",
 		fmt.Sprintf(`{"root_hash":"%s"}`, result.RootHash),
 	)

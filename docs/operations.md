@@ -56,8 +56,8 @@ wpcomposer build --force
 wpcomposer build --package=wp-plugin/akismet
 ```
 
-- Generates immutable build artifacts and `manifest.json`.
-- Validates all hash references before marking build as successful.
+- Generates build artifacts (`p2/` files, `packages.json`, `manifest.json`).
+- Validates artifact integrity before marking build as successful.
 - `--output` to specify a custom build output directory.
 
 ### Deploy
@@ -75,7 +75,7 @@ wpcomposer deploy --cleanup --r2-cleanup --grace-hours 6
 ```
 
 - Validates build artifacts before any sync or promotion.
-- `--to-r2` uploads to a versioned release prefix (`releases/<build-id>/`), rewrites root `packages.json` as the atomic pointer swap, then promotes locally. If R2 sync fails, the local symlink is not updated.
+- `--to-r2` uploads `p2/` files and `packages.json` to R2, then promotes locally. If R2 sync fails, the local symlink is not updated.
 - Rollback validates target build, syncs to R2 if enabled, then promotes.
 - `--cleanup` removes old local builds beyond retention (default: 5 beyond current).
 - `--r2-cleanup` removes stale release prefixes from R2 (must be combined with `--cleanup`). Reads R2 state directly — no local filesystem dependency.
@@ -349,7 +349,7 @@ PRAGMA busy_timeout=5000;
 
 3. **R2 sync failed mid-upload:**
    - Local symlink was not updated, so local state is consistent.
-   - Re-run `wpcomposer deploy --to-r2` to retry. Uploads to the release prefix are idempotent; the root `packages.json` pointer only updates after all release files land.
+   - Re-run `wpcomposer deploy --to-r2` to retry.
    - To clean up stale releases: `wpcomposer deploy --cleanup --r2-cleanup`.
 
 4. **Telemetry counters stale:**

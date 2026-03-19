@@ -397,8 +397,8 @@ func handleTriggerBuild(a *app.App) http.HandlerFunc {
 		res, err := a.DB.ExecContext(r.Context(), `
 			INSERT INTO builds (id, started_at, status, pid,
 				packages_total, packages_changed, packages_skipped,
-				provider_groups, artifact_count, root_hash, manifest_json)
-			SELECT ?, ?, 'running', ?, 0, 0, 0, 0, 0, '', '{}'
+				artifact_count, root_hash, manifest_json)
+			SELECT ?, ?, 'running', ?, 0, 0, 0, 0, '', '{}'
 			WHERE NOT EXISTS (
 				SELECT 1 FROM builds WHERE status = 'running'
 			)`,

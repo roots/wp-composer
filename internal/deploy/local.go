@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -199,27 +198,4 @@ func FormatBuildAge(buildID string) string {
 		return fmt.Sprintf("%dh ago", int(d.Hours()))
 	}
 	return fmt.Sprintf("%dd ago", int(d.Hours()/24))
-}
-
-// WalkBuildFiles calls fn for each file in a build directory with its relative path.
-func WalkBuildFiles(buildDir string, fn func(relPath string, data []byte) error) error {
-	return filepath.Walk(buildDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
-		relPath, err := filepath.Rel(buildDir, path)
-		if err != nil {
-			return err
-		}
-		// Normalize to forward slashes for R2 keys
-		relPath = strings.ReplaceAll(relPath, string(os.PathSeparator), "/")
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		return fn(relPath, data)
-	})
 }
