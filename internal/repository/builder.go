@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -8,7 +9,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"bytes"
 	"strings"
 	"time"
 
@@ -17,14 +17,14 @@ import (
 
 // BuildOpts configures a repository build.
 type BuildOpts struct {
-	OutputDir       string // base output dir (e.g. storage/repository/builds)
-	AppURL          string // absolute app URL for notify-batch
-	Force           bool
-	PackageName     string   // optional: build single package
-	PackageNames    []string // optional: build only these slugs
-	BuildID         string   // optional: pre-generated build ID (used by pipeline)
-	PreviousBuildDir string // optional: compare against previous build to count changes
-	Logger          *slog.Logger
+	OutputDir        string // base output dir (e.g. storage/repository/builds)
+	AppURL           string // absolute app URL for notify-batch
+	Force            bool
+	PackageName      string   // optional: build single package
+	PackageNames     []string // optional: build only these slugs
+	BuildID          string   // optional: pre-generated build ID (used by pipeline)
+	PreviousBuildDir string   // optional: compare against previous build to count changes
+	Logger           *slog.Logger
 }
 
 // BuildResult holds build metadata for manifest.json and the builds table.
