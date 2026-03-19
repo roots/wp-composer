@@ -42,7 +42,7 @@
 </td>
 <td class="px-4 py-2 font-mono text-xs">{{if .CurrentVersion}}{{.CurrentVersion}}{{else}}—{{end}}</td>
 <td class="px-4 py-2 text-right">{{formatNumber .ActiveInstalls}}</td>
-<td class="px-4 py-2 text-right">{{formatNumber .WpComposerInstallsTotal}}</td>
+<td class="px-4 py-2 text-right">{{formatNumber .WpPackagesInstallsTotal}}</td>
 <td class="px-4 py-2 text-center">{{if .IsActive}}<span class="text-green-600">&#10003;</span>{{else}}<span class="text-gray-300">&#10005;</span>{{end}}</td>
 <td class="px-4 py-2 text-xs text-gray-500">{{if .LastSyncedAt}}{{.LastSyncedAt}}{{else}}never{{end}}</td>
 </tr>

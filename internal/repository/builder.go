@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/roots/wp-composer/internal/version"
+	"github.com/roots/wp-packages/internal/version"
 )
 
 // BuildOpts configures a repository build.

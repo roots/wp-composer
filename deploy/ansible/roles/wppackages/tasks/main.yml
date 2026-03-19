@@ -1,0 +1,115 @@
+---
+- name: Deploy Litestream config
+  template:
+    src: litestream.yml.j2
+    dest: "{{ app_root }}/shared/litestream.yml"
+    owner: deploy
+    group: www-data
+    mode: "0640"
+
+- name: Remove legacy wppackages socket unit
+  file:
+    path: /etc/systemd/system/wppackages.socket
+    state: absent
+  notify: Reload systemd
+
+- name: Deploy wppackages service
+  template:
+    src: wppackages.service.j2
+    dest: /etc/systemd/system/wppackages.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy pipeline timer
+  template:
+    src: wppackages-pipeline.service.j2
+    dest: /etc/systemd/system/wppackages-pipeline.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy pipeline timer unit
+  template:
+    src: wppackages-pipeline.timer.j2
+    dest: /etc/systemd/system/wppackages-pipeline.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy aggregate-installs timer
+  template:
+    src: wppackages-aggregate.service.j2
+    dest: /etc/systemd/system/wppackages-aggregate.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy aggregate-installs timer unit
+  template:
+    src: wppackages-aggregate.timer.j2
+    dest: /etc/systemd/system/wppackages-aggregate.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy cleanup-sessions timer
+  template:
+    src: wppackages-cleanup.service.j2
+    dest: /etc/systemd/system/wppackages-cleanup.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy cleanup-sessions timer unit
+  template:
+    src: wppackages-cleanup.timer.j2
+    dest: /etc/systemd/system/wppackages-cleanup.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy generate-og timer
+  template:
+    src: wppackages-generate-og.service.j2
+    dest: /etc/systemd/system/wppackages-generate-og.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy generate-og timer unit
+  template:
+    src: wppackages-generate-og.timer.j2
+    dest: /etc/systemd/system/wppackages-generate-og.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Flush handlers
+  meta: flush_handlers
+
+- name: Enable and start wppackages service
+  service:
+    name: wppackages
+    state: started
+    enabled: yes
+
+- name: Enable and start timers
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - wppackages-pipeline.timer
+    - wppackages-aggregate.timer
+    - wppackages-cleanup.timer
+    - wppackages-generate-og.timer

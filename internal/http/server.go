@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/roots/wp-composer/internal/app"
+	"github.com/roots/wp-packages/internal/app"
 )
 
 func ListenAndServe(a *app.App) error {

@@ -1,6 +1,6 @@
-# WP Composer Benchmarks
+# WP Packages Benchmarks
 
-Comparative benchmarks: WP Composer vs WPackagist.
+Comparative benchmarks: WP Packages vs WPackagist.
 
 ## Prerequisites
 

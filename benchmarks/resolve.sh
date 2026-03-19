@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Benchmark: Composer resolve times — WP Composer vs WPackagist
+# Benchmark: Composer resolve times — WP Packages vs WPackagist
 #
 # Measures cold (no cache) and warm (cached) composer update times
 # across small/medium/large dependency sets.
@@ -15,7 +15,7 @@ mkdir -p "$RESULTS_DIR"
 
 RUNS=5
 SIZE="all"
-WPC_URL="https://repo.wp-composer.com"
+WPC_URL="https://repo.wp-packages.org"
 WPKG_URL="https://wpackagist.org"
 
 while [[ $# -gt 0 ]]; do
@@ -171,7 +171,7 @@ run_size() {
   echo ""
   echo "── ${size_label} (${#plugins[@]} plugins) ──"
 
-  run_benchmark "wp-composer-${size_label}" "$WPC_URL" "wp-plugin" "${plugins[@]}"
+  run_benchmark "wp-packages-${size_label}" "$WPC_URL" "wp-plugin" "${plugins[@]}"
   run_benchmark "wpackagist-${size_label}" "$WPKG_URL" "wpackagist-plugin" "${plugins[@]}"
 }
 

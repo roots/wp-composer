@@ -1,0 +1,9 @@
+---
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Restart wppackages
+  service:
+    name: wppackages
+    state: restarted

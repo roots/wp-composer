@@ -1,0 +1,10 @@
+[Unit]
+Description=Run WP Packages install aggregation hourly
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target

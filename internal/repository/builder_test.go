@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/roots/wp-composer/internal/db"
+	"github.com/roots/wp-packages/internal/db"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
@@ -41,8 +41,8 @@ func setupTestDB(t *testing.T) *sql.DB {
 			last_committed TEXT,
 			last_synced_at TEXT,
 			last_sync_run_id INTEGER,
-			wp_composer_installs_total INTEGER NOT NULL DEFAULT 0,
-			wp_composer_installs_30d INTEGER NOT NULL DEFAULT 0,
+			wp_packages_installs_total INTEGER NOT NULL DEFAULT 0,
+			wp_packages_installs_30d INTEGER NOT NULL DEFAULT 0,
 			last_installed_at TEXT,
 			created_at TEXT NOT NULL,
 			updated_at TEXT NOT NULL,

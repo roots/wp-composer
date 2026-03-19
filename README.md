@@ -1,6 +1,6 @@
-# WP Composer
+# WP Packages
 
-[![Build status](https://img.shields.io/github/actions/workflow/status/roots/wp-composer/ci.yml?branch=main&style=flat-square)](https://github.com/roots/wp-composer/actions)
+[![Build status](https://img.shields.io/github/actions/workflow/status/roots/wp-packages/ci.yml?branch=main&style=flat-square)](https://github.com/roots/wp-packages/actions)
 [![Follow Roots](https://img.shields.io/badge/follow%20@rootswp-1da1f2?logo=twitter&logoColor=ffffff&message=&style=flat-square)](https://twitter.com/rootswp)
 [![Sponsor Roots](https://img.shields.io/badge/sponsor%20roots-525ddc?logo=github&style=flat-square&logoColor=ffffff&message=)](https://github.com/sponsors/roots)
 
@@ -29,9 +29,9 @@ Add the repository to your `composer.json`:
 {
   "repositories": [
     {
-      "name": "wp-composer",
+      "name": "wp-packages",
       "type": "composer",
-      "url": "https://repo.wp-composer.com",
+      "url": "https://repo.wp-packages.org",
       "only": ["wp-plugin/*", "wp-theme/*"]
     }
   ],
@@ -63,7 +63,7 @@ Add the repository to your `composer.json`:
 
 ### Roots WordPress Packages
 
-WP Composer is built by [Roots](https://roots.io) and is the recommended repository for use alongside the Roots WordPress packaging ecosystem:
+WP Packages is built by [Roots](https://roots.io) and is the recommended repository for use alongside the Roots WordPress packaging ecosystem:
 
 | Package | Description |
 |---|---|
@@ -72,15 +72,15 @@ WP Composer is built by [Roots](https://roots.io) and is the recommended reposit
 | [`roots/wordpress-no-content`](https://github.com/roots/wordpress-no-content) | Minimal WordPress build (core only) |
 | [`roots/bedrock`](https://github.com/roots/bedrock) | WordPress boilerplate with Composer, better config, and improved structure |
 
-A typical [Bedrock](https://roots.io/bedrock/) project uses `roots/wordpress` for WordPress core and WP Composer for plugins and themes:
+A typical [Bedrock](https://roots.io/bedrock/) project uses `roots/wordpress` for WordPress core and WP Packages for plugins and themes:
 
 ```json
 {
   "repositories": [
     {
-      "name": "wp-composer",
+      "name": "wp-packages",
       "type": "composer",
-      "url": "https://repo.wp-composer.com",
+      "url": "https://repo.wp-packages.org",
       "only": ["wp-plugin/*", "wp-theme/*"]
     }
   ],
@@ -116,7 +116,7 @@ A typical [Bedrock](https://roots.io/bedrock/) project uses `roots/wordpress` fo
 Or use the [migration script](scripts/migrate-from-wpackagist.sh) to automatically update your `composer.json`:
 
 ```sh
-curl -sO https://raw.githubusercontent.com/roots/wp-composer/main/scripts/migrate-from-wpackagist.sh && bash migrate-from-wpackagist.sh
+curl -sO https://raw.githubusercontent.com/roots/wp-packages/main/scripts/migrate-from-wpackagist.sh && bash migrate-from-wpackagist.sh
 ```
 
 ## Community

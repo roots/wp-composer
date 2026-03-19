@@ -70,7 +70,7 @@ func defaults() *Config {
 	return &Config{
 		Env:      "local",
 		LogLevel: "info",
-		DB:       DBConfig{Path: "./storage/wpcomposer.db"},
+		DB:       DBConfig{Path: "./storage/wppackages.db"},
 		Server: ServerConfig{
 			Addr: ":8080",
 		},

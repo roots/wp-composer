@@ -20,11 +20,11 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/roots/wp-composer/internal/app"
-	"github.com/roots/wp-composer/internal/config"
-	"github.com/roots/wp-composer/internal/deploy"
-	"github.com/roots/wp-composer/internal/og"
-	"github.com/roots/wp-composer/internal/version"
+	"github.com/roots/wp-packages/internal/app"
+	"github.com/roots/wp-packages/internal/config"
+	"github.com/roots/wp-packages/internal/deploy"
+	"github.com/roots/wp-packages/internal/og"
+	"github.com/roots/wp-packages/internal/version"
 )
 
 const perPage = 12
@@ -71,7 +71,7 @@ type packageRow struct {
 	ActiveInstalls          int64
 	IsActive                bool
 	LastSyncedAt            string
-	WpComposerInstallsTotal int64
+	WpPackagesInstallsTotal int64
 }
 
 type versionRow struct {
@@ -111,7 +111,7 @@ func handleIndex(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		jsonLDData := map[string]any{
 			"@context": "https://schema.org",
 			"@type":    "WebSite",
-			"name":     "WP Composer",
+			"name":     "WP Packages",
 			"url":      a.Config.AppURL + "/",
 			"potentialAction": map[string]any{
 				"@type":       "SearchAction",
@@ -495,7 +495,7 @@ func markStaleBuildsCancelled(ctx context.Context, db *sql.DB, logger *slog.Logg
 }
 
 var logFiles = map[string]string{
-	"wpcomposer": filepath.Join("storage", "logs", "wpcomposer.log"),
+	"wppackages": filepath.Join("storage", "logs", "wppackages.log"),
 	"pipeline":   filepath.Join("storage", "logs", "pipeline.log"),
 }
 
@@ -681,7 +681,7 @@ func generatePackageOG(a *app.App, pkg *packageDetail) {
 		CurrentVersion:     pkg.CurrentVersion,
 		Description:        pkg.Description,
 		ActiveInstalls:     og.FormatInstalls(pkg.ActiveInstalls),
-		WpComposerInstalls: og.FormatInstalls(pkg.WpComposerInstallsTotal),
+		WpPackagesInstalls: og.FormatInstalls(pkg.WpPackagesInstallsTotal),
 	}
 
 	pngBytes, err := og.GeneratePackageImage(data)
@@ -699,7 +699,7 @@ func generatePackageOG(a *app.App, pkg *packageDetail) {
 		return
 	}
 
-	_ = og.MarkOGGeneratedBySlug(context.Background(), a.DB, pkg.Type, pkg.Name, pkg.ActiveInstalls, pkg.WpComposerInstallsTotal)
+	_ = og.MarkOGGeneratedBySlug(context.Background(), a.DB, pkg.Type, pkg.Name, pkg.ActiveInstalls, pkg.WpPackagesInstallsTotal)
 	a.Logger.Info("generated OG image", "package", pkg.Type+"/"+pkg.Name)
 }
 
@@ -754,7 +754,7 @@ func queryPackages(ctx context.Context, db *sql.DB, f publicFilters, page, limit
 		args = append(args, f.Type)
 	}
 
-	orderBy := "wp_composer_installs_total DESC"
+	orderBy := "wp_packages_installs_total DESC"
 	switch f.Sort {
 	case "active_installs":
 		orderBy = "active_installs DESC"
@@ -776,7 +776,7 @@ func queryPackages(ctx context.Context, db *sql.DB, f publicFilters, page, limit
 
 	offset := (page - 1) * limit
 	q := fmt.Sprintf(`SELECT type, name, COALESCE(display_name,''), COALESCE(description,''),
-		COALESCE(current_version,''), downloads, active_installs, wp_composer_installs_total
+		COALESCE(current_version,''), downloads, active_installs, wp_packages_installs_total
 		FROM packages WHERE %s ORDER BY %s LIMIT ? OFFSET ?`, where, orderBy)
 
 	rows, err := db.QueryContext(ctx, q, append(args, limit, offset)...)
@@ -788,7 +788,7 @@ func queryPackages(ctx context.Context, db *sql.DB, f publicFilters, page, limit
 	var pkgs []packageRow
 	for rows.Next() {
 		var p packageRow
-		if err := rows.Scan(&p.Type, &p.Name, &p.DisplayName, &p.Description, &p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpComposerInstallsTotal); err != nil {
+		if err := rows.Scan(&p.Type, &p.Name, &p.DisplayName, &p.Description, &p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpPackagesInstallsTotal); err != nil {
 			return nil, 0, fmt.Errorf("scanning package row: %w", err)
 		}
 		pkgs = append(pkgs, p)
@@ -814,11 +814,11 @@ func queryPackageDetail(ctx context.Context, db *sql.DB, pkgType, name string) (
 	var p packageDetail
 	err := db.QueryRowContext(ctx, `SELECT type, name, COALESCE(display_name,''), COALESCE(description,''),
 		COALESCE(author,''), COALESCE(homepage,''), COALESCE(current_version,''),
-		downloads, active_installs, wp_composer_installs_total, versions_json, og_image_generated_at,
+		downloads, active_installs, wp_packages_installs_total, versions_json, og_image_generated_at,
 		COALESCE(updated_at,'')
 		FROM packages WHERE type = ? AND name = ? AND is_active = 1`, pkgType, name,
 	).Scan(&p.Type, &p.Name, &p.DisplayName, &p.Description, &p.Author, &p.Homepage,
-		&p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpComposerInstallsTotal,
+		&p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpPackagesInstallsTotal,
 		&p.VersionsJSON, &p.OGImageGeneratedAt, &p.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -904,7 +904,7 @@ func queryAdminPackages(ctx context.Context, db *sql.DB, f adminFilters, page, l
 
 	offset := (page - 1) * limit
 	q := fmt.Sprintf(`SELECT type, name, COALESCE(display_name,''), COALESCE(current_version,''),
-		downloads, active_installs, wp_composer_installs_total, is_active, COALESCE(last_synced_at,'')
+		downloads, active_installs, wp_packages_installs_total, is_active, COALESCE(last_synced_at,'')
 		FROM packages WHERE %s ORDER BY downloads DESC LIMIT ? OFFSET ?`, where)
 
 	rows, err := db.QueryContext(ctx, q, append(args, limit, offset)...)
@@ -917,7 +917,7 @@ func queryAdminPackages(ctx context.Context, db *sql.DB, f adminFilters, page, l
 	for rows.Next() {
 		var p packageRow
 		var isActive int
-		_ = rows.Scan(&p.Type, &p.Name, &p.DisplayName, &p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpComposerInstallsTotal, &isActive, &p.LastSyncedAt)
+		_ = rows.Scan(&p.Type, &p.Name, &p.DisplayName, &p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpPackagesInstallsTotal, &isActive, &p.LastSyncedAt)
 		p.IsActive = isActive == 1
 		pkgs = append(pkgs, p)
 	}

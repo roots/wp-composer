@@ -14,7 +14,7 @@ import (
 
 	"errors"
 
-	"github.com/roots/wp-composer/internal/config"
+	"github.com/roots/wp-packages/internal/config"
 )
 
 // ErrNotFound is returned when a package does not exist on WordPress.org.

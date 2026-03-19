@@ -44,7 +44,7 @@ type PackageData struct {
 	CurrentVersion     string
 	Description        string
 	ActiveInstalls     string // pre-formatted, e.g. "1.2M"
-	WpComposerInstalls string // pre-formatted, e.g. "350"
+	WpPackagesInstalls string // pre-formatted, e.g. "350"
 }
 
 var (
@@ -122,10 +122,10 @@ func GeneratePackageImage(pkg PackageData) ([]byte, error) {
 	contentMaxW := cardW - 96
 	y := cardY + 52
 
-	// --- "WP Composer" header ---
+	// --- "WP Packages" header ---
 	dc.SetFontFace(fontFace(fontSansBold, 18))
 	dc.SetColor(colorBrandPrimary)
-	dc.DrawString("WP Composer", cx, y)
+	dc.DrawString("WP Packages", cx, y)
 	y += 44
 
 	// --- Package name (large, bold) ---
@@ -204,7 +204,7 @@ func GeneratePackageImage(pkg PackageData) ([]byte, error) {
 	drawTerminalIcon(dc, composerX, footerCenterY-7, 14, colorGray400)
 	dc.SetFontFace(fontFace(fontSansRegular, 15))
 	dc.SetColor(colorGray400)
-	drawTextVCenter(dc, pkg.WpComposerInstalls+" composer installs", composerX+22, footerCenterY)
+	drawTextVCenter(dc, pkg.WpPackagesInstalls+" composer installs", composerX+22, footerCenterY)
 
 	// "by [icon] roots.io" (bottom right)
 	drawByRootsFooter(dc, cx+contentMaxW, footerCenterY, 16, 15)
@@ -243,7 +243,7 @@ func GenerateFallbackImage() ([]byte, error) {
 	// Title
 	dc.SetFontFace(fontFace(fontSansBold, 36))
 	dc.SetColor(colorGray900)
-	dc.DrawStringAnchored("WP Composer", centerX, centerY+logoSize/2+32, 0.5, 0.5)
+	dc.DrawStringAnchored("WP Packages", centerX, centerY+logoSize/2+32, 0.5, 0.5)
 
 	// Subtitle
 	dc.SetFontFace(fontFace(fontSansRegular, 18))

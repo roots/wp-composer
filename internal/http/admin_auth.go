@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/roots/wp-composer/internal/app"
-	"github.com/roots/wp-composer/internal/auth"
+	"github.com/roots/wp-packages/internal/app"
+	"github.com/roots/wp-packages/internal/auth"
 )
 
 func handleLoginPage(a *app.App) http.HandlerFunc {
@@ -117,7 +117,7 @@ func loginHTML(errMsg string) string {
 		errorBlock = `<p style="color:#dc2626;margin-bottom:1rem">` + html.EscapeString(errMsg) + `</p>`
 	}
 	return `<!DOCTYPE html>
-<html><head><title>Admin Login — WP Composer</title>
+<html><head><title>Admin Login — WP Packages</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 body{font-family:system-ui,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f8fafc}

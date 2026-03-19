@@ -3,7 +3,7 @@
 # Benchmark: Repository metadata — sizes, TTFB, transfer times
 #
 # Compares packages.json, provider files, and p2 metadata endpoints
-# between WP Composer and WPackagist.
+# between WP Packages and WPackagist.
 #
 # Usage: ./benchmarks/metadata.sh [--runs N]
 #
@@ -14,7 +14,7 @@ RESULTS_DIR="${SCRIPT_DIR}/results"
 mkdir -p "$RESULTS_DIR"
 
 RUNS=5
-WPC_BASE="https://repo.wp-composer.com"
+WPC_BASE="https://repo.wp-packages.org"
 WPKG_BASE="https://wpackagist.org"
 
 while [[ $# -gt 0 ]]; do
@@ -119,7 +119,7 @@ echo "label,url,size_bytes,ttfb_avg,ttfb_min,ttfb_max,total_avg,total_min,total_
 
 # Root packages.json
 echo "── packages.json ──"
-measure_url "wp-composer/packages.json" "${WPC_BASE}/packages.json"
+measure_url "wp-packages/packages.json" "${WPC_BASE}/packages.json"
 measure_url "wpackagist/packages.json" "${WPKG_BASE}/packages.json"
 
 # p2 metadata for specific packages
@@ -133,9 +133,9 @@ for plugin in "${SAMPLE_PLUGINS[@]}"; do
   wpkg_p2=$(resolve_p2_url "$WPKG_BASE" "wpackagist-plugin/${plugin}" 2>/dev/null || echo "")
 
   if [[ -n "$wpc_p2" ]]; then
-    measure_url "wp-composer/p2/${plugin}" "$wpc_p2"
+    measure_url "wp-packages/p2/${plugin}" "$wpc_p2"
   else
-    printf "  %-45s  No p2 metadata-url\n" "wp-composer/p2/${plugin}"
+    printf "  %-45s  No p2 metadata-url\n" "wp-packages/p2/${plugin}"
   fi
 
   if [[ -n "$wpkg_p2" ]]; then
@@ -149,7 +149,7 @@ done
 echo ""
 echo "── Cache headers ──"
 
-echo "  wp-composer/packages.json:"
+echo "  wp-packages/packages.json:"
 curl -sI "${WPC_BASE}/packages.json" 2>/dev/null | grep -iE '^(cache-control|cdn-cache|cf-cache|x-cache|age):' | sed 's/^/    /' || echo "    (none)"
 
 echo "  wpackagist/packages.json:"

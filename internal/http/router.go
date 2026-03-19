@@ -14,7 +14,7 @@ import (
 	"time"
 
 	sentryhttp "github.com/getsentry/sentry-go/http"
-	"github.com/roots/wp-composer/internal/app"
+	"github.com/roots/wp-packages/internal/app"
 )
 
 // cacheControl wraps an http.Handler and sets the Cache-Control header.
@@ -85,7 +85,10 @@ func NewRouter(a *app.App) http.Handler {
 	routeFunc("GET /{$}", handleIndex(a, tmpl))
 	routeFunc("GET /packages-partial", handleIndexPartial(a, tmpl))
 	routeFunc("GET /packages/{type}/{name}", handleDetail(a, tmpl))
-	routeFunc("GET /wp-composer-vs-wpackagist", handleCompare(a, tmpl))
+	routeFunc("GET /wp-composer-vs-wpackagist", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/wp-packages-vs-wpackagist", http.StatusMovedPermanently)
+	})
+	routeFunc("GET /wp-packages-vs-wpackagist", handleCompare(a, tmpl))
 	routeFunc("GET /roots-wordpress", handleRootsWordpress(a, tmpl))
 
 	routeFunc("POST /downloads", handleDownloads(a))

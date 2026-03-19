@@ -25,7 +25,7 @@
 - name: Deploy logrotate config
   template:
     src: logrotate.j2
-    dest: /etc/logrotate.d/wp-composer
+    dest: /etc/logrotate.d/wp-packages
     owner: root
     group: root
     mode: "0644"

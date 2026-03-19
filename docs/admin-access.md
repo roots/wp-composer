@@ -11,19 +11,19 @@ Admin access is protected by in-app authentication. Email/password login and adm
 ### Create initial admin user
 
 ```bash
-echo 'secure-password' | wpcomposer admin create --email admin@example.com --name "Admin" --password-stdin
+echo 'secure-password' | wppackages admin create --email admin@example.com --name "Admin" --password-stdin
 ```
 
 ### Promote existing user to admin
 
 ```bash
-wpcomposer admin promote --email user@example.com
+wppackages admin promote --email user@example.com
 ```
 
 ### Reset admin password
 
 ```bash
-echo 'new-password' | wpcomposer admin reset-password --email admin@example.com --password-stdin
+echo 'new-password' | wppackages admin reset-password --email admin@example.com --password-stdin
 ```
 
 ## Login/Logout
@@ -38,7 +38,7 @@ echo 'new-password' | wpcomposer admin reset-password --email admin@example.com 
 Expired sessions accumulate in the `sessions` table. Clean them periodically:
 
 ```bash
-wpcomposer cleanup-sessions
+wppackages cleanup-sessions
 ```
 
 Run via systemd timer or cron (daily recommended).
@@ -52,7 +52,7 @@ If locked out of the admin panel:
 ssh deploy@your-server
 
 # Reset the password
-echo 'new-password' | wpcomposer admin reset-password --email admin@example.com --password-stdin
+echo 'new-password' | wppackages admin reset-password --email admin@example.com --password-stdin
 ```
 
 No database access or application restart required.

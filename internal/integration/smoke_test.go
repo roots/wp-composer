@@ -13,13 +13,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/roots/wp-composer/internal/app"
-	"github.com/roots/wp-composer/internal/config"
-	apphttp "github.com/roots/wp-composer/internal/http"
-	"github.com/roots/wp-composer/internal/packagist"
-	"github.com/roots/wp-composer/internal/repository"
-	"github.com/roots/wp-composer/internal/testutil"
-	"github.com/roots/wp-composer/internal/wporg"
+	"github.com/roots/wp-packages/internal/app"
+	"github.com/roots/wp-packages/internal/config"
+	apphttp "github.com/roots/wp-packages/internal/http"
+	"github.com/roots/wp-packages/internal/packagist"
+	"github.com/roots/wp-packages/internal/repository"
+	"github.com/roots/wp-packages/internal/testutil"
+	"github.com/roots/wp-packages/internal/wporg"
 )
 
 func TestSmoke(t *testing.T) {

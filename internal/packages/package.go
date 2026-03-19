@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/roots/wp-composer/internal/version"
+	"github.com/roots/wp-packages/internal/version"
 )
 
 type Package struct {
@@ -30,8 +30,8 @@ type Package struct {
 	LastCommitted           *time.Time
 	LastSyncedAt            *time.Time
 	LastSyncRunID           *int64
-	WpComposerInstallsTotal int
-	WpComposerInstalls30d   int
+	WpPackagesInstallsTotal int
+	WpPackagesInstalls30d   int
 	LastInstalledAt         *time.Time
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
@@ -335,9 +335,9 @@ func RefreshSiteStats(ctx context.Context, db *sql.DB) error {
 		SELECT 1,
 			COALESCE(SUM(CASE WHEN type = 'plugin' THEN 1 ELSE 0 END), 0),
 			COALESCE(SUM(CASE WHEN type = 'theme' THEN 1 ELSE 0 END), 0),
-			COALESCE(SUM(CASE WHEN type = 'plugin' THEN wp_composer_installs_total ELSE 0 END), 0),
-			COALESCE(SUM(CASE WHEN type = 'theme' THEN wp_composer_installs_total ELSE 0 END), 0),
-			COALESCE(SUM(wp_composer_installs_30d), 0),
+			COALESCE(SUM(CASE WHEN type = 'plugin' THEN wp_packages_installs_total ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN type = 'theme' THEN wp_packages_installs_total ELSE 0 END), 0),
+			COALESCE(SUM(wp_packages_installs_30d), 0),
 			datetime('now')
 		FROM packages
 		WHERE is_active = 1`)

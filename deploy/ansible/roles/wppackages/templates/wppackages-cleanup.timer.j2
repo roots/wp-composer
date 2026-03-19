@@ -1,0 +1,10 @@
+[Unit]
+Description=Run WP Packages session cleanup daily
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

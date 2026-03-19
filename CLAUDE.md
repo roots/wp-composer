@@ -1,6 +1,6 @@
-# WP Composer
+# WP Packages
 
-Go + SQLite single binary (`wpcomposer`) for CLI + HTTP. Server-rendered templates + Tailwind. Composer metadata served from R2/CDN. See `docs/` for details.
+Go + SQLite single binary (`wppackages`) for CLI + HTTP. Server-rendered templates + Tailwind. Composer metadata served from R2/CDN. See `docs/` for details.
 
 ## Dev
 

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/roots/wp-composer/internal/app"
+	"github.com/roots/wp-packages/internal/app"
 )
 
 // RSS feed
@@ -107,7 +107,7 @@ func generateFeed(ctx context.Context, db *sql.DB, appURL string) ([]byte, error
 
 		pkgURL := appURL + "/packages/wp-" + pkgType + "/" + name
 
-		summary := "Install " + displayName + " with WP Composer: composer require wp-" + pkgType + "/" + name
+		summary := "Install " + displayName + " with WP Packages: composer require wp-" + pkgType + "/" + name
 		if version != "" {
 			summary = displayName + " " + version + " — " + summary
 		}
@@ -135,7 +135,7 @@ func generateFeed(ctx context.Context, db *sql.DB, appURL string) ([]byte, error
 
 	feed := atomFeed{
 		XMLNS:   "http://www.w3.org/2005/Atom",
-		Title:   "WP Composer — Recently Updated Packages",
+		Title:   "WP Packages — Recently Updated Packages",
 		ID:      appURL + "/feed.xml",
 		Updated: latestUpdated,
 		Link: []atomLink{
@@ -310,7 +310,7 @@ func generateSitemaps(ctx context.Context, db *sql.DB, appURL string) (index []b
 		URLs: []sitemapURL{
 			{Loc: appURL + "/"},
 			{Loc: appURL + "/roots-wordpress"},
-			{Loc: appURL + "/wp-composer-vs-wpackagist"},
+			{Loc: appURL + "/wp-packages-vs-wpackagist"},
 		},
 	}
 	pages, err = marshalXML(pagesURLSet)

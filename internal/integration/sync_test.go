@@ -15,11 +15,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/johannesboyne/gofakes3"
 	"github.com/johannesboyne/gofakes3/backend/s3mem"
-	"github.com/roots/wp-composer/internal/config"
-	"github.com/roots/wp-composer/internal/deploy"
-	"github.com/roots/wp-composer/internal/repository"
-	"github.com/roots/wp-composer/internal/testutil"
-	"github.com/roots/wp-composer/internal/wporg"
+	"github.com/roots/wp-packages/internal/config"
+	"github.com/roots/wp-packages/internal/deploy"
+	"github.com/roots/wp-packages/internal/repository"
+	"github.com/roots/wp-packages/internal/testutil"
+	"github.com/roots/wp-packages/internal/wporg"
 )
 
 func TestR2Sync(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"testing"
 
-	wpcomposergo "github.com/roots/wp-composer"
+	wppackagesgo "github.com/roots/wp-packages"
 )
 
 func TestMigrateCreatesPackageStatsAndFTS(t *testing.T) {
@@ -15,7 +15,7 @@ func TestMigrateCreatesPackageStatsAndFTS(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = database.Close() })
 
-	if err := Migrate(database, wpcomposergo.Migrations); err != nil {
+	if err := Migrate(database, wppackagesgo.Migrations); err != nil {
 		t.Fatalf("running migrations: %v", err)
 	}
 

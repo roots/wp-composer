@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/roots/wp-composer/internal/packages"
+	"github.com/roots/wp-packages/internal/packages"
 )
 
-// AggregateInstalls recomputes wp_composer_installs_total, wp_composer_installs_30d,
+// AggregateInstalls recomputes wp_packages_installs_total, wp_packages_installs_30d,
 // and last_installed_at on all packages.
 func AggregateInstalls(ctx context.Context, db *sql.DB) (AggregateResult, error) {
 	thirtyDaysAgo := time.Now().UTC().AddDate(0, 0, -30).Format(time.RFC3339)
@@ -17,7 +17,7 @@ func AggregateInstalls(ctx context.Context, db *sql.DB) (AggregateResult, error)
 	// Update total counts and last_installed_at
 	totalResult, err := db.ExecContext(ctx, `
 		UPDATE packages SET
-			wp_composer_installs_total = sub.total,
+			wp_packages_installs_total = sub.total,
 			last_installed_at = sub.last_at
 		FROM (
 			SELECT package_id, COUNT(*) AS total, MAX(created_at) AS last_at
@@ -33,7 +33,7 @@ func AggregateInstalls(ctx context.Context, db *sql.DB) (AggregateResult, error)
 	// Update 30-day counts
 	_, err = db.ExecContext(ctx, `
 		UPDATE packages SET
-			wp_composer_installs_30d = sub.recent
+			wp_packages_installs_30d = sub.recent
 		FROM (
 			SELECT package_id, COUNT(*) AS recent
 			FROM install_events
@@ -48,9 +48,9 @@ func AggregateInstalls(ctx context.Context, db *sql.DB) (AggregateResult, error)
 	// Reset totals for packages with no events at all
 	_, err = db.ExecContext(ctx, `
 		UPDATE packages SET
-			wp_composer_installs_total = 0,
+			wp_packages_installs_total = 0,
 			last_installed_at = NULL
-		WHERE (wp_composer_installs_total > 0 OR last_installed_at IS NOT NULL)
+		WHERE (wp_packages_installs_total > 0 OR last_installed_at IS NOT NULL)
 		AND id NOT IN (
 			SELECT DISTINCT package_id FROM install_events
 		)`)
@@ -60,8 +60,8 @@ func AggregateInstalls(ctx context.Context, db *sql.DB) (AggregateResult, error)
 
 	// Reset 30d counts for packages with no recent installs
 	resetResult, err := db.ExecContext(ctx, `
-		UPDATE packages SET wp_composer_installs_30d = 0
-		WHERE wp_composer_installs_30d > 0
+		UPDATE packages SET wp_packages_installs_30d = 0
+		WHERE wp_packages_installs_30d > 0
 		AND id NOT IN (
 			SELECT DISTINCT package_id FROM install_events WHERE created_at >= ?
 		)`, thirtyDaysAgo)

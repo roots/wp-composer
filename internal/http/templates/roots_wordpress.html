@@ -1,18 +1,18 @@
 {{template "layout" .}}
-{{define "title"}}WordPress Core via Composer — WP Composer{{end}}
+{{define "title"}}WordPress Core via Composer — WP Packages{{end}}
 {{define "meta_seo"}}
 <meta name="description" content="Install WordPress core via Composer with roots/wordpress packages. Choose between full, minimal, or standard WordPress builds for your Composer-based project.">
 {{if .AppURL}}<link rel="canonical" href="{{.AppURL}}/roots-wordpress">{{end}}
 {{end}}
 {{define "json_ld"}}{{end}}
 {{define "og_meta"}}
-<meta property="og:title" content="WordPress Core via Composer — WP Composer">
+<meta property="og:title" content="WordPress Core via Composer — WP Packages">
 <meta property="og:description" content="Install WordPress core via Composer with roots/wordpress packages. Choose between full, minimal, or standard builds.">
 {{if .OGImage}}<meta property="og:image" content="{{.OGImage}}">{{end}}
 {{if .AppURL}}<meta property="og:url" content="{{.AppURL}}/roots-wordpress">{{end}}
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="WordPress Core via Composer — WP Composer">
+<meta name="twitter:title" content="WordPress Core via Composer — WP Packages">
 <meta name="twitter:description" content="Install WordPress core via Composer with roots/wordpress packages. Choose between full, minimal, or standard builds.">
 {{if .OGImage}}<meta name="twitter:image" content="{{.OGImage}}">{{end}}
 {{end}}
@@ -78,15 +78,15 @@
 <h2 class="text-2xl font-bold text-gray-900 mb-4">Example configurations</h2>
 
 <h3 class="text-lg font-semibold text-gray-900 mb-3">Standard (recommended)</h3>
-<p class="text-gray-600 mb-4 leading-relaxed">WordPress core without default themes or plugins. Manage your themes and plugins individually via Composer with <a href="/" class="text-brand-primary hover:underline">WP Composer</a>.</p>
+<p class="text-gray-600 mb-4 leading-relaxed">WordPress core without default themes or plugins. Manage your themes and plugins individually via Composer with <a href="/" class="text-brand-primary hover:underline">WP Packages</a>.</p>
 <div class="rounded-xl border border-gray-200/60 overflow-hidden mb-10">
 <div class="bg-gray-50/50 px-4 py-2 text-xs text-gray-500 border-b border-gray-200/40">composer.json</div>
 <pre class="p-4 text-sm font-mono leading-relaxed overflow-x-auto"><code>{
   <span class="text-green-700">"repositories"</span>: [
     {
-      <span class="text-green-700">"name"</span>: <span class="text-green-700">"wp-composer"</span>,
+      <span class="text-green-700">"name"</span>: <span class="text-green-700">"wp-packages"</span>,
       <span class="text-green-700">"type"</span>: <span class="text-green-700">"composer"</span>,
-      <span class="text-green-700">"url"</span>: <span class="text-green-700">"https://repo.wp-composer.com"</span>,
+      <span class="text-green-700">"url"</span>: <span class="text-green-700">"https://repo.wp-packages.org"</span>,
       <span class="text-green-700">"only"</span>: [<span class="text-green-700">"wp-plugin/*"</span>, <span class="text-green-700">"wp-theme/*"</span>]
     }
   ],

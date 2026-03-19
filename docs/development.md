@@ -23,35 +23,35 @@ This builds the binary, runs migrations, creates an admin user (`admin@localhost
 make build
 
 # Run migrations
-./wpcomposer migrate
+./wppackages migrate
 
 # Create admin user
-echo 'your-password' | ./wpcomposer admin create \
+echo 'your-password' | ./wppackages admin create \
   --email admin@example.com \
   --name "Admin" \
   --password-stdin
 
 # Start server
-./wpcomposer serve
+./wppackages serve
 ```
 
 ## Commands
 
 | Command | Purpose |
 |---------|---------|
-| `wpcomposer dev` | Bootstrap and start dev server (all-in-one) |
-| `wpcomposer serve` | Start HTTP server |
-| `wpcomposer migrate` | Apply database migrations |
-| `wpcomposer discover` | Discover package slugs from WordPress.org |
-| `wpcomposer update` | Fetch/store package metadata |
-| `wpcomposer build` | Generate Composer repository artifacts |
-| `wpcomposer deploy` | Promote build (local symlink and/or R2 sync) |
-| `wpcomposer pipeline` | Run full discover → update → build → deploy |
-| `wpcomposer aggregate-installs` | Recompute install counters |
-| `wpcomposer cleanup-sessions` | Remove expired admin sessions |
-| `wpcomposer admin create` | Create admin user |
-| `wpcomposer admin promote` | Grant admin role to existing user |
-| `wpcomposer admin reset-password` | Reset user password |
+| `wppackages dev` | Bootstrap and start dev server (all-in-one) |
+| `wppackages serve` | Start HTTP server |
+| `wppackages migrate` | Apply database migrations |
+| `wppackages discover` | Discover package slugs from WordPress.org |
+| `wppackages update` | Fetch/store package metadata |
+| `wppackages build` | Generate Composer repository artifacts |
+| `wppackages deploy` | Promote build (local symlink and/or R2 sync) |
+| `wppackages pipeline` | Run full discover → update → build → deploy |
+| `wppackages aggregate-installs` | Recompute install counters |
+| `wppackages cleanup-sessions` | Remove expired admin sessions |
+| `wppackages admin create` | Create admin user |
+| `wppackages admin promote` | Grant admin role to existing user |
+| `wppackages admin reset-password` | Reset user password |
 
 All commands accept `--config`, `--db`, and `--log-level` flags. See [`operations.md`](operations.md) for usage details.
 
@@ -62,7 +62,7 @@ Env-first with optional YAML config file (env overrides YAML).
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `APP_URL` | — | App domain for `notify-batch` URL |
-| `DB_PATH` | `./storage/wpcomposer.db` | SQLite database path |
+| `DB_PATH` | `./storage/wppackages.db` | SQLite database path |
 | `WP_COMPOSER_DEPLOY_R2` | `false` | Enable R2 deploy |
 | `R2_ACCESS_KEY_ID` | — | R2 credentials |
 | `R2_SECRET_ACCESS_KEY` | — | R2 credentials |

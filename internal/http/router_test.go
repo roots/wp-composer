@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/roots/wp-composer/internal/app"
-	"github.com/roots/wp-composer/internal/auth"
-	"github.com/roots/wp-composer/internal/config"
-	"github.com/roots/wp-composer/internal/db"
-	"github.com/roots/wp-composer/internal/packagist"
+	"github.com/roots/wp-packages/internal/app"
+	"github.com/roots/wp-packages/internal/auth"
+	"github.com/roots/wp-packages/internal/config"
+	"github.com/roots/wp-packages/internal/db"
+	"github.com/roots/wp-packages/internal/packagist"
 )
 
 func newTestApp(t *testing.T) *app.App {
@@ -261,7 +261,7 @@ func TestRouter_LogStreamBypassesTimeout(t *testing.T) {
 	client := srv.Client()
 	client.Timeout = 2 * time.Second
 
-	httpReq, _ := http.NewRequest("GET", srv.URL+"/admin/logs/stream?file=wpcomposer", nil)
+	httpReq, _ := http.NewRequest("GET", srv.URL+"/admin/logs/stream?file=wppackages", nil)
 	httpReq.AddCookie(&http.Cookie{Name: "session", Value: session})
 
 	resp, err := client.Do(httpReq)

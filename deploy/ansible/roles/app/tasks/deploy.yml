@@ -27,11 +27,11 @@
   become: false
   shell: >
     cd {{ playbook_dir }}/../.. &&
-    GOOS=linux GOARCH=amd64 go build -o /tmp/wpcomposer-deploy-{{ release_id }} ./cmd/wpcomposer
+    GOOS=linux GOARCH=amd64 go build -o /tmp/wppackages-deploy-{{ release_id }} ./cmd/wppackages
 
 - name: Upload binary
   copy:
-    src: "/tmp/wpcomposer-deploy-{{ release_id }}"
+    src: "/tmp/wppackages-deploy-{{ release_id }}"
     dest: "{{ release_path }}/{{ go_binary_name }}"
     owner: deploy
     group: www-data
@@ -70,16 +70,16 @@
     ln -sfn {{ release_path }} {{ app_root }}/current.tmp
     mv -T {{ app_root }}/current.tmp {{ app_root }}/current
 
-- name: Check if wpcomposer service exists
+- name: Check if wppackages service exists
   stat:
-    path: /etc/systemd/system/wpcomposer.service
-  register: wpcomposer_service
+    path: /etc/systemd/system/wppackages.service
+  register: wppackages_service
 
-- name: Restart wpcomposer service
+- name: Restart wppackages service
   service:
-    name: wpcomposer
+    name: wppackages
     state: restarted
-  when: wpcomposer_service.stat.exists
+  when: wppackages_service.stat.exists
 
 - name: Clean up old releases
   shell: |
@@ -90,5 +90,5 @@
   delegate_to: localhost
   become: false
   file:
-    path: "/tmp/wpcomposer-deploy-{{ release_id }}"
+    path: "/tmp/wppackages-deploy-{{ release_id }}"
     state: absent

@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/roots/wp-composer/internal/config"
+	"github.com/roots/wp-packages/internal/config"
 )
 
 // Uploader handles uploading OG images to R2 CDN or local disk.

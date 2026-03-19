@@ -1,14 +1,14 @@
 # Operations
 
-Day-to-day operation of WP Composer in production-like environments.
+Day-to-day operation of WP Packages in production-like environments.
 
 ## Prerequisites
 
 - Ubuntu 24.04 LTS server
-- Go binary (`wpcomposer`) deployed to the server
-- SQLite database at configured path (default `./storage/wpcomposer.db`)
+- Go binary (`wppackages`) deployed to the server
+- SQLite database at configured path (default `./storage/wppackages.db`)
 - Caddy configured as reverse proxy for app routes
-- systemd service for `wpcomposer serve`
+- systemd service for `wppackages serve`
 - systemd timers or cron for periodic commands
 
 All prerequisites are automated via Ansible. See [Server Provisioning](#server-provisioning) below.
@@ -18,7 +18,7 @@ All prerequisites are automated via Ansible. See [Server Provisioning](#server-p
 ### Migrate
 
 ```bash
-wpcomposer migrate
+wppackages migrate
 ```
 
 Apply pending database migrations. Run this before first use and after upgrades.
@@ -26,8 +26,8 @@ Apply pending database migrations. Run this before first use and after upgrades.
 ### Discover
 
 ```bash
-wpcomposer discover --source=svn
-wpcomposer discover --source=config --type=plugin --limit=100
+wppackages discover --source=svn
+wppackages discover --source=config --type=plugin --limit=100
 ```
 
 - `--source=svn` for full WordPress.org directory discovery.
@@ -38,9 +38,9 @@ wpcomposer discover --source=config --type=plugin --limit=100
 ### Update
 
 ```bash
-wpcomposer update
-wpcomposer update --type=plugin --name=akismet --force
-wpcomposer update --include-inactive
+wppackages update
+wppackages update --type=plugin --name=akismet --force
+wppackages update --include-inactive
 ```
 
 - Fetches full package payloads from WordPress.org and normalizes versions.
@@ -51,9 +51,9 @@ wpcomposer update --include-inactive
 ### Build
 
 ```bash
-wpcomposer build
-wpcomposer build --force
-wpcomposer build --package=wp-plugin/akismet
+wppackages build
+wppackages build --force
+wppackages build --package=wp-plugin/akismet
 ```
 
 - Generates build artifacts (`p2/` files, `packages.json`, `manifest.json`).
@@ -63,13 +63,13 @@ wpcomposer build --package=wp-plugin/akismet
 ### Deploy
 
 ```bash
-wpcomposer deploy
-wpcomposer deploy 20260313-140000
-wpcomposer deploy --rollback
-wpcomposer deploy --rollback=20260313-130000
-wpcomposer deploy --to-r2
-wpcomposer deploy --cleanup
-wpcomposer deploy --cleanup --retain 10
+wppackages deploy
+wppackages deploy 20260313-140000
+wppackages deploy --rollback
+wppackages deploy --rollback=20260313-130000
+wppackages deploy --to-r2
+wppackages deploy --cleanup
+wppackages deploy --cleanup --retain 10
 ```
 
 - Validates build artifacts before any sync or promotion.
@@ -81,10 +81,10 @@ wpcomposer deploy --cleanup --retain 10
 ### Full Pipeline
 
 ```bash
-wpcomposer pipeline
-wpcomposer pipeline --skip-discover
-wpcomposer pipeline --skip-deploy
-wpcomposer pipeline --discover-source=config
+wppackages pipeline
+wppackages pipeline --skip-discover
+wppackages pipeline --skip-deploy
+wppackages pipeline --discover-source=config
 ```
 
 Runs discover → update → build → deploy sequentially, stopping on failure. After a successful deploy, automatically cleans up old local builds (keeps 5 most recent). Cleanup is best-effort — failures are logged as warnings but do not fail the pipeline.
@@ -92,15 +92,15 @@ Runs discover → update → build → deploy sequentially, stopping on failure.
 ### Aggregate Installs
 
 ```bash
-wpcomposer aggregate-installs
+wppackages aggregate-installs
 ```
 
-Recomputes `wp_composer_installs_total`, `wp_composer_installs_30d`, and `last_installed_at` on all packages.
+Recomputes `wp_packages_installs_total`, `wp_packages_installs_30d`, and `last_installed_at` on all packages.
 
 ### Cleanup Sessions
 
 ```bash
-wpcomposer cleanup-sessions
+wppackages cleanup-sessions
 ```
 
 Deletes expired rows from the `sessions` table.
@@ -111,19 +111,19 @@ Configure via systemd timers or cron:
 
 | Command | Schedule | Notes |
 |---------|----------|-------|
-| `wpcomposer pipeline` | Every 5 minutes | Main data refresh cycle |
-| `wpcomposer aggregate-installs` | Hourly | Telemetry counter rollups |
-| `wpcomposer cleanup-sessions` | Daily | Expired session cleanup |
-| `wpcomposer generate-og` | Daily | Regenerate OG images where install counts changed |
+| `wppackages pipeline` | Every 5 minutes | Main data refresh cycle |
+| `wppackages aggregate-installs` | Hourly | Telemetry counter rollups |
+| `wppackages cleanup-sessions` | Daily | Expired session cleanup |
+| `wppackages generate-og` | Daily | Regenerate OG images where install counts changed |
 
-Alternatively, run `wpcomposer serve --with-scheduler` to handle scheduling in-process.
+Alternatively, run `wppackages serve --with-scheduler` to handle scheduling in-process.
 
 ## Global Flags
 
 All commands accept:
 
 - `--config <path>` — optional config file path
-- `--db <path>` — database path (default `./storage/wpcomposer.db`)
+- `--db <path>` — database path (default `./storage/wppackages.db`)
 - `--log-level info|debug|warn|error` — log verbosity
 
 ## Key Environment Variables
@@ -144,7 +144,7 @@ All commands accept:
 ### Create initial admin user
 
 ```bash
-echo 'secure-password' | wpcomposer admin create --email admin@example.com --name "Admin" --password-stdin
+echo 'secure-password' | wppackages admin create --email admin@example.com --name "Admin" --password-stdin
 ```
 
 `--password-stdin` is required. Password must be piped via stdin to avoid shell history exposure.
@@ -152,13 +152,13 @@ echo 'secure-password' | wpcomposer admin create --email admin@example.com --nam
 ### Promote existing user to admin
 
 ```bash
-wpcomposer admin promote --email user@example.com
+wppackages admin promote --email user@example.com
 ```
 
 ### Reset admin password
 
 ```bash
-echo 'new-password' | wpcomposer admin reset-password --email admin@example.com --password-stdin
+echo 'new-password' | wppackages admin reset-password --email admin@example.com --password-stdin
 ```
 
 ## Admin Access Model
@@ -273,14 +273,14 @@ gh secret set PROD_SSH_PRIVATE_KEY --env production < /path/to/private/key
 
 ## Litestream (SQLite Backup to R2)
 
-[Litestream](https://litestream.io/) continuously replicates the SQLite database to R2 by streaming WAL changes. In production it wraps `wpcomposer serve` as a sidecar process — if the child dies, Litestream exits and systemd restarts both.
+[Litestream](https://litestream.io/) continuously replicates the SQLite database to R2 by streaming WAL changes. In production it wraps `wppackages serve` as a sidecar process — if the child dies, Litestream exits and systemd restarts both.
 
 ### How it works
 
 The systemd service runs:
 
 ```
-litestream replicate -config /srv/wp-composer/shared/litestream.yml -exec "wpcomposer serve ..."
+litestream replicate -config /srv/wp-packages/shared/litestream.yml -exec "wppackages serve ..."
 ```
 
 WAL segments are uploaded to R2 continuously. A full snapshot is taken every 24 hours (Litestream default).
@@ -296,7 +296,7 @@ make db-restore
 Or directly:
 
 ```bash
-wpcomposer db restore --force
+wppackages db restore --force
 ```
 
 Requires `litestream` in PATH (`brew install litestream` on macOS) and the following env vars set:
@@ -320,10 +320,10 @@ litestream snapshots -config litestream.yml
 SQLite in WAL mode supports safe file-level backups:
 
 ```bash
-sqlite3 /path/to/wpcomposer.db ".backup '/path/to/backup.db'"
+sqlite3 /path/to/wppackages.db ".backup '/path/to/backup.db'"
 ```
 
-Or use filesystem snapshots. The WAL file (`wpcomposer.db-wal`) must be included in any backup.
+Or use filesystem snapshots. The WAL file (`wppackages.db-wal`) must be included in any backup.
 
 ### Runtime Settings
 
@@ -342,19 +342,19 @@ PRAGMA busy_timeout=5000;
    - Re-run with `--force`, inspect build output and manifest.
 
 2. **Bad promotion:**
-   - Use `wpcomposer deploy --rollback` or rollback to an explicit build ID.
+   - Use `wppackages deploy --rollback` or rollback to an explicit build ID.
 
 3. **R2 sync failed mid-upload:**
    - Local symlink was not updated, so local state is consistent.
-   - Re-run `wpcomposer deploy --to-r2` to retry.
+   - Re-run `wppackages deploy --to-r2` to retry.
 
 4. **Telemetry counters stale:**
-   - Run `wpcomposer aggregate-installs` manually.
+   - Run `wppackages aggregate-installs` manually.
 
 5. **Expired sessions accumulating:**
-   - Run `wpcomposer cleanup-sessions` manually or verify the timer/cron is active.
+   - Run `wppackages cleanup-sessions` manually or verify the timer/cron is active.
 
 6. **Database locked errors:**
-   - Verify WAL mode is active: `sqlite3 wpcomposer.db "PRAGMA journal_mode;"`
+   - Verify WAL mode is active: `sqlite3 wppackages.db "PRAGMA journal_mode;"`
    - Check `busy_timeout` is set.
-   - Ensure only one `wpcomposer serve` process is running.
+   - Ensure only one `wppackages serve` process is running.

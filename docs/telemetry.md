@@ -4,7 +4,7 @@ Install telemetry records installs via Composer's `notify-batch` mechanism.
 
 ## Goal
 
-- Count installs initiated through WP Composer package metadata.
+- Count installs initiated through WP Packages package metadata.
 - No impact on download latency (notification is sent after install).
 - Avoid counting rapid duplicate retries from the same client.
 
@@ -83,15 +83,15 @@ dedupe_hash   = sha256(ip_hash + package_id + version + user_agent_hash)
 Periodic command (run hourly via systemd timer or cron):
 
 ```bash
-wpcomposer aggregate-installs
+wppackages aggregate-installs
 ```
 
 Rollups written to `packages`:
 
 | Column | Description |
 |--------|-------------|
-| `wp_composer_installs_total` | All-time install count |
-| `wp_composer_installs_30d` | Installs in the last 30 days |
+| `wp_packages_installs_total` | All-time install count |
+| `wp_packages_installs_30d` | Installs in the last 30 days |
 | `last_installed_at` | Timestamp of most recent install |
 
 ## UI Integration
@@ -99,7 +99,7 @@ Rollups written to `packages`:
 Public browser and detail pages expose:
 
 - WordPress.org download count (from package metadata).
-- WP Composer install counters (when non-zero).
+- WP Packages install counters (when non-zero).
 - Sort by Composer installs.
 
 ## Operational Notes

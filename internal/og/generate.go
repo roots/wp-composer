@@ -17,7 +17,7 @@ type PackageOGRow struct {
 	Description             string
 	CurrentVersion          string
 	ActiveInstalls          int64
-	WpComposerInstallsTotal int64
+	WpPackagesInstallsTotal int64
 	OGImageGeneratedAt      *string
 	OGImageInstalls         int64
 	OGImageWpInstalls       int64
@@ -39,14 +39,14 @@ func FormatInstalls(n int64) string {
 // - Install counts changed since last generation
 func GetPackagesNeedingOG(ctx context.Context, db *sql.DB, limit int) ([]PackageOGRow, error) {
 	q := `SELECT id, type, name, COALESCE(display_name, ''), COALESCE(description, ''),
-		COALESCE(current_version, ''), active_installs, wp_composer_installs_total,
+		COALESCE(current_version, ''), active_installs, wp_packages_installs_total,
 		og_image_generated_at, og_image_installs, og_image_wp_installs
 		FROM packages
 		WHERE is_active = 1
 		AND (
 			og_image_generated_at IS NULL
 			OR active_installs != og_image_installs
-			OR wp_composer_installs_total != og_image_wp_installs
+			OR wp_packages_installs_total != og_image_wp_installs
 		)
 		ORDER BY active_installs DESC
 		LIMIT ?`
@@ -61,7 +61,7 @@ func GetPackagesNeedingOG(ctx context.Context, db *sql.DB, limit int) ([]Package
 	for rows.Next() {
 		var p PackageOGRow
 		if err := rows.Scan(&p.ID, &p.Type, &p.Name, &p.DisplayName, &p.Description,
-			&p.CurrentVersion, &p.ActiveInstalls, &p.WpComposerInstallsTotal,
+			&p.CurrentVersion, &p.ActiveInstalls, &p.WpPackagesInstallsTotal,
 			&p.OGImageGeneratedAt, &p.OGImageInstalls, &p.OGImageWpInstalls); err != nil {
 			return nil, fmt.Errorf("scanning OG row: %w", err)
 		}
@@ -132,7 +132,7 @@ func GenerateAll(ctx context.Context, db *sql.DB, uploader *Uploader, limit int,
 			CurrentVersion:     pkg.CurrentVersion,
 			Description:        pkg.Description,
 			ActiveInstalls:     FormatInstalls(pkg.ActiveInstalls),
-			WpComposerInstalls: FormatInstalls(pkg.WpComposerInstallsTotal),
+			WpPackagesInstalls: FormatInstalls(pkg.WpPackagesInstallsTotal),
 		}
 
 		pngBytes, err := GeneratePackageImage(data)
@@ -149,7 +149,7 @@ func GenerateAll(ctx context.Context, db *sql.DB, uploader *Uploader, limit int,
 			continue
 		}
 
-		if err := MarkOGGenerated(ctx, db, pkg.ID, pkg.ActiveInstalls, pkg.WpComposerInstallsTotal); err != nil {
+		if err := MarkOGGenerated(ctx, db, pkg.ID, pkg.ActiveInstalls, pkg.WpPackagesInstallsTotal); err != nil {
 			logger.Error("marking OG generated", "package", pkg.Name, "error", err)
 			result.Errors++
 			continue

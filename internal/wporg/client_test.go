@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/roots/wp-composer/internal/config"
+	"github.com/roots/wp-packages/internal/config"
 )
 
 func testClient(handler http.Handler) (*Client, *httptest.Server) {
