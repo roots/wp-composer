@@ -10,14 +10,14 @@
 </div>
 </div>
 <div class="flex gap-1 mb-2" role="tablist">
-<button onclick="switchTab('wpcomposer')" id="tab-wpcomposer" role="tab" class="px-4 py-2 text-sm font-medium rounded-t border border-b-0 border-gray-300 bg-white">wpcomposer.log</button>
+<button onclick="switchTab('wppackages')" id="tab-wppackages" role="tab" class="px-4 py-2 text-sm font-medium rounded-t border border-b-0 border-gray-300 bg-white">wppackages.log</button>
 <button onclick="switchTab('pipeline')" id="tab-pipeline" role="tab" class="px-4 py-2 text-sm font-medium rounded-t border border-b-0 border-gray-200 bg-gray-100 text-gray-500">pipeline.log</button>
 </div>
 <div id="log-container" style="background:#111827; color:#f3f4f6; font-family:ui-monospace,monospace; font-size:0.75rem; line-height:1.625; border:1px solid #d1d5db; border-radius:0 0.25rem 0.25rem 0.25rem; height:calc(100vh - 260px); overflow-y:scroll; overflow-x:hidden;">
 <pre id="log-output" style="padding:1rem; margin:0; white-space:pre-wrap; word-break:break-word;"></pre>
 </div>
 <script>
-let currentTab = 'wpcomposer';
+let currentTab = 'wppackages';
 let eventSource = null;
 let autoScroll = true;
 const maxLines = 5000;

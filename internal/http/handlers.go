@@ -495,7 +495,7 @@ func markStaleBuildsCancelled(ctx context.Context, db *sql.DB, logger *slog.Logg
 }
 
 var logFiles = map[string]string{
-	"wpcomposer": filepath.Join("storage", "logs", "wpcomposer.log"),
+	"wppackages": filepath.Join("storage", "logs", "wppackages.log"),
 	"pipeline":   filepath.Join("storage", "logs", "pipeline.log"),
 }
 
