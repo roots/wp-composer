@@ -86,8 +86,8 @@ func runPipeline(cmd *cobra.Command, args []string) error {
 		_, err := application.DB.ExecContext(ctx, `
 			INSERT INTO builds (id, started_at, status, pid,
 				packages_total, packages_changed, packages_skipped,
-				provider_groups, artifact_count, root_hash, manifest_json)
-			VALUES (?, ?, 'running', ?, 0, 0, 0, 0, 0, '', '{}')`,
+				artifact_count, root_hash, manifest_json)
+			VALUES (?, ?, 'running', ?, 0, 0, 0, 0, '', '{}')`,
 			buildID,
 			started.Format(time.RFC3339),
 			os.Getpid(),
@@ -188,9 +188,8 @@ func executePipelineSteps(cmd *cobra.Command, ctx context.Context, skipDiscover,
 			application.Logger.Info("pipeline: local cleanup done", "removed", removed)
 		}
 
-		// R2 cleanup disabled — old release prefixes with full file sets make
-		// listing too slow. Run manually via: wpcomposer deploy --cleanup --r2-cleanup
-		// TODO: re-enable after old fat release prefixes are purged.
+		// Legacy releases/ and p/ objects on R2 are orphaned and should be
+		// deleted manually via AWS CLI when ready.
 	}
 
 	return nil

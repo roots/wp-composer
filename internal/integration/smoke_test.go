@@ -4,7 +4,6 @@ package integration
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -97,15 +96,12 @@ func TestSmoke(t *testing.T) {
 			t.Errorf("unexpected metadata-url: %v", pkgJSON["metadata-url"])
 		}
 
-		// providers-url
-		if pu, ok := pkgJSON["providers-url"].(string); !ok || !strings.Contains(pu, "/p/") {
-			t.Errorf("unexpected providers-url: %v", pkgJSON["providers-url"])
+		// providers-url and provider-includes should NOT exist (v1 removed)
+		if _, ok := pkgJSON["providers-url"]; ok {
+			t.Error("packages.json should not contain providers-url")
 		}
-
-		// provider-includes
-		pi, ok := pkgJSON["provider-includes"].(map[string]any)
-		if !ok || len(pi) == 0 {
-			t.Error("missing or empty provider-includes")
+		if _, ok := pkgJSON["provider-includes"]; ok {
+			t.Error("packages.json should not contain provider-includes")
 		}
 	})
 
@@ -164,44 +160,15 @@ func TestSmoke(t *testing.T) {
 		}
 	})
 
-	t.Run("p content-addressed endpoint", func(t *testing.T) {
-		// Extract hash from packages.json provider-includes
-		body := httpGet(t, repoServer.URL+"/packages.json")
-		var pkgJSON map[string]any
-		if err := json.Unmarshal([]byte(body), &pkgJSON); err != nil {
-			t.Fatalf("invalid packages.json: %v", err)
+	t.Run("p directory should not exist", func(t *testing.T) {
+		resp, err := http.Get(repoServer.URL + "/p/wp-plugin/akismet.json")
+		if err != nil {
+			t.Fatalf("GET p/ endpoint: %v", err)
 		}
-
-		pi := pkgJSON["provider-includes"].(map[string]any)
-		for providerPath := range pi {
-			// Fetch the provider file
-			providerBody := httpGet(t, repoServer.URL+"/"+providerPath)
-			var provider map[string]any
-			if err := json.Unmarshal([]byte(providerBody), &provider); err != nil {
-				t.Fatalf("invalid provider file %s: %v", providerPath, err)
-			}
-
-			providers, ok := provider["providers"].(map[string]any)
-			if !ok {
-				continue
-			}
-
-			// Find akismet and verify the content-addressed file exists
-			if akInfo, ok := providers["wp-plugin/akismet"]; ok {
-				info := akInfo.(map[string]any)
-				hash := info["sha256"].(string)
-				pPath := fmt.Sprintf("/p/wp-plugin/akismet$%s.json", hash)
-				pBody := httpGet(t, repoServer.URL+pPath)
-
-				// Should match p2 content
-				p2Body := httpGet(t, repoServer.URL+"/p2/wp-plugin/akismet.json")
-				if pBody != p2Body {
-					t.Error("p/ content-addressed file does not match p2/ file")
-				}
-				return
-			}
+		defer resp.Body.Close()
+		if resp.StatusCode == 200 {
+			t.Error("p/ directory should not exist after dropping Composer v1 support")
 		}
-		t.Error("could not find akismet in any provider-includes")
 	})
 
 	t.Run("package detail page", func(t *testing.T) {
@@ -252,6 +219,9 @@ func TestSmoke(t *testing.T) {
 	})
 
 	t.Run("install events recorded", func(t *testing.T) {
+		if _, err := exec.LookPath("composer"); err != nil {
+			t.Skip("composer not in PATH — install events require composer install to run first")
+		}
 		var count int
 		if err := db.QueryRow("SELECT COUNT(*) FROM install_events").Scan(&count); err != nil {
 			t.Fatalf("querying install_events: %v", err)

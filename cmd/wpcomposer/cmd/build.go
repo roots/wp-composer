@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/roots/wp-composer/internal/deploy"
 	"github.com/roots/wp-composer/internal/repository"
 	"github.com/spf13/cobra"
 )
@@ -25,24 +24,13 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		output = filepath.Join("storage", "repository", "builds")
 	}
 
-	// Resolve previous build dir for incremental builds
-	var previousBuildDir string
-	repoDir := filepath.Dir(output) // storage/repository
-	if latestID, err := deploy.LatestBuildID(repoDir); err == nil && latestID != "" {
-		candidate := deploy.BuildDirFromID(repoDir, latestID)
-		if err := deploy.ValidateBuild(candidate); err == nil {
-			previousBuildDir = candidate
-		}
-	}
-
 	result, err := repository.Build(cmd.Context(), application.DB, repository.BuildOpts{
-		OutputDir:        output,
-		AppURL:           application.Config.AppURL,
-		Force:            force,
-		PackageName:      pkg,
-		PreviousBuildDir: previousBuildDir,
-		BuildID:          pipelineBuildID,
-		Logger:           application.Logger,
+		OutputDir:   output,
+		AppURL:      application.Config.AppURL,
+		Force:       force,
+		PackageName: pkg,
+		BuildID:     pipelineBuildID,
+		Logger:      application.Logger,
 	})
 	if err != nil {
 		return err
@@ -57,13 +45,12 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		_, dbErr = application.DB.ExecContext(cmd.Context(), `
 			UPDATE builds SET
 				packages_total = ?, packages_changed = ?, packages_skipped = ?,
-				provider_groups = ?, artifact_count = ?, root_hash = ?,
+				artifact_count = ?, root_hash = ?,
 				sync_run_id = ?, manifest_json = ?
 			WHERE id = ?`,
 			result.PackagesTotal,
 			result.PackagesChanged,
 			result.PackagesSkipped,
-			result.ProviderGroups,
 			result.ArtifactCount,
 			result.RootHash,
 			result.SyncRunID,
@@ -74,8 +61,8 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		_, dbErr = application.DB.ExecContext(cmd.Context(), `
 			INSERT INTO builds (id, started_at, finished_at, duration_seconds,
 				packages_total, packages_changed, packages_skipped,
-				provider_groups, artifact_count, root_hash, sync_run_id, status, manifest_json)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				artifact_count, root_hash, sync_run_id, status, manifest_json)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			result.BuildID,
 			result.StartedAt.Format(time.RFC3339),
 			result.FinishedAt.Format(time.RFC3339),
@@ -83,7 +70,6 @@ func runBuild(cmd *cobra.Command, args []string) error {
 			result.PackagesTotal,
 			result.PackagesChanged,
 			result.PackagesSkipped,
-			result.ProviderGroups,
 			result.ArtifactCount,
 			result.RootHash,
 			result.SyncRunID,

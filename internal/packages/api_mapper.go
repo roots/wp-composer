@@ -55,8 +55,6 @@ func PackageFromAPIData(data map[string]any, pkgType string) *Package {
 		}
 	}
 
-	pkg.ProviderGroup = strPtr(ComputeProviderGroup(pkg.LastCommitted))
-
 	// Extract versions map (version string -> download URL)
 	if versionsRaw, ok := data["versions"]; ok {
 		if vm, ok := versionsRaw.(map[string]any); ok {
@@ -101,10 +99,6 @@ func getFloat64(m map[string]any, key string) float64 {
 		}
 	}
 	return 0
-}
-
-func strPtr(s string) *string {
-	return &s
 }
 
 // parseWordPressDate tries common date formats from the WordPress.org API.

@@ -20,7 +20,6 @@ type Package struct {
 	Author                  *string
 	Homepage                *string
 	SlugURL                 *string
-	ProviderGroup           *string
 	VersionsJSON            string
 	Downloads               int64
 	ActiveInstalls          int64
@@ -81,18 +80,17 @@ func UpsertPackage(ctx context.Context, db *sql.DB, pkg *Package) error {
 	_, err := db.ExecContext(ctx, `
 		INSERT INTO packages (
 			type, name, display_name, description, author, homepage, slug_url,
-			provider_group, versions_json, downloads, active_installs,
+			versions_json, downloads, active_installs,
 			current_version, rating, num_ratings, is_active,
 			last_committed, last_synced_at, last_sync_run_id,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(type, name) DO UPDATE SET
 			display_name = excluded.display_name,
 			description = excluded.description,
 			author = excluded.author,
 			homepage = excluded.homepage,
 			slug_url = excluded.slug_url,
-			provider_group = excluded.provider_group,
 			versions_json = excluded.versions_json,
 			downloads = excluded.downloads,
 			active_installs = excluded.active_installs,
@@ -105,7 +103,7 @@ func UpsertPackage(ctx context.Context, db *sql.DB, pkg *Package) error {
 			last_sync_run_id = COALESCE(excluded.last_sync_run_id, packages.last_sync_run_id),
 			updated_at = excluded.updated_at`,
 		pkg.Type, pkg.Name, pkg.DisplayName, pkg.Description, pkg.Author,
-		pkg.Homepage, pkg.SlugURL, pkg.ProviderGroup, pkg.VersionsJSON,
+		pkg.Homepage, pkg.SlugURL, pkg.VersionsJSON,
 		pkg.Downloads, pkg.ActiveInstalls, pkg.CurrentVersion, pkg.Rating,
 		pkg.NumRatings, boolToInt(pkg.IsActive),
 		timeStr(pkg.LastCommitted), timeStr(pkg.LastSyncedAt), pkg.LastSyncRunID,
@@ -121,24 +119,18 @@ func UpsertPackage(ctx context.Context, db *sql.DB, pkg *Package) error {
 // updates last_committed if the new date is more recent.
 func UpsertShellPackage(ctx context.Context, db *sql.DB, pkgType, name string, lastCommitted *time.Time) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	pg := ComputeProviderGroup(lastCommitted)
 
 	_, err := db.ExecContext(ctx, `
-		INSERT INTO packages (type, name, provider_group, last_committed, is_active, versions_json, created_at, updated_at)
-		VALUES (?, ?, ?, ?, 1, '{}', ?, ?)
+		INSERT INTO packages (type, name, last_committed, is_active, versions_json, created_at, updated_at)
+		VALUES (?, ?, ?, 1, '{}', ?, ?)
 		ON CONFLICT(type, name) DO UPDATE SET
 			last_committed = CASE
 				WHEN excluded.last_committed > COALESCE(packages.last_committed, '')
 				THEN excluded.last_committed
 				ELSE packages.last_committed
 			END,
-			provider_group = CASE
-				WHEN excluded.last_committed > COALESCE(packages.last_committed, '')
-				THEN excluded.provider_group
-				ELSE packages.provider_group
-			END,
 			updated_at = excluded.updated_at`,
-		pkgType, name, pg, timeStr(lastCommitted), now, now,
+		pkgType, name, timeStr(lastCommitted), now, now,
 	)
 	if err != nil {
 		return fmt.Errorf("upserting shell package %s/%s: %w", pkgType, name, err)
@@ -165,18 +157,13 @@ func BatchUpsertShellPackages(ctx context.Context, db *sql.DB, entries []ShellEn
 	defer func() { _ = tx.Rollback() }()
 
 	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO packages (type, name, provider_group, last_committed, is_active, versions_json, created_at, updated_at)
-		VALUES (?, ?, ?, ?, 1, '{}', ?, ?)
+		INSERT INTO packages (type, name, last_committed, is_active, versions_json, created_at, updated_at)
+		VALUES (?, ?, ?, 1, '{}', ?, ?)
 		ON CONFLICT(type, name) DO UPDATE SET
 			last_committed = CASE
 				WHEN excluded.last_committed > COALESCE(packages.last_committed, '')
 				THEN excluded.last_committed
 				ELSE packages.last_committed
-			END,
-			provider_group = CASE
-				WHEN excluded.last_committed > COALESCE(packages.last_committed, '')
-				THEN excluded.provider_group
-				ELSE packages.provider_group
 			END,
 			updated_at = excluded.updated_at`)
 	if err != nil {
@@ -186,8 +173,7 @@ func BatchUpsertShellPackages(ctx context.Context, db *sql.DB, entries []ShellEn
 
 	now := time.Now().UTC().Format(time.RFC3339)
 	for _, e := range entries {
-		pg := ComputeProviderGroup(e.LastCommitted)
-		if _, err := stmt.ExecContext(ctx, e.Type, e.Name, pg, timeStr(e.LastCommitted), now, now); err != nil {
+		if _, err := stmt.ExecContext(ctx, e.Type, e.Name, timeStr(e.LastCommitted), now, now); err != nil {
 			return fmt.Errorf("upserting shell package %s/%s: %w", e.Type, e.Name, err)
 		}
 	}
@@ -208,18 +194,17 @@ func BatchUpsertPackages(ctx context.Context, db *sql.DB, pkgs []*Package) error
 	stmt, err := tx.PrepareContext(ctx, `
 		INSERT INTO packages (
 			type, name, display_name, description, author, homepage, slug_url,
-			provider_group, versions_json, downloads, active_installs,
+			versions_json, downloads, active_installs,
 			current_version, rating, num_ratings, is_active,
 			last_committed, last_synced_at, last_sync_run_id,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(type, name) DO UPDATE SET
 			display_name = excluded.display_name,
 			description = excluded.description,
 			author = excluded.author,
 			homepage = excluded.homepage,
 			slug_url = excluded.slug_url,
-			provider_group = excluded.provider_group,
 			versions_json = excluded.versions_json,
 			downloads = excluded.downloads,
 			active_installs = excluded.active_installs,
@@ -240,7 +225,7 @@ func BatchUpsertPackages(ctx context.Context, db *sql.DB, pkgs []*Package) error
 	for _, pkg := range pkgs {
 		if _, err := stmt.ExecContext(ctx,
 			pkg.Type, pkg.Name, pkg.DisplayName, pkg.Description, pkg.Author,
-			pkg.Homepage, pkg.SlugURL, pkg.ProviderGroup, pkg.VersionsJSON,
+			pkg.Homepage, pkg.SlugURL, pkg.VersionsJSON,
 			pkg.Downloads, pkg.ActiveInstalls, pkg.CurrentVersion, pkg.Rating,
 			pkg.NumRatings, boolToInt(pkg.IsActive),
 			timeStr(pkg.LastCommitted), timeStr(pkg.LastSyncedAt), pkg.LastSyncRunID,
@@ -379,18 +364,16 @@ func MarkPackagesChanged(ctx context.Context, db *sql.DB, pkgType string, slugs 
 
 	stmt, err := tx.PrepareContext(ctx, `
 		UPDATE packages
-		SET last_committed = ?, provider_group = ?, updated_at = ?
+		SET last_committed = ?, updated_at = ?
 		WHERE type = ? AND name = ? AND is_active = 1`)
 	if err != nil {
 		return 0, fmt.Errorf("preparing statement: %w", err)
 	}
 	defer func() { _ = stmt.Close() }()
 
-	t, _ := time.Parse(time.RFC3339, now)
-	pg := ComputeProviderGroup(&t)
 	var affected int64
 	for _, slug := range slugs {
-		res, err := stmt.ExecContext(ctx, now, pg, now, pkgType, slug)
+		res, err := stmt.ExecContext(ctx, now, now, pkgType, slug)
 		if err != nil {
 			return affected, fmt.Errorf("marking package %s/%s changed: %w", pkgType, slug, err)
 		}
