@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/roots/wp-composer/internal/packages"
+	"github.com/roots/wp-packages/internal/packages"
 )
 
 // AggregateInstalls recomputes wp_composer_installs_total, wp_composer_installs_30d,

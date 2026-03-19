@@ -9,14 +9,14 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
-	wpcomposergo "github.com/roots/wp-composer"
-	"github.com/roots/wp-composer/internal/auth"
-	"github.com/roots/wp-composer/internal/db"
-	"github.com/roots/wp-composer/internal/deploy"
-	apphttp "github.com/roots/wp-composer/internal/http"
-	"github.com/roots/wp-composer/internal/packages"
-	"github.com/roots/wp-composer/internal/repository"
-	"github.com/roots/wp-composer/internal/wporg"
+	wpcomposergo "github.com/roots/wp-packages"
+	"github.com/roots/wp-packages/internal/auth"
+	"github.com/roots/wp-packages/internal/db"
+	"github.com/roots/wp-packages/internal/deploy"
+	apphttp "github.com/roots/wp-packages/internal/http"
+	"github.com/roots/wp-packages/internal/packages"
+	"github.com/roots/wp-packages/internal/repository"
+	"github.com/roots/wp-packages/internal/wporg"
 )
 
 var devCmd = &cobra.Command{

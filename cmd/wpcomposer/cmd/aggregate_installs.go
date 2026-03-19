@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/roots/wp-composer/internal/telemetry"
+	"github.com/roots/wp-packages/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 

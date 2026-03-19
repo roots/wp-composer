@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/roots/wp-composer/internal/db"
+	"github.com/roots/wp-packages/internal/db"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {

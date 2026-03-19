@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/roots/wp-composer/internal/packages"
-	"github.com/roots/wp-composer/internal/wporg"
+	"github.com/roots/wp-packages/internal/packages"
+	"github.com/roots/wp-packages/internal/wporg"
 )
 
 var discoverCmd = &cobra.Command{

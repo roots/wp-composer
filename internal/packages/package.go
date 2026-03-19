@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/roots/wp-composer/internal/version"
+	"github.com/roots/wp-packages/internal/version"
 )
 
 type Package struct {

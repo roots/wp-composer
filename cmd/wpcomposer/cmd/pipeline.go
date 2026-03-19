@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/roots/wp-composer/internal/deploy"
+	"github.com/roots/wp-packages/internal/deploy"
 	"github.com/spf13/cobra"
 )
 

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/roots/wp-composer/internal/repository"
+	"github.com/roots/wp-packages/internal/repository"
 	"github.com/spf13/cobra"
 )
 

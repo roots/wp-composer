@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/roots/wp-composer/internal/og"
+	"github.com/roots/wp-packages/internal/og"
 	"github.com/spf13/cobra"
 )
 

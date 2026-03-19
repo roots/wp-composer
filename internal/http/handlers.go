@@ -20,11 +20,11 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/roots/wp-composer/internal/app"
-	"github.com/roots/wp-composer/internal/config"
-	"github.com/roots/wp-composer/internal/deploy"
-	"github.com/roots/wp-composer/internal/og"
-	"github.com/roots/wp-composer/internal/version"
+	"github.com/roots/wp-packages/internal/app"
+	"github.com/roots/wp-packages/internal/config"
+	"github.com/roots/wp-packages/internal/deploy"
+	"github.com/roots/wp-packages/internal/og"
+	"github.com/roots/wp-packages/internal/version"
 )
 
 const perPage = 12

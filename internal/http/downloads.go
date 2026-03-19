@@ -5,8 +5,8 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/roots/wp-composer/internal/app"
-	"github.com/roots/wp-composer/internal/telemetry"
+	"github.com/roots/wp-packages/internal/app"
+	"github.com/roots/wp-packages/internal/telemetry"
 )
 
 type notifyBatchRequest struct {

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"testing"
 
-	wpcomposergo "github.com/roots/wp-composer"
+	wpcomposergo "github.com/roots/wp-packages"
 )
 
 func TestMigrateCreatesPackageStatsAndFTS(t *testing.T) {

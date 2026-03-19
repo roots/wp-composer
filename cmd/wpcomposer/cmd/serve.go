@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	apphttp "github.com/roots/wp-composer/internal/http"
+	apphttp "github.com/roots/wp-packages/internal/http"
 	"github.com/spf13/cobra"
 )
 

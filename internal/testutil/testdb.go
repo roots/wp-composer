@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	wpcomposergo "github.com/roots/wp-composer"
-	"github.com/roots/wp-composer/internal/config"
-	"github.com/roots/wp-composer/internal/db"
-	"github.com/roots/wp-composer/internal/packages"
-	"github.com/roots/wp-composer/internal/wporg"
+	wpcomposergo "github.com/roots/wp-packages"
+	"github.com/roots/wp-packages/internal/config"
+	"github.com/roots/wp-packages/internal/db"
+	"github.com/roots/wp-packages/internal/packages"
+	"github.com/roots/wp-packages/internal/wporg"
 )
 
 // OpenTestDB opens an in-memory SQLite database and runs all migrations.

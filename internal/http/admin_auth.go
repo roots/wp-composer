@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/roots/wp-composer/internal/app"
-	"github.com/roots/wp-composer/internal/auth"
+	"github.com/roots/wp-packages/internal/app"
+	"github.com/roots/wp-packages/internal/auth"
 )
 
 func handleLoginPage(a *app.App) http.HandlerFunc {

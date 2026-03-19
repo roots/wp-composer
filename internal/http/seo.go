@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/roots/wp-composer/internal/app"
+	"github.com/roots/wp-packages/internal/app"
 )
 
 // RSS feed

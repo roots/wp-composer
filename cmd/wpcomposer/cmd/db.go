@@ -5,8 +5,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/roots/wp-composer/internal/config"
-	"github.com/roots/wp-composer/internal/db"
+	"github.com/roots/wp-packages/internal/config"
+	"github.com/roots/wp-packages/internal/db"
 	"github.com/spf13/cobra"
 )
 

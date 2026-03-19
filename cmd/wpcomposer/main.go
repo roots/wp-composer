@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	wpcomposergo "github.com/roots/wp-composer"
-	"github.com/roots/wp-composer/cmd/wpcomposer/cmd"
+	wpcomposergo "github.com/roots/wp-packages"
+	"github.com/roots/wp-packages/cmd/wpcomposer/cmd"
 )
 
 func main() {

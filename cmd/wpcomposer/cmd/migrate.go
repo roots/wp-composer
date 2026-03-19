@@ -3,7 +3,7 @@ package cmd
 import (
 	"embed"
 
-	"github.com/roots/wp-composer/internal/db"
+	"github.com/roots/wp-packages/internal/db"
 	"github.com/spf13/cobra"
 )
 

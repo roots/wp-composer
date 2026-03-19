@@ -14,7 +14,7 @@ import (
 	"time"
 
 	sentryhttp "github.com/getsentry/sentry-go/http"
-	"github.com/roots/wp-composer/internal/app"
+	"github.com/roots/wp-packages/internal/app"
 )
 
 // cacheControl wraps an http.Handler and sets the Cache-Control header.

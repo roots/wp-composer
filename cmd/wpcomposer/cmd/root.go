@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/roots/wp-composer/internal/app"
-	"github.com/roots/wp-composer/internal/config"
+	"github.com/roots/wp-packages/internal/app"
+	"github.com/roots/wp-packages/internal/config"
 	"github.com/spf13/cobra"
 )
 
