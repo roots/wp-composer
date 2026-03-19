@@ -47,7 +47,7 @@ lint:
 	$(shell go env GOPATH)/bin/golangci-lint run ./...
 	@if [ -n "$$(gofmt -s -l .)" ]; then echo "gofmt needed:"; gofmt -s -l .; exit 1; fi
 	go vet ./...
-	@go mod tidy && if [ -n "$$(git diff --name-only -- go.mod go.sum)" ]; then echo "go mod tidy needed"; exit 1; fi
+	go mod tidy -diff
 
 # Restore production database from R2
 db-restore:
