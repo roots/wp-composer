@@ -25,6 +25,7 @@ type Client struct {
 	logger     *slog.Logger
 	maxRetries int
 	retryDelay time.Duration
+	baseURL    string // override for testing; defaults to "https://api.wordpress.org"
 }
 
 func NewClient(cfg config.DiscoveryConfig, logger *slog.Logger) *Client {
@@ -49,11 +50,17 @@ func NewClient(cfg config.DiscoveryConfig, logger *slog.Logger) *Client {
 		logger:     logger,
 		maxRetries: cfg.MaxRetries,
 		retryDelay: time.Duration(cfg.RetryDelayMs) * time.Millisecond,
+		baseURL:    "https://api.wordpress.org",
 	}
 }
 
+// SetBaseURL overrides the WordPress.org API base URL (for testing).
+func (c *Client) SetBaseURL(u string) {
+	c.baseURL = u
+}
+
 func (c *Client) FetchPlugin(ctx context.Context, slug string) (map[string]any, error) {
-	u := "https://api.wordpress.org/plugins/info/1.2/?action=plugin_information" +
+	u := c.baseURL + "/plugins/info/1.2/?action=plugin_information" +
 		"&request%5Bslug%5D=" + url.QueryEscape(slug) +
 		"&request%5Bfields%5D%5Bversions%5D=true" +
 		"&request%5Bfields%5D%5Bdescription%5D=false" +
@@ -81,7 +88,7 @@ func (c *Client) FetchPlugin(ctx context.Context, slug string) (map[string]any, 
 }
 
 func (c *Client) FetchTheme(ctx context.Context, slug string) (map[string]any, error) {
-	u := "https://api.wordpress.org/themes/info/1.2/?action=theme_information" +
+	u := c.baseURL + "/themes/info/1.2/?action=theme_information" +
 		"&request%5Bslug%5D=" + url.QueryEscape(slug) +
 		"&request%5Bfields%5D%5Bversions%5D=true" +
 		"&request%5Bfields%5D%5Bactive_installs%5D=true" +
@@ -97,14 +104,14 @@ func (c *Client) FetchTheme(ctx context.Context, slug string) (map[string]any, e
 func (c *Client) FetchLastUpdated(ctx context.Context, pkgType, slug string) (*time.Time, error) {
 	var u string
 	if pkgType == "plugin" {
-		u = "https://api.wordpress.org/plugins/info/1.2/?action=plugin_information" +
+		u = c.baseURL + "/plugins/info/1.2/?action=plugin_information" +
 			"&request%5Bslug%5D=" + url.QueryEscape(slug) +
 			"&request%5Bfields%5D%5Blast_updated%5D=true" +
 			"&request%5Bfields%5D%5Bdescription%5D=false" +
 			"&request%5Bfields%5D%5Bsections%5D=false" +
 			"&request%5Bfields%5D%5Bversions%5D=false"
 	} else {
-		u = "https://api.wordpress.org/themes/info/1.2/?action=theme_information" +
+		u = c.baseURL + "/themes/info/1.2/?action=theme_information" +
 			"&request%5Bslug%5D=" + url.QueryEscape(slug) +
 			"&request%5Bfields%5D%5Blast_updated%5D=true" +
 			"&request%5Bfields%5D%5Bversions%5D=false"

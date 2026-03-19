@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/roots/wp-composer/internal/version"
 )
 
 // BuildOpts configures a repository build.
@@ -144,6 +146,13 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 			opts.Logger.Warn("skipping package with invalid versions_json", "name", name, "error", err)
 			continue
 		}
+		if len(versions) == 0 {
+			continue
+		}
+
+		// Defense-in-depth: re-filter versions through normalization so stale
+		// DB rows with invalid versions (e.g. "3.1.0-dev1") never reach artifacts.
+		versions = version.NormalizeVersions(versions)
 		if len(versions) == 0 {
 			continue
 		}

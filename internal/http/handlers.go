@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/go-chi/chi/v5"
 	"github.com/roots/wp-composer/internal/app"
 	"github.com/roots/wp-composer/internal/config"
 	"github.com/roots/wp-composer/internal/deploy"
@@ -31,7 +30,12 @@ import (
 const perPage = 12
 
 // captureError reports a non-panic error to Sentry with the request's hub.
+// It silently ignores context cancellation errors (timeouts, client disconnects)
+// since these are expected during normal operation.
 func captureError(r *http.Request, err error) {
+	if r.Context().Err() != nil {
+		return
+	}
 	if hub := sentry.GetHubFromContext(r.Context()); hub != nil {
 		hub.CaptureException(err)
 	} else {
@@ -197,8 +201,8 @@ func handleRootsWordpress(a *app.App, tmpl *templateSet) http.HandlerFunc {
 
 func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		pkgType := chi.URLParam(r, "type")
-		name := chi.URLParam(r, "name")
+		pkgType := r.PathValue("type")
+		name := r.PathValue("name")
 
 		// Strip wp- prefix from type
 		pkgType = strings.TrimPrefix(pkgType, "wp-")
@@ -630,7 +634,7 @@ func ogImageURL(cfg *config.Config, key string) string {
 // handleOGImage serves OG images from local disk (dev mode).
 func handleOGImage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		key := chi.URLParam(r, "*")
+		key := strings.TrimPrefix(r.URL.Path, "/og/")
 		clean := filepath.Clean(key)
 		if strings.Contains(clean, "..") {
 			http.NotFound(w, r)

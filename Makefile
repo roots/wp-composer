@@ -1,4 +1,4 @@
-.PHONY: build install dev test smoke lint clean tailwind
+.PHONY: build install dev test integration lint clean tailwind db-restore
 
 TAILWIND ?= ./bin/tailwindcss
 
@@ -38,16 +38,20 @@ dev: tailwind-install
 test:
 	go test ./...
 
-# End-to-end smoke test (requires composer, sqlite3)
-smoke: build
-	./test/smoke_test.sh
+# Integration tests (requires composer)
+integration:
+	go test -tags=integration -count=1 -timeout=5m -v ./internal/integration/...
 
 # Lint (matches CI: golangci-lint + gofmt + go vet + go mod tidy)
 lint:
 	$(shell go env GOPATH)/bin/golangci-lint run ./...
 	@if [ -n "$$(gofmt -s -l .)" ]; then echo "gofmt needed:"; gofmt -s -l .; exit 1; fi
 	go vet ./...
-	@go mod tidy && if [ -n "$$(git diff --name-only -- go.mod go.sum)" ]; then echo "go mod tidy needed"; exit 1; fi
+	go mod tidy -diff
+
+# Restore production database from R2
+db-restore:
+	go run ./cmd/wpcomposer db restore --force
 
 # Remove build artifacts
 clean:

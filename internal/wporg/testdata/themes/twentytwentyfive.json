@@ -1,0 +1,19 @@
+{
+  "name": "Twenty Twenty-Five",
+  "slug": "twentytwentyfive",
+  "version": "1.1",
+  "author": "WordPress team",
+  "homepage": "https://wordpress.org/themes/twentytwentyfive/",
+  "last_updated": "2025-01-15 12:00:00",
+  "active_installs": 3000000,
+  "downloaded": 50000000,
+  "rating": 72,
+  "num_ratings": 40,
+  "sections": {
+    "description": "Twenty Twenty-Five is a versatile theme designed for blogs and websites."
+  },
+  "versions": {
+    "1.0": "https://downloads.wordpress.org/theme/twentytwentyfive.1.0.zip",
+    "1.1": "https://downloads.wordpress.org/theme/twentytwentyfive.1.1.zip"
+  }
+}

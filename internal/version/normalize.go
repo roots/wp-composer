@@ -8,8 +8,10 @@ import (
 )
 
 // validVersion matches WordPress version strings: digits separated by dots (1-4 parts),
-// optionally followed by a pre-release suffix like -beta1, -RC2, -alpha.
-var validVersion = regexp.MustCompile(`^\d+(\.\d+){0,3}(-[a-zA-Z0-9._]+)?$`)
+// optionally followed by a Composer-compatible pre-release suffix.
+// alpha/beta/a/b/rc/p/patch allow an optional (dotted or bare) numeric qualifier: -beta1, -RC.2
+// dev/stable only allow bare or dot-separated numeric qualifier: -dev, -dev.1 (not -dev1)
+var validVersion = regexp.MustCompile(`(?i)^\d+(\.\d+){0,3}(-((alpha|beta|a|b|rc|p|patch)(\.?\d+)?|(dev|stable)(\.\d+)?))?$`)
 
 // Normalize converts a WordPress version string to a Composer-compatible form.
 // Returns empty string for invalid versions.
@@ -18,7 +20,10 @@ func Normalize(v string) string {
 	if v == "" {
 		return ""
 	}
-	if strings.EqualFold(v, "trunk") {
+	// Strip leading v/V to match Composer's VersionParser behavior.
+	v = strings.TrimPrefix(v, "v")
+	v = strings.TrimPrefix(v, "V")
+	if strings.EqualFold(v, "trunk") || v == "dev-trunk" {
 		return "dev-trunk"
 	}
 	if !IsValid(v) {
@@ -33,7 +38,7 @@ func IsValid(v string) bool {
 	if v == "" {
 		return false
 	}
-	if strings.EqualFold(v, "trunk") {
+	if strings.EqualFold(v, "trunk") || v == "dev-trunk" {
 		return true
 	}
 	return validVersion.MatchString(v)

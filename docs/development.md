@@ -68,8 +68,6 @@ Env-first with optional YAML config file (env overrides YAML).
 | `R2_SECRET_ACCESS_KEY` | — | R2 credentials |
 | `R2_BUCKET` | — | R2 bucket name |
 | `R2_ENDPOINT` | — | R2 S3-compatible endpoint |
-| `ADMIN_ALLOW_CIDR` | Tailscale ranges | Comma-separated CIDRs for `/admin/*` access |
-| `TRUST_PROXY` | `false` | Trust `X-Forwarded-For` for client IP (enable behind proxy) |
 | `SESSION_LIFETIME_MINUTES` | `7200` | Admin session lifetime |
 
 ## Technical Decisions
@@ -77,14 +75,14 @@ Env-first with optional YAML config file (env overrides YAML).
 | Area | Choice |
 |------|--------|
 | CLI | Cobra |
-| HTTP router | Chi |
+| HTTP router | `net/http` (stdlib) |
 | Migrations | Goose (SQL-first) |
 | Templates | `html/template` + Tailwind |
 | Logging | `log/slog` |
 | SQLite driver | `modernc.org/sqlite` |
 | R2 | AWS SDK for Go v2 |
 | Config | env-first + optional YAML |
-| Admin access | Tailscale network gating + in-app auth |
+| Admin access | In-app auth (email/password + session) |
 
 ## Make Targets
 

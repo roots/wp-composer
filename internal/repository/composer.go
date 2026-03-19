@@ -24,6 +24,9 @@ func ComposerVersion(pkgType, slug, ver, downloadURL string, meta PackageMeta) m
 	}
 
 	ref := fmt.Sprintf("tags/%s", ver)
+	if pkgType == "theme" {
+		ref = ver
+	}
 	if ver == "dev-trunk" {
 		ref = "trunk"
 	}

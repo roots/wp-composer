@@ -29,11 +29,11 @@ caddy_email: "team@roots.io"
 wp_composer_deploy_r2: "true"
 r2_cdn_public_url: "https://cdn.wp-composer.com"
 
+# Litestream
+litestream_version: "0.5.10"
+
 # Sessions
 session_lifetime_minutes: 7200
-
-# Admin access (empty = no IP restriction, set Tailscale CIDRs when ready)
-admin_allow_cidr: ""
 
 # Repository
 repository_path: "{{ app_root }}/shared/storage/repository"

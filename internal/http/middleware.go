@@ -3,8 +3,6 @@ package http
 import (
 	"context"
 	"database/sql"
-	"log/slog"
-	"net"
 	"net/http"
 
 	"github.com/roots/wp-composer/internal/auth"
@@ -13,15 +11,6 @@ import (
 type contextKey string
 
 const userContextKey contextKey = "user"
-
-// noTimeout wraps a handler to bypass the global timeout middleware.
-// Client disconnects are detected via failed writes in the handler.
-func noTimeout(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := context.WithoutCancel(r.Context())
-		h.ServeHTTP(w, r.WithContext(ctx))
-	}
-}
 
 func UserFromContext(ctx context.Context) *auth.User {
 	u, _ := ctx.Value(userContextKey).(*auth.User)
@@ -62,60 +51,4 @@ func RequireAdmin(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
-}
-
-// RequireAllowedIP restricts access to requests from allowed CIDR ranges.
-// If allowCIDRs is nil or empty, all requests are allowed (no network restriction).
-// If CIDRs are configured but none parse successfully, access is denied (fail closed).
-func RequireAllowedIP(allowCIDRs []string, logger *slog.Logger) func(http.Handler) http.Handler {
-	configured := len(allowCIDRs) > 0
-	var nets []*net.IPNet
-	for _, cidr := range allowCIDRs {
-		_, ipNet, err := net.ParseCIDR(cidr)
-		if err != nil {
-			logger.Error("invalid admin CIDR — admin access will be restricted", "cidr", cidr, "error", err)
-			continue
-		}
-		nets = append(nets, ipNet)
-	}
-
-	// Fail closed: CIDRs were configured but none parsed
-	failClosed := configured && len(nets) == 0
-	if failClosed {
-		logger.Error("all admin CIDRs are invalid — admin access is blocked")
-	}
-
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if failClosed {
-				http.Error(w, "Forbidden", http.StatusForbidden)
-				return
-			}
-
-			if !configured {
-				next.ServeHTTP(w, r)
-				return
-			}
-
-			host, _, err := net.SplitHostPort(r.RemoteAddr)
-			if err != nil {
-				host = r.RemoteAddr
-			}
-			ip := net.ParseIP(host)
-			if ip == nil {
-				http.Error(w, "Forbidden", http.StatusForbidden)
-				return
-			}
-
-			for _, n := range nets {
-				if n.Contains(ip) {
-					next.ServeHTTP(w, r)
-					return
-				}
-			}
-
-			logger.Warn("admin access denied", "ip", host)
-			http.Error(w, "Forbidden", http.StatusForbidden)
-		})
-	}
 }

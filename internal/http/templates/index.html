@@ -52,7 +52,7 @@
 </section>
 <section class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10">
 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2">
-<form id="filter-form" method="GET" action="/" hx-get="/packages-partial" hx-target="#package-results" hx-trigger="submit, change from:select" hx-push-url="false" hx-swap="innerHTML" class="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1 scroll-mt-16">
+<form id="filter-form" method="GET" action="/" hx-get="/packages-partial" hx-target="#package-results" hx-trigger="submit, change from:select, input from:[name=search] delay:300ms changed" hx-push-url="false" hx-swap="innerHTML" class="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1 scroll-mt-16">
 <div class="relative w-full sm:max-w-md">
 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
 <input type="search" name="search" value="{{.Filters.Search}}" placeholder="Search packages..." class="w-full pl-9 pr-12 h-10 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
@@ -155,7 +155,7 @@
 <div class="flex w-8 h-8 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-sm font-bold">2</div>
 <div>
 <p class="text-gray-600 mb-2">Remove the wpackagist repository and add WP Composer:</p>
-<div class="bg-gray-50 rounded-lg px-4 py-2.5 font-mono text-sm overflow-x-auto">composer config --unset repositories.wpackagist &amp;&amp; composer config repositories.wp-composer composer https://wp-composer.com</div>
+<div class="bg-gray-50 rounded-lg px-4 py-2.5 font-mono text-sm overflow-x-auto">composer config --unset repositories.wpackagist &amp;&amp; composer config repositories.wp-composer composer https://repo.wp-composer.com</div>
 </div>
 </div>
 <div class="flex gap-4">

@@ -1,0 +1,9 @@
+dbs:
+  - path: {{ db_path }}
+    replica:
+      type: s3
+      bucket: ${LITESTREAM_BUCKET}
+      endpoint: ${R2_ENDPOINT}
+      access-key-id: ${R2_ACCESS_KEY_ID}
+      secret-access-key: ${R2_SECRET_ACCESS_KEY}
+      force-path-style: true

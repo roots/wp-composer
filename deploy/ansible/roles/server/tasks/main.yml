@@ -90,6 +90,10 @@
     group: www-data
     mode: "0775"
 
+- name: Install Litestream
+  apt:
+    deb: https://github.com/benbjohnson/litestream/releases/download/v{{ litestream_version }}/litestream-{{ litestream_version }}-linux-x86_64.deb
+
 - name: Enable unattended-upgrades
   apt:
     name: unattended-upgrades

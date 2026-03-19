@@ -1,0 +1,25 @@
+{
+  "name": "Akismet Anti-spam: Spam Protection",
+  "slug": "akismet",
+  "version": "5.3.3",
+  "author": "<a href=\"https://automattic.com/wordpress-plugins/\">Automattic - Anti-spam Team</a>",
+  "requires": "5.8",
+  "tested": "6.7.2",
+  "requires_php": "5.6.20",
+  "download_link": "https://downloads.wordpress.org/plugin/akismet.5.3.3.zip",
+  "added": "2005-10-25",
+  "last_updated": "2024-10-03 14:31:00",
+  "homepage": "https://akismet.com/",
+  "short_description": "The best anti-spam protection to block spam comments and spam in a contact form.",
+  "downloaded": 312000000,
+  "active_installs": 5000000,
+  "rating": 94,
+  "num_ratings": 1100,
+  "versions": {
+    "5.3": "https://downloads.wordpress.org/plugin/akismet.5.3.zip",
+    "5.3.1": "https://downloads.wordpress.org/plugin/akismet.5.3.1.zip",
+    "5.3.2": "https://downloads.wordpress.org/plugin/akismet.5.3.2.zip",
+    "5.3.3": "https://downloads.wordpress.org/plugin/akismet.5.3.3.zip",
+    "dev-trunk": "https://downloads.wordpress.org/plugin/akismet.zip"
+  }
+}

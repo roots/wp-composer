@@ -17,12 +17,13 @@ type Config struct {
 
 	SentryDSN string `yaml:"sentry_dsn"`
 
-	DB        DBConfig        `yaml:"db"`
-	Server    ServerConfig    `yaml:"server"`
-	R2        R2Config        `yaml:"r2"`
-	Session   SessionConfig   `yaml:"session"`
-	Telemetry TelemetryConfig `yaml:"telemetry"`
-	Discovery DiscoveryConfig `yaml:"discovery"`
+	DB         DBConfig         `yaml:"db"`
+	Server     ServerConfig     `yaml:"server"`
+	R2         R2Config         `yaml:"r2"`
+	Session    SessionConfig    `yaml:"session"`
+	Telemetry  TelemetryConfig  `yaml:"telemetry"`
+	Discovery  DiscoveryConfig  `yaml:"discovery"`
+	Litestream LitestreamConfig `yaml:"litestream"`
 }
 
 type DBConfig struct {
@@ -30,9 +31,7 @@ type DBConfig struct {
 }
 
 type ServerConfig struct {
-	Addr           string   `yaml:"addr"`
-	AdminAllowCIDR []string `yaml:"admin_allow_cidr"`
-	TrustProxy     bool     `yaml:"trust_proxy"`
+	Addr string `yaml:"addr"`
 }
 
 type R2Config struct {
@@ -53,6 +52,11 @@ type TelemetryConfig struct {
 	DedupeWindowSeconds int `yaml:"dedupe_window_seconds"`
 }
 
+type LitestreamConfig struct {
+	Bucket string `yaml:"bucket"`
+	Path   string `yaml:"path"`
+}
+
 type DiscoveryConfig struct {
 	SeedsFile    string `yaml:"seeds_file"`
 	Concurrency  int    `yaml:"concurrency"`
@@ -68,13 +72,13 @@ func defaults() *Config {
 		LogLevel: "info",
 		DB:       DBConfig{Path: "./storage/wpcomposer.db"},
 		Server: ServerConfig{
-			Addr:           ":8080",
-			AdminAllowCIDR: []string{"100.64.0.0/10", "fd7a:115c:a1e0::/48"}, // Tailscale default ranges
+			Addr: ":8080",
 		},
 		Session: SessionConfig{LifetimeMinutes: 7200},
 		Telemetry: TelemetryConfig{
 			DedupeWindowSeconds: 3600,
 		},
+		Litestream: LitestreamConfig{Path: "db"},
 		Discovery: DiscoveryConfig{
 			SeedsFile:    "./seeds.yaml",
 			Concurrency:  10,
@@ -156,15 +160,11 @@ func applyEnv(cfg *Config) {
 			cfg.Telemetry.DedupeWindowSeconds = n
 		}
 	}
-	if v := os.Getenv("TRUST_PROXY"); v != "" {
-		cfg.Server.TrustProxy = strings.EqualFold(v, "true") || v == "1"
+	if v := os.Getenv("LITESTREAM_BUCKET"); v != "" {
+		cfg.Litestream.Bucket = v
 	}
-	if v, ok := os.LookupEnv("ADMIN_ALLOW_CIDR"); ok {
-		if v == "" {
-			cfg.Server.AdminAllowCIDR = nil // explicitly disable restriction
-		} else {
-			cfg.Server.AdminAllowCIDR = strings.Split(v, ",")
-		}
+	if v := os.Getenv("LITESTREAM_PATH"); v != "" {
+		cfg.Litestream.Path = v
 	}
 	if v := os.Getenv("SEEDS_FILE"); v != "" {
 		cfg.Discovery.SeedsFile = v

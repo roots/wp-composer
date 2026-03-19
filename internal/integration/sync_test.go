@@ -1,0 +1,177 @@
+//go:build integration
+
+package integration
+
+import (
+	"context"
+	"encoding/json"
+	"io"
+	"net/http/httptest"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/johannesboyne/gofakes3"
+	"github.com/johannesboyne/gofakes3/backend/s3mem"
+	"github.com/roots/wp-composer/internal/config"
+	"github.com/roots/wp-composer/internal/deploy"
+	"github.com/roots/wp-composer/internal/repository"
+	"github.com/roots/wp-composer/internal/testutil"
+	"github.com/roots/wp-composer/internal/wporg"
+)
+
+func TestR2Sync(t *testing.T) {
+	ctx := context.Background()
+
+	// 1. Seed DB from fixtures
+	fixtureDir := filepath.Join("..", "wporg", "testdata")
+	mock := wporg.NewMockServer(fixtureDir)
+	defer mock.Close()
+
+	db := testutil.OpenTestDB(t)
+	testutil.SeedFromFixtures(t, db, mock.URL)
+
+	// 2. Build artifacts
+	buildOutputDir := filepath.Join(t.TempDir(), "builds")
+	result, err := repository.Build(ctx, db, repository.BuildOpts{
+		OutputDir: buildOutputDir,
+		AppURL:    "http://test.local",
+		Force:     true,
+		Logger:    testLogger(t),
+	})
+	if err != nil {
+		t.Fatalf("build failed: %v", err)
+	}
+	buildDir := filepath.Join(buildOutputDir, result.BuildID)
+
+	// 3. Start gofakes3 in-process
+	backend := s3mem.New()
+	faker := gofakes3.New(backend)
+	ts := httptest.NewServer(faker.Server())
+	defer ts.Close()
+
+	// Create the bucket
+	s3Client := newTestS3Client(ts.URL)
+	_, err = s3Client.CreateBucket(ctx, &s3.CreateBucketInput{
+		Bucket: aws.String("test-bucket"),
+	})
+	if err != nil {
+		t.Fatalf("creating bucket: %v", err)
+	}
+
+	r2Cfg := config.R2Config{
+		AccessKeyID:     "test",
+		SecretAccessKey: "test",
+		Bucket:          "test-bucket",
+		Endpoint:        ts.URL,
+	}
+
+	// 4. First sync — all packages uploaded
+	err = deploy.SyncToR2(ctx, r2Cfg, buildDir, result.BuildID, "", testLogger(t))
+	if err != nil {
+		t.Fatalf("first sync failed: %v", err)
+	}
+
+	// Verify packages.json exists in bucket
+	rootObj, err := s3Client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String("test-bucket"),
+		Key:    aws.String("packages.json"),
+	})
+	if err != nil {
+		t.Fatalf("packages.json not found after sync: %v", err)
+	}
+	rootData, _ := io.ReadAll(rootObj.Body)
+	_ = rootObj.Body.Close()
+
+	var rootJSON map[string]any
+	if err := json.Unmarshal(rootData, &rootJSON); err != nil {
+		t.Fatalf("invalid packages.json: %v", err)
+	}
+	if rootJSON["build-id"] != result.BuildID {
+		t.Errorf("root packages.json build-id = %v, want %s", rootJSON["build-id"], result.BuildID)
+	}
+
+	// Verify p2/ files exist
+	p2Key := "p2/wp-plugin/akismet.json"
+	p2Obj, err := s3Client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String("test-bucket"),
+		Key:    aws.String(p2Key),
+	})
+	if err != nil {
+		t.Fatalf("p2 file %s not found: %v", p2Key, err)
+	}
+	_ = p2Obj.Body.Close()
+
+	// Verify p/ content-addressed files exist
+	listResp, err := s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+		Bucket: aws.String("test-bucket"),
+		Prefix: aws.String("p/"),
+	})
+	if err != nil {
+		t.Fatalf("listing p/ objects: %v", err)
+	}
+	pFileCount := 0
+	for _, obj := range listResp.Contents {
+		key := aws.ToString(obj.Key)
+		if strings.Contains(key, "$") {
+			pFileCount++
+		}
+	}
+	if pFileCount == 0 {
+		t.Error("no content-addressed p/ files found after sync")
+	}
+
+	// Verify release-prefixed index files exist
+	releaseKey := "releases/" + result.BuildID + "/packages.json"
+	relObj, err := s3Client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String("test-bucket"),
+		Key:    aws.String(releaseKey),
+	})
+	if err != nil {
+		t.Fatalf("release packages.json not found: %v", err)
+	}
+	_ = relObj.Body.Close()
+
+	// Count total uploaded objects for the idempotency check
+	allResp, err := s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+		Bucket: aws.String("test-bucket"),
+	})
+	if err != nil {
+		t.Fatalf("listing all objects: %v", err)
+	}
+	firstSyncCount := len(allResp.Contents)
+	t.Logf("first sync: %d objects in bucket", firstSyncCount)
+
+	// 5. Second sync — same build, nothing should change
+	// (pass buildDir as previousBuildDir so unchanged files are skipped)
+	err = deploy.SyncToR2(ctx, r2Cfg, buildDir, result.BuildID, buildDir, testLogger(t))
+	if err != nil {
+		t.Fatalf("second sync failed: %v", err)
+	}
+
+	// Object count should be the same (idempotent)
+	allResp2, err := s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+		Bucket: aws.String("test-bucket"),
+	})
+	if err != nil {
+		t.Fatalf("listing all objects after second sync: %v", err)
+	}
+	secondSyncCount := len(allResp2.Contents)
+	if secondSyncCount != firstSyncCount {
+		t.Errorf("second sync changed object count: %d -> %d", firstSyncCount, secondSyncCount)
+	}
+}
+
+func newTestS3Client(endpoint string) *s3.Client {
+	return s3.New(s3.Options{
+		Region: "auto",
+		Credentials: credentials.NewStaticCredentialsProvider(
+			"test", "test", "",
+		),
+		BaseEndpoint: aws.String(endpoint),
+		UsePathStyle: true,
+	})
+}

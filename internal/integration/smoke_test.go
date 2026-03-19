@@ -1,0 +1,306 @@
+//go:build integration
+
+package integration
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/roots/wp-composer/internal/app"
+	"github.com/roots/wp-composer/internal/config"
+	apphttp "github.com/roots/wp-composer/internal/http"
+	"github.com/roots/wp-composer/internal/packagist"
+	"github.com/roots/wp-composer/internal/repository"
+	"github.com/roots/wp-composer/internal/testutil"
+	"github.com/roots/wp-composer/internal/wporg"
+)
+
+func TestSmoke(t *testing.T) {
+	// --- Setup ---
+	fixtureDir := filepath.Join("..", "wporg", "testdata")
+	mock := wporg.NewMockServer(fixtureDir)
+	defer mock.Close()
+
+	db := testutil.OpenTestDB(t)
+	testutil.SeedFromFixtures(t, db, mock.URL)
+
+	// --- Start app server (unstarted to get URL before build) ---
+	cfg := &config.Config{
+		Env: "test",
+	}
+	a := &app.App{
+		Config:    cfg,
+		DB:        db,
+		Logger:    testLogger(t),
+		Packagist: packagist.NewStubCache(),
+	}
+	router := apphttp.NewRouter(a)
+	srv := httptest.NewUnstartedServer(router)
+	srv.Start()
+	defer srv.Close()
+
+	// Set AppURL to the real app server so notify-batch points there
+	cfg.AppURL = srv.URL
+
+	// --- Build ---
+	buildDir := t.TempDir()
+	buildsDir := filepath.Join(buildDir, "builds")
+	repoDir := buildDir
+
+	result, err := repository.Build(t.Context(), db, repository.BuildOpts{
+		OutputDir: buildsDir,
+		AppURL:    srv.URL,
+		Force:     true,
+		Logger:    testLogger(t),
+	})
+	if err != nil {
+		t.Fatalf("build failed: %v", err)
+	}
+	if result.PackagesTotal == 0 {
+		t.Fatal("build produced zero packages")
+	}
+
+	// Symlink current -> build
+	currentLink := filepath.Join(repoDir, "current")
+	if err := os.Symlink(filepath.Join("builds", result.BuildID), currentLink); err != nil {
+		t.Fatalf("creating current symlink: %v", err)
+	}
+
+	// Serve repository files from the build directory
+	actualBuildDir := filepath.Join(buildsDir, result.BuildID)
+	repoServer := httptest.NewServer(http.FileServer(http.Dir(actualBuildDir)))
+	defer repoServer.Close()
+
+	// --- Composer metadata endpoints ---
+	t.Run("packages.json", func(t *testing.T) {
+		body := httpGet(t, repoServer.URL+"/packages.json")
+		var pkgJSON map[string]any
+		if err := json.Unmarshal([]byte(body), &pkgJSON); err != nil {
+			t.Fatalf("invalid packages.json: %v", err)
+		}
+
+		// notify-batch URL should point to the app server
+		if nb, ok := pkgJSON["notify-batch"].(string); !ok || nb != srv.URL+"/downloads" {
+			t.Errorf("notify-batch = %q, want %q", nb, srv.URL+"/downloads")
+		}
+
+		// metadata-url
+		if mu, ok := pkgJSON["metadata-url"].(string); !ok || mu != "/p2/%package%.json" {
+			t.Errorf("unexpected metadata-url: %v", pkgJSON["metadata-url"])
+		}
+
+		// providers-url
+		if pu, ok := pkgJSON["providers-url"].(string); !ok || !strings.Contains(pu, "/p/") {
+			t.Errorf("unexpected providers-url: %v", pkgJSON["providers-url"])
+		}
+
+		// provider-includes
+		pi, ok := pkgJSON["provider-includes"].(map[string]any)
+		if !ok || len(pi) == 0 {
+			t.Error("missing or empty provider-includes")
+		}
+	})
+
+	t.Run("p2 endpoint", func(t *testing.T) {
+		body := httpGet(t, repoServer.URL+"/p2/wp-plugin/akismet.json")
+		var data map[string]any
+		if err := json.Unmarshal([]byte(body), &data); err != nil {
+			t.Fatalf("invalid p2 response: %v", err)
+		}
+
+		pkgs, ok := data["packages"].(map[string]any)
+		if !ok {
+			t.Fatal("missing 'packages' key in p2 response")
+		}
+
+		akismet, ok := pkgs["wp-plugin/akismet"].(map[string]any)
+		if !ok {
+			t.Fatal("missing wp-plugin/akismet in packages")
+		}
+
+		// Check at least one version entry
+		if len(akismet) == 0 {
+			t.Fatal("no version entries for akismet")
+		}
+
+		// Verify version entry structure
+		for ver, entry := range akismet {
+			e, ok := entry.(map[string]any)
+			if !ok {
+				t.Fatalf("version %s is not an object", ver)
+			}
+
+			// Required fields
+			for _, field := range []string{"name", "version", "type", "dist", "source", "require"} {
+				if _, ok := e[field]; !ok {
+					t.Errorf("version %s missing field: %s", ver, field)
+				}
+			}
+
+			// dist URL should point to downloads.wordpress.org
+			if dist, ok := e["dist"].(map[string]any); ok {
+				if url, ok := dist["url"].(string); ok {
+					if !strings.Contains(url, "downloads.wordpress.org") {
+						t.Errorf("version %s dist URL unexpected: %s", ver, url)
+					}
+				}
+			}
+
+			// type should be wordpress-plugin
+			if typ, ok := e["type"].(string); ok {
+				if typ != "wordpress-plugin" {
+					t.Errorf("version %s type: got %s, want wordpress-plugin", ver, typ)
+				}
+			}
+			break // checking one entry is sufficient
+		}
+	})
+
+	t.Run("p content-addressed endpoint", func(t *testing.T) {
+		// Extract hash from packages.json provider-includes
+		body := httpGet(t, repoServer.URL+"/packages.json")
+		var pkgJSON map[string]any
+		if err := json.Unmarshal([]byte(body), &pkgJSON); err != nil {
+			t.Fatalf("invalid packages.json: %v", err)
+		}
+
+		pi := pkgJSON["provider-includes"].(map[string]any)
+		for providerPath := range pi {
+			// Fetch the provider file
+			providerBody := httpGet(t, repoServer.URL+"/"+providerPath)
+			var provider map[string]any
+			if err := json.Unmarshal([]byte(providerBody), &provider); err != nil {
+				t.Fatalf("invalid provider file %s: %v", providerPath, err)
+			}
+
+			providers, ok := provider["providers"].(map[string]any)
+			if !ok {
+				continue
+			}
+
+			// Find akismet and verify the content-addressed file exists
+			if akInfo, ok := providers["wp-plugin/akismet"]; ok {
+				info := akInfo.(map[string]any)
+				hash := info["sha256"].(string)
+				pPath := fmt.Sprintf("/p/wp-plugin/akismet$%s.json", hash)
+				pBody := httpGet(t, repoServer.URL+pPath)
+
+				// Should match p2 content
+				p2Body := httpGet(t, repoServer.URL+"/p2/wp-plugin/akismet.json")
+				if pBody != p2Body {
+					t.Error("p/ content-addressed file does not match p2/ file")
+				}
+				return
+			}
+		}
+		t.Error("could not find akismet in any provider-includes")
+	})
+
+	t.Run("package detail page", func(t *testing.T) {
+		resp, err := http.Get(srv.URL + "/packages/wp-plugin/akismet")
+		if err != nil {
+			t.Fatalf("GET package detail: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != 200 {
+			t.Errorf("package detail status: got %d, want 200", resp.StatusCode)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		if !strings.Contains(string(body), "composer require") {
+			t.Error("package detail page missing 'composer require'")
+		}
+	})
+
+	t.Run("package detail 404", func(t *testing.T) {
+		resp, err := http.Get(srv.URL + "/packages/wp-plugin/nonexistent")
+		if err != nil {
+			t.Fatalf("GET nonexistent package: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != 404 {
+			t.Errorf("nonexistent package status: got %d, want 404", resp.StatusCode)
+		}
+	})
+
+	// --- Composer install ---
+	t.Run("composer install", func(t *testing.T) {
+		composerPath, err := exec.LookPath("composer")
+		if err != nil {
+			t.Skip("composer not in PATH")
+		}
+
+		dir := t.TempDir()
+		writeComposerJSON(t, dir, repoServer.URL, map[string]string{
+			"wp-plugin/akismet":        "*",
+			"wp-plugin/classic-editor": "*",
+			"wp-theme/astra":           "*",
+		})
+		out := runComposer(t, composerPath, dir, "install", "--no-interaction", "--no-progress")
+		for _, pkg := range []string{"wp-plugin/akismet", "wp-plugin/classic-editor", "wp-theme/astra"} {
+			if !strings.Contains(out, pkg) {
+				t.Errorf("composer install output missing %s", pkg)
+			}
+		}
+	})
+
+	t.Run("install events recorded", func(t *testing.T) {
+		var count int
+		if err := db.QueryRow("SELECT COUNT(*) FROM install_events").Scan(&count); err != nil {
+			t.Fatalf("querying install_events: %v", err)
+		}
+		if count == 0 {
+			t.Error("no install events recorded — notify-batch may not be reaching the app server")
+		}
+	})
+
+	t.Run("composer version pinning", func(t *testing.T) {
+		composerPath, err := exec.LookPath("composer")
+		if err != nil {
+			t.Skip("composer not in PATH")
+		}
+
+		dir := t.TempDir()
+		writeComposerJSON(t, dir, repoServer.URL, map[string]string{
+			"wp-plugin/akismet": "5.3.3",
+		})
+		out := runComposer(t, composerPath, dir, "install", "--no-interaction", "--no-progress")
+		if !strings.Contains(out, "5.3.3") {
+			t.Errorf("composer install did not lock pinned version 5.3.3, output: %s", out)
+		}
+	})
+
+	// --- Build integrity ---
+	t.Run("build integrity", func(t *testing.T) {
+		manifestPath := filepath.Join(actualBuildDir, "manifest.json")
+		data, err := os.ReadFile(manifestPath)
+		if err != nil {
+			t.Fatalf("reading manifest: %v", err)
+		}
+		var manifest map[string]any
+		if err := json.Unmarshal(data, &manifest); err != nil {
+			t.Fatalf("invalid manifest: %v", err)
+		}
+		if _, ok := manifest["root_hash"]; !ok {
+			t.Error("manifest missing root_hash")
+		}
+		if count, ok := manifest["artifact_count"].(float64); !ok || count == 0 {
+			t.Error("manifest missing or zero artifact_count")
+		}
+
+		// Run full integrity validation
+		errs := repository.ValidateIntegrity(actualBuildDir)
+		if len(errs) > 0 {
+			for _, e := range errs {
+				t.Errorf("integrity error: %s", e)
+			}
+		}
+	})
+}
