@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
-	wpcomposergo "github.com/roots/wp-packages"
+	wppackagesgo "github.com/roots/wp-packages"
 	"github.com/roots/wp-packages/internal/auth"
 	"github.com/roots/wp-packages/internal/db"
 	"github.com/roots/wp-packages/internal/deploy"
@@ -42,7 +42,7 @@ func runDev(cmd *cobra.Command, args []string) error {
 
 	// 1. Migrations
 	application.Logger.Info("dev: running migrations")
-	if err := db.Migrate(application.DB, wpcomposergo.Migrations); err != nil {
+	if err := db.Migrate(application.DB, wppackagesgo.Migrations); err != nil {
 		return fmt.Errorf("migrations: %w", err)
 	}
 

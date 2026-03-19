@@ -1,4 +1,4 @@
-module github.com/roots/wp-composer
+module github.com/roots/wp-packages
 
 go 1.26.1
 

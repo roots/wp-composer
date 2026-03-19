@@ -5,7 +5,7 @@ import (
 	"os"
 
 	wppackagesgo "github.com/roots/wp-packages"
-	"github.com/roots/wp-packages/cmd/wpcomposer/cmd"
+	"github.com/roots/wp-packages/cmd/wppackages/cmd"
 )
 
 func main() {

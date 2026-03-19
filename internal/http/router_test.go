@@ -261,7 +261,7 @@ func TestRouter_LogStreamBypassesTimeout(t *testing.T) {
 	client := srv.Client()
 	client.Timeout = 2 * time.Second
 
-	httpReq, _ := http.NewRequest("GET", srv.URL+"/admin/logs/stream?file=wpcomposer", nil)
+	httpReq, _ := http.NewRequest("GET", srv.URL+"/admin/logs/stream?file=wppackages", nil)
 	httpReq.AddCookie(&http.Cookie{Name: "session", Value: session})
 
 	resp, err := client.Do(httpReq)
