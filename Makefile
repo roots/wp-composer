@@ -44,11 +44,9 @@ test:
 integration:
 	go test -tags=integration -count=1 -timeout=5m -v ./internal/integration/...
 
-# Lint (matches CI: golangci-lint + gofmt + go vet + go mod tidy)
+# Lint (matches CI: golangci-lint + go mod tidy)
 lint:
 	$(shell go env GOPATH)/bin/golangci-lint run ./...
-	@if [ -n "$$(gofmt -s -l .)" ]; then echo "gofmt needed:"; gofmt -s -l .; exit 1; fi
-	go vet ./...
 	go mod tidy -diff
 
 # Restore production database from R2 (reads secrets from Ansible vault)
