@@ -29,10 +29,6 @@ import (
 
 const perPage = 12
 
-// ogSem limits concurrent OG image generation to avoid starving the pipeline
-// of DB write access under heavy crawler traffic.
-var ogSem = make(chan struct{}, 2)
-
 // captureError reports a non-panic error to Sentry with the request's hub.
 // It silently ignores context cancellation errors (timeouts, client disconnects)
 // since these are expected during normal operation.
@@ -226,17 +222,6 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		versions := parseVersions(pkg)
 
 		ogKey := "social/" + pkg.Type + "/" + pkg.Name + ".png"
-		if pkg.OGImageGeneratedAt == nil {
-			// Generate on demand in background (skip if at capacity)
-			select {
-			case ogSem <- struct{}{}:
-				go func() {
-					defer func() { <-ogSem }()
-					generatePackageOG(a, pkg)
-				}()
-			default:
-			}
-		}
 
 		displayName := pkg.Name
 		if pkg.DisplayName != "" {
@@ -683,37 +668,6 @@ func ensureLocalFallbackOG(cfg *config.Config) {
 	}
 }
 
-// generatePackageOG generates an OG image for a package and saves it.
-func generatePackageOG(a *app.App, pkg *packageDetail) {
-	data := og.PackageData{
-		DisplayName:        pkg.DisplayName,
-		Name:               pkg.Name,
-		Type:               pkg.Type,
-		CurrentVersion:     pkg.CurrentVersion,
-		Description:        pkg.Description,
-		ActiveInstalls:     og.FormatInstalls(pkg.ActiveInstalls),
-		WpPackagesInstalls: og.FormatInstalls(pkg.WpPackagesInstallsTotal),
-	}
-
-	pngBytes, err := og.GeneratePackageImage(data)
-	if err != nil {
-		a.Logger.Error("generating OG image", "package", pkg.Name, "error", err)
-		sentry.CaptureException(err)
-		return
-	}
-
-	uploader := og.NewUploader(a.Config.R2)
-	key := "social/" + pkg.Type + "/" + pkg.Name + ".png"
-	if err := uploader.Upload(context.Background(), key, pngBytes); err != nil {
-		a.Logger.Error("uploading OG image", "package", pkg.Name, "error", err)
-		sentry.CaptureException(err)
-		return
-	}
-
-	_ = og.MarkOGGeneratedBySlug(context.Background(), a.DB, pkg.Type, pkg.Name, pkg.ActiveInstalls, pkg.WpPackagesInstallsTotal)
-	a.Logger.Info("generated OG image", "package", pkg.Type+"/"+pkg.Name)
-}
-
 // Query helpers
 
 type indexStats struct {
@@ -809,9 +763,8 @@ func queryPackages(ctx context.Context, db *sql.DB, f publicFilters, page, limit
 
 type packageDetail struct {
 	packageRow
-	VersionsJSON       string
-	OGImageGeneratedAt *string
-	UpdatedAt          string
+	VersionsJSON string
+	UpdatedAt    string
 }
 
 func packageExistsInactive(ctx context.Context, db *sql.DB, pkgType, name string) bool {
@@ -825,12 +778,12 @@ func queryPackageDetail(ctx context.Context, db *sql.DB, pkgType, name string) (
 	var p packageDetail
 	err := db.QueryRowContext(ctx, `SELECT type, name, COALESCE(display_name,''), COALESCE(description,''),
 		COALESCE(author,''), COALESCE(homepage,''), COALESCE(current_version,''),
-		downloads, active_installs, wp_packages_installs_total, versions_json, og_image_generated_at,
+		downloads, active_installs, wp_packages_installs_total, versions_json,
 		COALESCE(updated_at,'')
 		FROM packages WHERE type = ? AND name = ? AND is_active = 1`, pkgType, name,
 	).Scan(&p.Type, &p.Name, &p.DisplayName, &p.Description, &p.Author, &p.Homepage,
 		&p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpPackagesInstallsTotal,
-		&p.VersionsJSON, &p.OGImageGeneratedAt, &p.UpdatedAt)
+		&p.VersionsJSON, &p.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
