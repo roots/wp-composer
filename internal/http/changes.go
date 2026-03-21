@@ -85,7 +85,7 @@ func handleMetadataChanges(a *app.App) http.HandlerFunc {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		// Deduplicate: keep only the latest action per package (highest id wins
 		// because rows are ordered by id ASC, so later overwrites earlier)
