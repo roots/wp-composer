@@ -92,6 +92,7 @@ func NewRouter(a *app.App) http.Handler {
 	routeFunc("GET /roots-wordpress", handleRootsWordpress(a, tmpl))
 
 	routeFunc("POST /downloads", handleDownloads(a))
+	routeFunc("GET /metadata/changes.json", handleMetadataChanges(a))
 
 	// Serve static repository files from current build (local/dev mode)
 	repoRoot := filepath.Join("storage", "repository", "current")

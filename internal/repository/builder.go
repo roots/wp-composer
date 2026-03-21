@@ -27,6 +27,12 @@ type BuildOpts struct {
 	Logger           *slog.Logger
 }
 
+// PackageChange records a single package-level change for the metadata changes feed.
+type PackageChange struct {
+	Name   string // e.g. "wp-plugin/akismet"
+	Action string // "update" or "delete"
+}
+
 // BuildResult holds build metadata for manifest.json and the builds table.
 type BuildResult struct {
 	BuildID         string
@@ -40,6 +46,7 @@ type BuildResult struct {
 	RootHash        string
 	SyncRunID       *int64
 	BuildDir        string
+	ChangedPackages []PackageChange
 }
 
 // Build generates all Composer repository artifacts (p2/ only).
@@ -112,6 +119,7 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 	defer func() { _ = rows.Close() }()
 
 	var totalPkgs, changedPkgs, artifactCount int
+	var changedPackages []PackageChange
 
 	for rows.Next() {
 		var (
@@ -189,6 +197,7 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 			prevData, err := os.ReadFile(filepath.Join(opts.PreviousBuildDir, p2Rel))
 			if err != nil || !bytes.Equal(prevData, data) {
 				changedPkgs++
+				changedPackages = append(changedPackages, PackageChange{Name: composerName, Action: "update"})
 				opts.Logger.Info("package changed", "package", composerName)
 			}
 		} else {
@@ -204,14 +213,47 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 		return nil, fmt.Errorf("iterating packages: %w", err)
 	}
 
+	// Detect deleted packages (only for full builds, not partial)
+	isPartialBuild := opts.PackageName != "" || len(opts.PackageNames) > 0
+	if opts.PreviousBuildDir != "" && !isPartialBuild {
+		prevP2 := filepath.Join(opts.PreviousBuildDir, "p2")
+		if err := filepath.Walk(prevP2, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() || !strings.HasSuffix(path, ".json") {
+				return nil
+			}
+			rel, err := filepath.Rel(prevP2, path)
+			if err != nil {
+				return fmt.Errorf("rel path for %s: %w", path, err)
+			}
+			newPath := filepath.Join(buildDir, "p2", rel)
+			if _, err := os.Stat(newPath); os.IsNotExist(err) {
+				name := strings.TrimSuffix(filepath.ToSlash(rel), ".json")
+				changedPackages = append(changedPackages, PackageChange{Name: name, Action: "delete"})
+				opts.Logger.Info("package deleted", "package", name)
+			}
+			return nil
+		}); err != nil {
+			opts.Logger.Warn("delete detection walk failed", "error", err)
+		}
+	}
+
 	// Build packages.json
 	notifyBatch := "/downloads"
 	if opts.AppURL != "" {
 		notifyBatch = opts.AppURL + "/downloads"
 	}
 
+	metadataChangesURL := "/metadata/changes.json"
+	if opts.AppURL != "" {
+		metadataChangesURL = opts.AppURL + "/metadata/changes.json"
+	}
+
 	packagesJSON := map[string]any{
 		"metadata-url":               "/p2/%package%.json",
+		"metadata-changes-url":       metadataChangesURL,
 		"notify-batch":               notifyBatch,
 		"available-package-patterns": []string{"wp-plugin/*", "wp-theme/*"},
 		"warning":                    "Support for Composer 1 is no longer available. Upgrade to Composer 2. See https://blog.packagist.com/shutting-down-packagist-org-support-for-composer-1-x/",
@@ -269,6 +311,7 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 		RootHash:        rootHash,
 		SyncRunID:       snapshotID,
 		BuildDir:        buildDir,
+		ChangedPackages: changedPackages,
 	}
 
 	opts.Logger.Info("build complete",
