@@ -30,7 +30,6 @@ func setupTestDB(t *testing.T) *sql.DB {
 			author TEXT,
 			homepage TEXT,
 			slug_url TEXT,
-			provider_group TEXT,
 			versions_json TEXT NOT NULL DEFAULT '{}',
 			downloads INTEGER NOT NULL DEFAULT 0,
 			active_installs INTEGER NOT NULL DEFAULT 0,

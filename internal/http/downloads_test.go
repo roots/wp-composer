@@ -25,7 +25,7 @@ func setupTestApp(t *testing.T) *app.App {
 			id INTEGER PRIMARY KEY,
 			type TEXT NOT NULL CHECK(type IN ('plugin','theme')),
 			name TEXT NOT NULL, display_name TEXT, description TEXT, author TEXT,
-			homepage TEXT, slug_url TEXT, provider_group TEXT,
+			homepage TEXT, slug_url TEXT,
 			versions_json TEXT NOT NULL DEFAULT '{}',
 			downloads INTEGER NOT NULL DEFAULT 0, active_installs INTEGER NOT NULL DEFAULT 0,
 			current_version TEXT, rating REAL, num_ratings INTEGER NOT NULL DEFAULT 0,
