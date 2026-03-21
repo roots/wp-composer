@@ -3,11 +3,9 @@ package cmd
 import (
 	"fmt"
 	"path/filepath"
-	"sync/atomic"
 	"time"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
 
 	wppackagesgo "github.com/roots/wp-packages"
 	"github.com/roots/wp-packages/internal/auth"
@@ -16,7 +14,6 @@ import (
 	apphttp "github.com/roots/wp-packages/internal/http"
 	"github.com/roots/wp-packages/internal/packages"
 	"github.com/roots/wp-packages/internal/repository"
-	"github.com/roots/wp-packages/internal/wporg"
 )
 
 var devCmd = &cobra.Command{
@@ -67,71 +64,20 @@ func runDev(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("discover: %w", err)
 	}
 
-	// 4. Update seeded packages only
+	// 4. Update seeded packages
+	application.Logger.Info("dev: fetching package metadata")
+	updateCmd.SetContext(ctx)
+	_ = updateCmd.Flags().Set("type", "all")
+	_ = updateCmd.Flags().Set("force", "true")
+	if err := runUpdate(updateCmd, nil); err != nil {
+		return fmt.Errorf("update: %w", err)
+	}
+
 	seeds, err := packages.LoadSeeds(application.Config.Discovery.SeedsFile)
 	if err != nil {
 		return fmt.Errorf("loading seeds: %w", err)
 	}
 	seedSlugs := append(seeds.PopularPlugins, seeds.PopularThemes...)
-
-	application.Logger.Info("dev: fetching package metadata")
-	syncRun, err := packages.AllocateSyncRunID(ctx, application.DB)
-	if err != nil {
-		return fmt.Errorf("allocating sync run: %w", err)
-	}
-
-	pkgs, err := packages.GetPackagesNeedingUpdate(ctx, application.DB, packages.UpdateQueryOpts{
-		Type:  "all",
-		Names: seedSlugs,
-		Force: true,
-	})
-	if err != nil {
-		return fmt.Errorf("querying packages: %w", err)
-	}
-
-	client := wporg.NewClient(application.Config.Discovery, application.Logger)
-	var succeeded, failed atomic.Int64
-	g, gCtx := errgroup.WithContext(ctx)
-	g.SetLimit(concurrency)
-
-	for _, p := range pkgs {
-		p := p
-		g.Go(func() error {
-			var data map[string]any
-			var fetchErr error
-			if p.Type == "plugin" {
-				data, fetchErr = client.FetchPlugin(gCtx, p.Name)
-			} else {
-				data, fetchErr = client.FetchTheme(gCtx, p.Name)
-			}
-			if fetchErr != nil {
-				failed.Add(1)
-				return nil
-			}
-
-			pkg := packages.PackageFromAPIData(data, p.Type)
-			_, _ = pkg.NormalizeAndStoreVersions()
-
-			now := time.Now().UTC()
-			pkg.LastSyncedAt = &now
-			pkg.LastSyncRunID = &syncRun.RunID
-
-			if err := packages.UpsertPackage(gCtx, application.DB, pkg); err != nil {
-				failed.Add(1)
-				return nil
-			}
-			succeeded.Add(1)
-			return nil
-		})
-	}
-	_ = g.Wait()
-	_ = packages.FinishSyncRun(ctx, application.DB, syncRun.RowID, "completed", map[string]any{
-		"updated": succeeded.Load(), "failed": failed.Load(),
-	})
-	if err := packages.RefreshSiteStats(ctx, application.DB); err != nil {
-		return fmt.Errorf("refreshing package stats: %w", err)
-	}
-	application.Logger.Info("dev: metadata fetched", "updated", succeeded.Load(), "failed", failed.Load())
 
 	// 5. Build
 	application.Logger.Info("dev: building repository")
