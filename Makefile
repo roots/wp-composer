@@ -1,8 +1,9 @@
-.PHONY: build install dev test integration lint clean tailwind db-restore
+.PHONY: build install dev test integration lint clean tailwind db-restore venv
 
 VAULT_FILE ?= deploy/ansible/group_vars/production/vault.yml
 
 TAILWIND ?= ./bin/tailwindcss
+ANSIBLE_VENV ?= deploy/ansible/.venv
 
 # Download Tailwind standalone CLI if missing
 tailwind-install:
@@ -49,9 +50,17 @@ lint:
 	$(shell go env GOPATH)/bin/golangci-lint run ./...
 	go mod tidy -diff
 
+# Create Ansible virtualenv if missing
+venv:
+	@if [ ! -f $(ANSIBLE_VENV)/bin/ansible-vault ]; then \
+		echo "Creating Ansible virtualenv..."; \
+		python3 -m venv $(ANSIBLE_VENV); \
+		$(ANSIBLE_VENV)/bin/pip install -q -r deploy/ansible/requirements.txt; \
+	fi
+
 # Restore production database from R2 (reads secrets from Ansible vault)
-db-restore:
-	@eval $$(ansible-vault view --vault-password-file deploy/ansible/.vault_pass $(VAULT_FILE) | yq -r \
+db-restore: venv
+	@eval $$($(ANSIBLE_VENV)/bin/ansible-vault view --vault-password-file deploy/ansible/.vault_pass $(VAULT_FILE) | yq -r \
 		'"export LITESTREAM_BUCKET=\(.vault_r2_litestream_bucket) R2_ENDPOINT=\(.vault_r2_endpoint) R2_ACCESS_KEY_ID=\(.vault_r2_access_key_id) R2_SECRET_ACCESS_KEY=\(.vault_r2_secret_access_key)"') && \
 		export DB_PATH=./storage/wppackages.db && \
 		echo "LITESTREAM_BUCKET=$$LITESTREAM_BUCKET" && \
