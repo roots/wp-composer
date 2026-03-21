@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -90,6 +91,48 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		application.Logger.Warn("failed to record build in database", "error", dbErr)
 	}
 
+	// Record metadata changes for the changes feed
+	if len(result.ChangedPackages) > 0 {
+		if err := persistMetadataChanges(cmd.Context(), result); err != nil {
+			application.Logger.Warn("failed to record metadata changes", "error", err)
+		}
+	}
+
+	// Cleanup: delete changes older than 24 hours (runs every build regardless of changes)
+	cutoff := time.Now().Add(-24 * time.Hour).UnixMilli()
+	if _, err := application.DB.ExecContext(cmd.Context(),
+		`DELETE FROM metadata_changes WHERE timestamp < ?`, cutoff); err != nil {
+		application.Logger.Warn("failed to cleanup old metadata changes", "error", err)
+	}
+
+	return nil
+}
+
+func persistMetadataChanges(ctx context.Context, result *repository.BuildResult) error {
+	buildTimestamp := result.FinishedAt.UnixMilli()
+	tx, err := application.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	stmt, err := tx.PrepareContext(ctx,
+		`INSERT INTO metadata_changes (package_name, action, timestamp, build_id)
+		 VALUES (?, ?, ?, ?)`)
+	if err != nil {
+		return fmt.Errorf("prepare: %w", err)
+	}
+	defer func() { _ = stmt.Close() }()
+
+	for _, c := range result.ChangedPackages {
+		if _, err := stmt.ExecContext(ctx, c.Name, c.Action, buildTimestamp, result.BuildID); err != nil {
+			return fmt.Errorf("insert %s: %w", c.Name, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
 	return nil
 }
 

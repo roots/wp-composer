@@ -96,6 +96,11 @@ func TestSmoke(t *testing.T) {
 			t.Errorf("unexpected metadata-url: %v", pkgJSON["metadata-url"])
 		}
 
+		// metadata-changes-url
+		if mcu, ok := pkgJSON["metadata-changes-url"].(string); !ok || mcu != srv.URL+"/metadata/changes.json" {
+			t.Errorf("metadata-changes-url = %q, want %q", mcu, srv.URL+"/metadata/changes.json")
+		}
+
 		// providers-url and provider-includes should NOT exist (v1 removed)
 		if _, ok := pkgJSON["providers-url"]; ok {
 			t.Error("packages.json should not contain providers-url")
