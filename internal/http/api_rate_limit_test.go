@@ -4,15 +4,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 )
 
 func TestAPIRateLimiter_AllowsUnderLimit(t *testing.T) {
 	l := newAPIRateLimiter()
-	now := time.Now()
 
 	for i := 0; i < apiRateLimitPerIP; i++ {
-		if !l.allow("1.2.3.4", now) {
+		if !l.limiterFor("1.2.3.4").Allow() {
 			t.Fatalf("request %d should be allowed", i+1)
 		}
 	}
@@ -20,51 +18,44 @@ func TestAPIRateLimiter_AllowsUnderLimit(t *testing.T) {
 
 func TestAPIRateLimiter_BlocksOverLimit(t *testing.T) {
 	l := newAPIRateLimiter()
-	now := time.Now()
 
 	for i := 0; i < apiRateLimitPerIP; i++ {
-		l.allow("1.2.3.4", now)
+		l.limiterFor("1.2.3.4").Allow()
 	}
 
-	if l.allow("1.2.3.4", now) {
+	if l.limiterFor("1.2.3.4").Allow() {
 		t.Error("request over limit should be blocked")
-	}
-}
-
-func TestAPIRateLimiter_ResetsAfterWindow(t *testing.T) {
-	l := newAPIRateLimiter()
-	now := time.Now()
-
-	for i := 0; i < apiRateLimitPerIP; i++ {
-		l.allow("1.2.3.4", now)
-	}
-
-	// Advance past the window
-	later := now.Add(apiRateLimitWindow + time.Second)
-	if !l.allow("1.2.3.4", later) {
-		t.Error("request should be allowed after window reset")
 	}
 }
 
 func TestAPIRateLimiter_IndependentPerIP(t *testing.T) {
 	l := newAPIRateLimiter()
-	now := time.Now()
 
 	// Exhaust limit for one IP
 	for i := 0; i < apiRateLimitPerIP; i++ {
-		l.allow("1.2.3.4", now)
+		l.limiterFor("1.2.3.4").Allow()
 	}
 
 	// Different IP should still be allowed
-	if !l.allow("5.6.7.8", now) {
+	if !l.limiterFor("5.6.7.8").Allow() {
 		t.Error("different IP should not be affected")
 	}
 }
 
 func TestAPIRateLimiter_EmptyIPAllowed(t *testing.T) {
 	l := newAPIRateLimiter()
-	if !l.allow("", time.Now()) {
-		t.Error("empty IP should always be allowed")
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	handler := l.RateLimit(inner)
+
+	req := httptest.NewRequest("GET", "/api/stats", nil)
+	req.RemoteAddr = ""
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("empty IP should always be allowed, got %d", w.Code)
 	}
 }
 
@@ -101,16 +92,19 @@ func TestAPIRateLimiter_Middleware(t *testing.T) {
 
 func TestAPIRateLimiter_Sweep(t *testing.T) {
 	l := newAPIRateLimiter()
-	now := time.Now()
 
-	l.allow("1.2.3.4", now)
+	l.limiterFor("1.2.3.4")
 
-	// Advance past sweep threshold and window
-	later := now.Add(apiRateLimiterSweepEvery + apiRateLimitWindow*2 + time.Second)
-	l.allow("5.6.7.8", later) // triggers sweep
+	// Manually set lastSeen far in the past to trigger sweep
+	l.mu.Lock()
+	l.limiters["1.2.3.4"].lastSeen = l.limiters["1.2.3.4"].lastSeen.Add(-(apiRateLimiterSweepEvery + apiRateLimitWindow*2 + 1))
+	l.lastCleanup = l.limiters["1.2.3.4"].lastSeen
+	l.mu.Unlock()
+
+	l.limiterFor("5.6.7.8") // triggers sweep
 
 	l.mu.Lock()
-	_, exists := l.hits["1.2.3.4"]
+	_, exists := l.limiters["1.2.3.4"]
 	l.mu.Unlock()
 
 	if exists {

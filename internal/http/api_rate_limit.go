@@ -4,69 +4,49 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 const (
-	apiRateLimitPerIP = 10            // requests per window per IP
-	apiRateLimitWindow = 1 * time.Minute
+	apiRateLimitPerIP        = 10 // burst size per IP
+	apiRateLimitWindow       = 1 * time.Minute
 	apiRateLimiterSweepEvery = 5 * time.Minute
 )
 
 type apiRateLimiter struct {
 	mu          sync.Mutex
-	hits        map[string]*apiHitState
+	limiters    map[string]*apiLimiterEntry
 	lastCleanup time.Time
 }
 
-type apiHitState struct {
-	count       int
-	windowStart time.Time
-	lastSeen    time.Time
+type apiLimiterEntry struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
 }
 
 func newAPIRateLimiter() *apiRateLimiter {
 	return &apiRateLimiter{
-		hits: make(map[string]*apiHitState),
+		limiters: make(map[string]*apiLimiterEntry),
 	}
 }
 
-// allow checks whether the IP is within its rate limit and, if so, increments
-// the counter. Returns true when the request should proceed.
-func (l *apiRateLimiter) allow(ip string, now time.Time) bool {
-	if ip == "" {
-		return true
-	}
-
+func (l *apiRateLimiter) limiterFor(ip string) *rate.Limiter {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	l.sweepLocked(now)
+	l.sweepLocked(time.Now())
 
-	state, ok := l.hits[ip]
+	entry, ok := l.limiters[ip]
 	if !ok {
-		l.hits[ip] = &apiHitState{
-			count:       1,
-			windowStart: now,
-			lastSeen:    now,
-		}
-		return true
+		// Refill rate: apiRateLimitPerIP tokens over apiRateLimitWindow.
+		limiter := rate.NewLimiter(rate.Every(apiRateLimitWindow/apiRateLimitPerIP), apiRateLimitPerIP)
+		l.limiters[ip] = &apiLimiterEntry{limiter: limiter, lastSeen: time.Now()}
+		return limiter
 	}
 
-	state.lastSeen = now
-
-	// Reset window if it has elapsed.
-	if now.Sub(state.windowStart) > apiRateLimitWindow {
-		state.count = 1
-		state.windowStart = now
-		return true
-	}
-
-	if state.count >= apiRateLimitPerIP {
-		return false
-	}
-
-	state.count++
-	return true
+	entry.lastSeen = time.Now()
+	return entry.limiter
 }
 
 func (l *apiRateLimiter) sweepLocked(now time.Time) {
@@ -74,9 +54,9 @@ func (l *apiRateLimiter) sweepLocked(now time.Time) {
 		return
 	}
 
-	for ip, state := range l.hits {
-		if now.Sub(state.lastSeen) > apiRateLimitWindow*2 {
-			delete(l.hits, ip)
+	for ip, entry := range l.limiters {
+		if now.Sub(entry.lastSeen) > apiRateLimitWindow*2 {
+			delete(l.limiters, ip)
 		}
 	}
 	l.lastCleanup = now
@@ -86,7 +66,7 @@ func (l *apiRateLimiter) sweepLocked(now time.Time) {
 func (l *apiRateLimiter) RateLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip := r.RemoteAddr
-		if !l.allow(ip, time.Now()) {
+		if ip != "" && !l.limiterFor(ip).Allow() {
 			w.Header().Set("Retry-After", "60")
 			http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
 			return
