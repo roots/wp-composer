@@ -5,8 +5,12 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"sync"
+	"sync/atomic"
 	"time"
 )
+
+const uploadConcurrency = 20
 
 // PackageOGRow holds the data needed for OG image generation decisions.
 type PackageOGRow struct {
@@ -45,8 +49,8 @@ func FormatInstalls(n int64) string {
 
 // getPackagesNeedingOG returns packages that need OG image generation:
 // - Never generated (og_image_generated_at IS NULL)
-// - Install counts changed since last generation
-func getPackagesNeedingOG(ctx context.Context, db *sql.DB, limit int) ([]PackageOGRow, error) {
+// - Composer install count changed since last generation
+func getPackagesNeedingOG(ctx context.Context, db *sql.DB) ([]PackageOGRow, error) {
 	q := `SELECT id, type, name, COALESCE(display_name, ''), COALESCE(description, ''),
 		COALESCE(current_version, ''), active_installs, wp_packages_installs_total,
 		og_image_generated_at, og_image_installs, og_image_wp_installs
@@ -54,13 +58,11 @@ func getPackagesNeedingOG(ctx context.Context, db *sql.DB, limit int) ([]Package
 		WHERE is_active = 1
 		AND (
 			og_image_generated_at IS NULL
-			OR active_installs != og_image_installs
 			OR wp_packages_installs_total != og_image_wp_installs
 		)
-		ORDER BY active_installs DESC
-		LIMIT ?`
+		ORDER BY active_installs DESC`
 
-	rows, err := db.QueryContext(ctx, q, limit)
+	rows, err := db.QueryContext(ctx, q)
 	if err != nil {
 		return nil, fmt.Errorf("querying packages for OG: %w", err)
 	}
@@ -100,98 +102,10 @@ type GenerateResult struct {
 	Errors    int
 }
 
-// ImageRenderer generates a PNG for the given package data.
-type ImageRenderer func(PackageData) ([]byte, error)
-
-// GenerateNew generates OG images for packages that have never had one.
-func GenerateNew(ctx context.Context, db *sql.DB, uploader *Uploader, render ImageRenderer, logger *slog.Logger) (GenerateResult, error) {
-	if render == nil {
-		render = GeneratePackageImage
-	}
-
-	q := `SELECT id, type, name, COALESCE(display_name, ''), COALESCE(description, ''),
-		COALESCE(current_version, ''), active_installs, wp_packages_installs_total
-		FROM packages
-		WHERE is_active = 1 AND og_image_generated_at IS NULL
-		ORDER BY active_installs DESC`
-
-	rows, err := db.QueryContext(ctx, q)
-	if err != nil {
-		return GenerateResult{}, fmt.Errorf("querying new packages for OG: %w", err)
-	}
-	defer func() { _ = rows.Close() }()
-
-	type newPkg struct {
-		id, installs, wpInstalls                         int64
-		pkgType, name, displayName, description, version string
-	}
-
-	var pkgs []newPkg
-	for rows.Next() {
-		var p newPkg
-		if err := rows.Scan(&p.id, &p.pkgType, &p.name, &p.displayName, &p.description, &p.version, &p.installs, &p.wpInstalls); err != nil {
-			return GenerateResult{}, fmt.Errorf("scanning OG row: %w", err)
-		}
-		pkgs = append(pkgs, p)
-	}
-	if err := rows.Err(); err != nil {
-		return GenerateResult{}, err
-	}
-
-	var result GenerateResult
-	for _, pkg := range pkgs {
-		if ctx.Err() != nil {
-			return result, ctx.Err()
-		}
-
-		data := PackageData{
-			DisplayName:        pkg.displayName,
-			Name:               pkg.name,
-			Type:               pkg.pkgType,
-			CurrentVersion:     pkg.version,
-			Description:        pkg.description,
-			ActiveInstalls:     FormatInstalls(pkg.installs),
-			WpPackagesInstalls: FormatInstalls(pkg.wpInstalls),
-		}
-
-		if err := generateAndUpload(ctx, render, uploader, db, pkg.id, pkg.pkgType, pkg.name, data, pkg.installs, pkg.wpInstalls, logger); err != nil {
-			result.Errors++
-			continue
-		}
-
-		result.Generated++
-		if result.Generated%100 == 0 {
-			logger.Info("OG generation progress", "generated", result.Generated)
-		}
-	}
-
-	return result, nil
-}
-
-func generateAndUpload(ctx context.Context, render ImageRenderer, uploader *Uploader, db *sql.DB, id int64, pkgType, name string, data PackageData, installs, wpInstalls int64, logger *slog.Logger) error {
-	pngBytes, err := render(data)
-	if err != nil {
-		logger.Error("generating OG image", "package", name, "error", err)
-		return err
-	}
-
-	key := fmt.Sprintf("social/%s/%s.png", pkgType, name)
-	if err := uploader.Upload(ctx, key, pngBytes); err != nil {
-		logger.Error("uploading OG image", "package", name, "error", err)
-		return err
-	}
-
-	if err := markOGGenerated(ctx, db, id, installs, wpInstalls); err != nil {
-		logger.Error("marking OG generated", "package", name, "error", err)
-		return err
-	}
-
-	return nil
-}
-
 // GenerateAll generates OG images for all packages that need them.
-func GenerateAll(ctx context.Context, db *sql.DB, uploader *Uploader, limit int, logger *slog.Logger) (GenerateResult, error) {
-	pkgs, err := getPackagesNeedingOG(ctx, db, limit)
+// Rendering and uploading run concurrently; DB writes stay serial.
+func GenerateAll(ctx context.Context, db *sql.DB, uploader *Uploader, logger *slog.Logger) (GenerateResult, error) {
+	pkgs, err := getPackagesNeedingOG(ctx, db)
 	if err != nil {
 		return GenerateResult{}, err
 	}
@@ -201,57 +115,100 @@ func GenerateAll(ctx context.Context, db *sql.DB, uploader *Uploader, limit int,
 		return GenerateResult{}, nil
 	}
 
-	logger.Info("generating OG images", "packages", len(pkgs))
-
-	var result GenerateResult
+	// Filter out packages whose formatted display values haven't changed.
+	var work []PackageOGRow
+	var skipped int
 	for _, pkg := range pkgs {
-		if ctx.Err() != nil {
-			return result, ctx.Err()
-		}
-
-		// Skip if the formatted display values haven't changed
 		if pkg.OGImageGeneratedAt != nil &&
-			FormatInstalls(pkg.ActiveInstalls) == FormatInstalls(pkg.OGImageInstalls) &&
 			FormatInstalls(pkg.WpPackagesInstallsTotal) == FormatInstalls(pkg.OGImageWpInstalls) {
-			result.Skipped++
+			skipped++
 			continue
 		}
-
-		data := PackageData{
-			DisplayName:        pkg.DisplayName,
-			Name:               pkg.Name,
-			Type:               pkg.Type,
-			CurrentVersion:     pkg.CurrentVersion,
-			Description:        pkg.Description,
-			ActiveInstalls:     FormatInstalls(pkg.ActiveInstalls),
-			WpPackagesInstalls: FormatInstalls(pkg.WpPackagesInstallsTotal),
-		}
-
-		pngBytes, err := GeneratePackageImage(data)
-		if err != nil {
-			logger.Error("generating OG image", "package", pkg.Name, "error", err)
-			result.Errors++
-			continue
-		}
-
-		key := fmt.Sprintf("social/%s/%s.png", pkg.Type, pkg.Name)
-		if err := uploader.Upload(ctx, key, pngBytes); err != nil {
-			logger.Error("uploading OG image", "package", pkg.Name, "error", err)
-			result.Errors++
-			continue
-		}
-
-		if err := markOGGenerated(ctx, db, pkg.ID, pkg.ActiveInstalls, pkg.WpPackagesInstallsTotal); err != nil {
-			logger.Error("marking OG generated", "package", pkg.Name, "error", err)
-			result.Errors++
-			continue
-		}
-
-		result.Generated++
-		if result.Generated%100 == 0 {
-			logger.Info("OG generation progress", "generated", result.Generated, "total", len(pkgs))
-		}
+		work = append(work, pkg)
 	}
 
-	return result, nil
+	logger.Info("generating OG images", "packages", len(work), "skipped", skipped)
+
+	if len(work) == 0 {
+		return GenerateResult{Skipped: skipped}, nil
+	}
+
+	type dbUpdate struct {
+		id, installs, wpInstalls int64
+	}
+
+	var generated, errCount atomic.Int64
+	ch := make(chan PackageOGRow)
+	updates := make(chan dbUpdate, uploadConcurrency*2)
+
+	// Render + upload concurrently.
+	var wg sync.WaitGroup
+	for range uploadConcurrency {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for pkg := range ch {
+				data := PackageData{
+					DisplayName:        pkg.DisplayName,
+					Name:               pkg.Name,
+					Type:               pkg.Type,
+					CurrentVersion:     pkg.CurrentVersion,
+					Description:        pkg.Description,
+					ActiveInstalls:     FormatInstalls(pkg.ActiveInstalls),
+					WpPackagesInstalls: FormatInstalls(pkg.WpPackagesInstallsTotal),
+				}
+
+				pngBytes, err := GeneratePackageImage(data)
+				if err != nil {
+					logger.Error("generating OG image", "package", pkg.Name, "error", err)
+					errCount.Add(1)
+					continue
+				}
+
+				key := fmt.Sprintf("social/%s/%s.png", pkg.Type, pkg.Name)
+				if err := uploader.Upload(ctx, key, pngBytes); err != nil {
+					logger.Error("uploading OG image", "package", pkg.Name, "error", err)
+					errCount.Add(1)
+					continue
+				}
+
+				updates <- dbUpdate{pkg.ID, pkg.ActiveInstalls, pkg.WpPackagesInstallsTotal}
+
+				if n := generated.Add(1); n%500 == 0 {
+					logger.Info("OG generation progress", "generated", n, "total", len(work))
+				}
+			}
+		}()
+	}
+
+	// Serial DB writer to avoid SQLite contention.
+	var dbErrors atomic.Int64
+	var dbWg sync.WaitGroup
+	dbWg.Add(1)
+	go func() {
+		defer dbWg.Done()
+		for u := range updates {
+			if err := markOGGenerated(ctx, db, u.id, u.installs, u.wpInstalls); err != nil {
+				logger.Error("marking OG generated", "id", u.id, "error", err)
+				dbErrors.Add(1)
+			}
+		}
+	}()
+
+	for _, pkg := range work {
+		if ctx.Err() != nil {
+			break
+		}
+		ch <- pkg
+	}
+	close(ch)
+	wg.Wait()
+	close(updates)
+	dbWg.Wait()
+
+	return GenerateResult{
+		Generated: int(generated.Load()),
+		Skipped:   skipped,
+		Errors:    int(errCount.Load() + dbErrors.Load()),
+	}, nil
 }

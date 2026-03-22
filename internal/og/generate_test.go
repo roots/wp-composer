@@ -14,10 +14,6 @@ func testLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 }
 
-func stubRenderer(_ PackageData) ([]byte, error) {
-	return []byte("fake-png"), nil
-}
-
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 
@@ -68,7 +64,7 @@ func markGenerated(t *testing.T, database *sql.DB, name string, installs, wpInst
 	}
 }
 
-func TestGenerateNew_GeneratesForNewPackages(t *testing.T) {
+func TestGenerateAll_GeneratesNewPackages(t *testing.T) {
 	database := setupTestDB(t)
 	ctx := context.Background()
 	uploader := &Uploader{localDir: t.TempDir()}
@@ -76,9 +72,9 @@ func TestGenerateNew_GeneratesForNewPackages(t *testing.T) {
 	insertPackage(t, database, "plugin", "akismet", "Akismet", "Anti-spam plugin", "6.0.0", 5000000, 100)
 	insertPackage(t, database, "plugin", "woocommerce", "WooCommerce", "eCommerce plugin", "9.6.2", 5000000, 200)
 
-	result, err := GenerateNew(ctx, database, uploader, stubRenderer, testLogger())
+	result, err := GenerateAll(ctx, database, uploader, testLogger())
 	if err != nil {
-		t.Fatalf("GenerateNew: %v", err)
+		t.Fatalf("GenerateAll: %v", err)
 	}
 
 	if result.Generated != 2 {
@@ -95,7 +91,7 @@ func TestGenerateNew_GeneratesForNewPackages(t *testing.T) {
 	}
 }
 
-func TestGenerateNew_SkipsAlreadyGenerated(t *testing.T) {
+func TestGenerateAll_SkipsUnchanged(t *testing.T) {
 	database := setupTestDB(t)
 	ctx := context.Background()
 	uploader := &Uploader{localDir: t.TempDir()}
@@ -103,29 +99,45 @@ func TestGenerateNew_SkipsAlreadyGenerated(t *testing.T) {
 	insertPackage(t, database, "plugin", "akismet", "Akismet", "Anti-spam plugin", "6.0.0", 5000000, 100)
 	markGenerated(t, database, "akismet", 5000000, 100)
 
-	insertPackage(t, database, "plugin", "woocommerce", "WooCommerce", "eCommerce plugin", "9.6.2", 5000000, 200)
-
-	result, err := GenerateNew(ctx, database, uploader, stubRenderer, testLogger())
+	result, err := GenerateAll(ctx, database, uploader, testLogger())
 	if err != nil {
-		t.Fatalf("GenerateNew: %v", err)
+		t.Fatalf("GenerateAll: %v", err)
 	}
 
-	if result.Generated != 1 {
-		t.Errorf("expected 1 generated (woocommerce only), got %d", result.Generated)
+	if result.Generated != 0 {
+		t.Errorf("expected 0 generated, got %d", result.Generated)
 	}
 }
 
-func TestGenerateNew_NothingToDo(t *testing.T) {
+func TestGenerateAll_RegeneratesOnComposerInstallChange(t *testing.T) {
+	database := setupTestDB(t)
+	ctx := context.Background()
+	uploader := &Uploader{localDir: t.TempDir()}
+
+	insertPackage(t, database, "plugin", "akismet", "Akismet", "Anti-spam plugin", "6.0.0", 5000000, 500)
+	markGenerated(t, database, "akismet", 5000000, 100) // composer installs differ
+
+	result, err := GenerateAll(ctx, database, uploader, testLogger())
+	if err != nil {
+		t.Fatalf("GenerateAll: %v", err)
+	}
+
+	if result.Generated != 1 {
+		t.Errorf("expected 1 generated, got %d", result.Generated)
+	}
+}
+
+func TestGenerateAll_IgnoresWPInstallChange(t *testing.T) {
 	database := setupTestDB(t)
 	ctx := context.Background()
 	uploader := &Uploader{localDir: t.TempDir()}
 
 	insertPackage(t, database, "plugin", "akismet", "Akismet", "Anti-spam plugin", "6.0.0", 5000000, 100)
-	markGenerated(t, database, "akismet", 5000000, 100)
+	markGenerated(t, database, "akismet", 4000000, 100) // WP installs differ, composer same
 
-	result, err := GenerateNew(ctx, database, uploader, stubRenderer, testLogger())
+	result, err := GenerateAll(ctx, database, uploader, testLogger())
 	if err != nil {
-		t.Fatalf("GenerateNew: %v", err)
+		t.Fatalf("GenerateAll: %v", err)
 	}
 
 	if result.Generated != 0 {

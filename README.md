@@ -4,7 +4,7 @@
 [![Follow Roots](https://img.shields.io/badge/follow%20@rootswp-1da1f2?logo=twitter&logoColor=ffffff&message=&style=flat-square)](https://twitter.com/rootswp)
 [![Sponsor Roots](https://img.shields.io/badge/sponsor%20roots-525ddc?logo=github&style=flat-square&logoColor=ffffff&message=)](https://github.com/sponsors/roots)
 
-A modern, community-funded Composer repository for WordPress plugins and themes.
+Manage your WordPress plugins and themes with Composer.
 
 ## Support us
 
@@ -13,6 +13,25 @@ Roots is an independent open source org, supported only by developers like you. 
 ### Sponsors
 
 <a href="https://carrot.com/"><img src="https://cdn.roots.io/app/uploads/carrot.svg" alt="Carrot" width="120" height="90"></a> <a href="https://wordpress.com/"><img src="https://cdn.roots.io/app/uploads/wordpress.svg" alt="WordPress.com" width="120" height="90"></a> <a href="https://www.itineris.co.uk/"><img src="https://cdn.roots.io/app/uploads/itineris.svg" alt="Itineris" width="120" height="90"></a> <a href="https://kinsta.com/?kaid=OFDHAJIXUDIV"><img src="https://cdn.roots.io/app/uploads/kinsta.svg" alt="Kinsta" width="120" height="90"></a>
+
+## [WP Packages vs WPackagist](https://wp-packages.org/wp-packages-vs-wpackagist)
+
+|  | WP Packages | WPackagist |
+|---|---|---|
+| Package naming | `wp-plugin/*` `wp-theme/*` | `wpackagist-plugin/*` `wpackagist-theme/*` |
+| Package metadata | Includes authors, description, homepage, and support links | Missing — [requested since 2020](https://github.com/outlandishideas/wpackagist/issues/305) |
+| Update frequency | Every 5 minutes | ~1.5 hours (estimated) |
+| Composer v2 `metadata-url` | ✅ | ❌ |
+| Composer v2 `metadata-changes-url` | ✅ | ❌ |
+
+### Composer resolve times
+
+Cold resolve (no cache) — lower is better:
+
+| Plugins | WP Packages | WPackagist | Speedup |
+|---|---|---|---|
+| 10 plugins | 0.7s | 12.3s | 17x faster |
+| 20 plugins | 1.1s | 19.0s | 17x faster |
 
 ## Package Naming
 
