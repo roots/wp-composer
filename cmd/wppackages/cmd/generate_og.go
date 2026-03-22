@@ -5,15 +5,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var generateOGLimit int
-
 var generateOGCmd = &cobra.Command{
 	Use:   "generate-og",
 	Short: "Generate OG images for packages that need them",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		uploader := og.NewUploader(application.Config.R2)
 
-		result, err := og.GenerateAll(cmd.Context(), application.DB, uploader, generateOGLimit, application.Logger)
+		result, err := og.GenerateAll(cmd.Context(), application.DB, uploader, application.Logger)
 		if err != nil {
 			return err
 		}
@@ -29,6 +27,5 @@ var generateOGCmd = &cobra.Command{
 
 func init() {
 	appCommand(generateOGCmd)
-	generateOGCmd.Flags().IntVar(&generateOGLimit, "limit", 1000, "max packages to generate")
 	rootCmd.AddCommand(generateOGCmd)
 }

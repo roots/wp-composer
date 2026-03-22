@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/roots/wp-packages/internal/deploy"
-	"github.com/roots/wp-packages/internal/og"
 	"github.com/spf13/cobra"
 )
 
@@ -171,24 +170,14 @@ func executePipelineSteps(cmd *cobra.Command, ctx context.Context, skipDiscover,
 	pipelineStepDurations.Build = intPtr(int(time.Since(stepStart).Seconds()))
 
 	if !skipDeploy {
-		application.Logger.Info("pipeline: generating OG images for new packages")
-		ogUploader := og.NewUploader(application.Config.R2)
-		ogResult, err := og.GenerateNew(ctx, application.DB, ogUploader, nil, application.Logger)
-		if err != nil {
-			application.Logger.Warn("pipeline: OG generation failed", "error", err)
-		} else if ogResult.Generated > 0 || ogResult.Errors > 0 {
-			application.Logger.Info("pipeline: OG generation done",
-				"generated", ogResult.Generated, "errors", ogResult.Errors)
-		}
-
 		application.Logger.Info("pipeline: running deploy")
 		deployCmd.SetContext(ctx)
 		stepStart = time.Now()
-		err = runDeploy(deployCmd, nil)
+		deployErr := runDeploy(deployCmd, nil)
 		pipelineStepDurations.Deploy = intPtr(int(time.Since(stepStart).Seconds()))
 		pipelineStepDurations.R2Upload = deployR2SyncSeconds
-		if err != nil {
-			return fmt.Errorf("deploy: %w", err)
+		if deployErr != nil {
+			return fmt.Errorf("deploy: %w", deployErr)
 		}
 
 		// Clean up old builds after a successful deploy.
