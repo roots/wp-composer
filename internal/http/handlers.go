@@ -221,7 +221,10 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 
 		versions := parseVersions(pkg)
 
-		ogKey := "social/" + pkg.Type + "/" + pkg.Name + ".png"
+		var ogImage string
+		if pkg.OGImageGeneratedAt != nil {
+			ogImage = ogImageURL(a.Config, "social/"+pkg.Type+"/"+pkg.Name+".png")
+		}
 
 		displayName := pkg.Name
 		if pkg.DisplayName != "" {
@@ -286,7 +289,7 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			"Versions": versions,
 			"AppURL":   a.Config.AppURL,
 			"CDNURL":   a.Config.R2.CDNPublicURL,
-			"OGImage":  ogImageURL(a.Config, ogKey),
+			"OGImage":  ogImage,
 			"JSONLD":   []any{softwareApp, breadcrumbs},
 		})
 	}
@@ -763,8 +766,9 @@ func queryPackages(ctx context.Context, db *sql.DB, f publicFilters, page, limit
 
 type packageDetail struct {
 	packageRow
-	VersionsJSON string
-	UpdatedAt    string
+	VersionsJSON       string
+	UpdatedAt          string
+	OGImageGeneratedAt *string
 }
 
 func packageExistsInactive(ctx context.Context, db *sql.DB, pkgType, name string) bool {
@@ -779,11 +783,11 @@ func queryPackageDetail(ctx context.Context, db *sql.DB, pkgType, name string) (
 	err := db.QueryRowContext(ctx, `SELECT type, name, COALESCE(display_name,''), COALESCE(description,''),
 		COALESCE(author,''), COALESCE(homepage,''), COALESCE(current_version,''),
 		downloads, active_installs, wp_packages_installs_total, versions_json,
-		COALESCE(updated_at,'')
+		COALESCE(updated_at,''), og_image_generated_at
 		FROM packages WHERE type = ? AND name = ? AND is_active = 1`, pkgType, name,
 	).Scan(&p.Type, &p.Name, &p.DisplayName, &p.Description, &p.Author, &p.Homepage,
 		&p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpPackagesInstallsTotal,
-		&p.VersionsJSON, &p.UpdatedAt)
+		&p.VersionsJSON, &p.UpdatedAt, &p.OGImageGeneratedAt)
 	if err != nil {
 		return nil, err
 	}
