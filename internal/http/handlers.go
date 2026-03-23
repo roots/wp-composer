@@ -221,7 +221,10 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 
 		versions := parseVersions(pkg)
 
-		ogKey := "social/" + pkg.Type + "/" + pkg.Name + ".png"
+		var ogImage string
+		if pkg.OGImageGeneratedAt != nil {
+			ogImage = ogImageURL(a.Config, "social/"+pkg.Type+"/"+pkg.Name+".png")
+		}
 
 		displayName := pkg.Name
 		if pkg.DisplayName != "" {
@@ -286,7 +289,7 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			"Versions": versions,
 			"AppURL":   a.Config.AppURL,
 			"CDNURL":   a.Config.R2.CDNPublicURL,
-			"OGImage":  ogImageURL(a.Config, ogKey),
+			"OGImage":  ogImage,
 			"JSONLD":   []any{softwareApp, breadcrumbs},
 		})
 	}
@@ -299,12 +302,13 @@ func handleAdminDashboard(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		// Get current build — set it on the Stats struct
 		currentBuild, _ := deploy.CurrentBuildID("storage/repository")
 		s := stats["Stats"].(struct {
-			TotalPackages int64
-			ActivePlugins int64
-			ActiveThemes  int64
-			TotalInstalls int64
-			Installs30d   int64
-			CurrentBuild  string
+			TotalPackages  int64
+			ActivePlugins  int64
+			ActiveThemes   int64
+			TotalInstalls  int64
+			Installs30d    int64
+			CurrentBuild   string
+			StatsUpdatedAt string
 		})
 		s.CurrentBuild = currentBuild
 		stats["Stats"] = s
@@ -763,8 +767,9 @@ func queryPackages(ctx context.Context, db *sql.DB, f publicFilters, page, limit
 
 type packageDetail struct {
 	packageRow
-	VersionsJSON string
-	UpdatedAt    string
+	VersionsJSON       string
+	UpdatedAt          string
+	OGImageGeneratedAt *string
 }
 
 func packageExistsInactive(ctx context.Context, db *sql.DB, pkgType, name string) bool {
@@ -779,11 +784,11 @@ func queryPackageDetail(ctx context.Context, db *sql.DB, pkgType, name string) (
 	err := db.QueryRowContext(ctx, `SELECT type, name, COALESCE(display_name,''), COALESCE(description,''),
 		COALESCE(author,''), COALESCE(homepage,''), COALESCE(current_version,''),
 		downloads, active_installs, wp_packages_installs_total, versions_json,
-		COALESCE(updated_at,'')
+		COALESCE(updated_at,''), og_image_generated_at
 		FROM packages WHERE type = ? AND name = ? AND is_active = 1`, pkgType, name,
 	).Scan(&p.Type, &p.Name, &p.DisplayName, &p.Description, &p.Author, &p.Homepage,
 		&p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpPackagesInstallsTotal,
-		&p.VersionsJSON, &p.UpdatedAt)
+		&p.VersionsJSON, &p.UpdatedAt, &p.OGImageGeneratedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -818,27 +823,29 @@ func parseVersions(pkg *packageDetail) []versionRow {
 func queryDashboardStats(ctx context.Context, db *sql.DB) map[string]any {
 	stats := map[string]any{
 		"Stats": struct {
-			TotalPackages int64
-			ActivePlugins int64
-			ActiveThemes  int64
-			TotalInstalls int64
-			Installs30d   int64
-			CurrentBuild  string
+			TotalPackages  int64
+			ActivePlugins  int64
+			ActiveThemes   int64
+			TotalInstalls  int64
+			Installs30d    int64
+			CurrentBuild   string
+			StatsUpdatedAt string
 		}{},
 	}
 
 	var s struct {
-		TotalPackages int64
-		ActivePlugins int64
-		ActiveThemes  int64
-		TotalInstalls int64
-		Installs30d   int64
-		CurrentBuild  string
+		TotalPackages  int64
+		ActivePlugins  int64
+		ActiveThemes   int64
+		TotalInstalls  int64
+		Installs30d    int64
+		CurrentBuild   string
+		StatsUpdatedAt string
 	}
 
 	_ = db.QueryRowContext(ctx, `SELECT active_plugins, active_themes, active_plugins + active_themes,
-		plugin_installs + theme_installs, installs_30d FROM package_stats WHERE id = 1`).Scan(
-		&s.ActivePlugins, &s.ActiveThemes, &s.TotalPackages, &s.TotalInstalls, &s.Installs30d)
+		plugin_installs + theme_installs, installs_30d, COALESCE(updated_at,'') FROM package_stats WHERE id = 1`).Scan(
+		&s.ActivePlugins, &s.ActiveThemes, &s.TotalPackages, &s.TotalInstalls, &s.Installs30d, &s.StatsUpdatedAt)
 
 	stats["Stats"] = s
 	return stats

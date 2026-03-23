@@ -26,6 +26,12 @@ var adminCreateCmd = &cobra.Command{
 			return fmt.Errorf("--email and --name are required")
 		}
 
+		// Idempotent: if user already exists, log and return
+		if _, err := auth.GetUserByEmail(cmd.Context(), application.DB, email); err == nil {
+			application.Logger.Info("admin user already exists", "email", email)
+			return nil
+		}
+
 		password, err := requirePasswordFromStdin(cmd)
 		if err != nil {
 			return err

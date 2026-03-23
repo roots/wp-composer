@@ -271,8 +271,8 @@ func TestGetPackagesNeedingUpdate(t *testing.T) {
 	lc := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	_ = UpsertShellPackage(ctx, database, "plugin", "needs-update", &lc)
 
-	// Package already synced with matching date — does not need update
-	synced := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
+	// Package already synced recently — does not need update
+	synced := time.Now().UTC()
 	pkg := &Package{
 		Type:          "plugin",
 		Name:          "up-to-date",
