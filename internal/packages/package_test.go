@@ -271,8 +271,8 @@ func TestGetPackagesNeedingUpdate(t *testing.T) {
 	lc := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	_ = UpsertShellPackage(ctx, database, "plugin", "needs-update", &lc)
 
-	// Package already synced with matching date — does not need update
-	synced := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
+	// Package already synced recently — does not need update
+	synced := time.Now().UTC()
 	pkg := &Package{
 		Type:          "plugin",
 		Name:          "up-to-date",
@@ -292,6 +292,33 @@ func TestGetPackagesNeedingUpdate(t *testing.T) {
 	}
 	if pkgs[0].Name != "needs-update" {
 		t.Errorf("got name=%s, want needs-update", pkgs[0].Name)
+	}
+
+	// Package synced more than 7 days ago — should be picked up for periodic resync
+	staleSync := time.Now().UTC().AddDate(0, 0, -8)
+	stalePkg := &Package{
+		Type:          "plugin",
+		Name:          "stale-sync",
+		VersionsJSON:  "{}",
+		IsActive:      true,
+		LastCommitted: &lc,
+		LastSyncedAt:  &staleSync,
+	}
+	_ = UpsertPackage(ctx, database, stalePkg)
+
+	pkgs, err = GetPackagesNeedingUpdate(ctx, database, UpdateQueryOpts{Type: "plugin"})
+	if err != nil {
+		t.Fatalf("query after stale insert: %v", err)
+	}
+	found := false
+	for _, p := range pkgs {
+		if p.Name == "stale-sync" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected stale-sync to be included in packages needing update (7-day resync)")
 	}
 }
 
