@@ -822,27 +822,29 @@ func parseVersions(pkg *packageDetail) []versionRow {
 func queryDashboardStats(ctx context.Context, db *sql.DB) map[string]any {
 	stats := map[string]any{
 		"Stats": struct {
-			TotalPackages int64
-			ActivePlugins int64
-			ActiveThemes  int64
-			TotalInstalls int64
-			Installs30d   int64
-			CurrentBuild  string
+			TotalPackages  int64
+			ActivePlugins  int64
+			ActiveThemes   int64
+			TotalInstalls  int64
+			Installs30d    int64
+			CurrentBuild   string
+			StatsUpdatedAt string
 		}{},
 	}
 
 	var s struct {
-		TotalPackages int64
-		ActivePlugins int64
-		ActiveThemes  int64
-		TotalInstalls int64
-		Installs30d   int64
-		CurrentBuild  string
+		TotalPackages  int64
+		ActivePlugins  int64
+		ActiveThemes   int64
+		TotalInstalls  int64
+		Installs30d    int64
+		CurrentBuild   string
+		StatsUpdatedAt string
 	}
 
 	_ = db.QueryRowContext(ctx, `SELECT active_plugins, active_themes, active_plugins + active_themes,
-		plugin_installs + theme_installs, installs_30d FROM package_stats WHERE id = 1`).Scan(
-		&s.ActivePlugins, &s.ActiveThemes, &s.TotalPackages, &s.TotalInstalls, &s.Installs30d)
+		plugin_installs + theme_installs, installs_30d, COALESCE(updated_at,'') FROM package_stats WHERE id = 1`).Scan(
+		&s.ActivePlugins, &s.ActiveThemes, &s.TotalPackages, &s.TotalInstalls, &s.Installs30d, &s.StatsUpdatedAt)
 
 	stats["Stats"] = s
 	return stats
