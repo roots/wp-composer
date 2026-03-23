@@ -293,33 +293,6 @@ func TestGetPackagesNeedingUpdate(t *testing.T) {
 	if pkgs[0].Name != "needs-update" {
 		t.Errorf("got name=%s, want needs-update", pkgs[0].Name)
 	}
-
-	// Package synced more than 7 days ago — should be picked up for periodic resync
-	staleSync := time.Now().UTC().AddDate(0, 0, -8)
-	stalePkg := &Package{
-		Type:          "plugin",
-		Name:          "stale-sync",
-		VersionsJSON:  "{}",
-		IsActive:      true,
-		LastCommitted: &lc,
-		LastSyncedAt:  &staleSync,
-	}
-	_ = UpsertPackage(ctx, database, stalePkg)
-
-	pkgs, err = GetPackagesNeedingUpdate(ctx, database, UpdateQueryOpts{Type: "plugin"})
-	if err != nil {
-		t.Fatalf("query after stale insert: %v", err)
-	}
-	found := false
-	for _, p := range pkgs {
-		if p.Name == "stale-sync" {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Errorf("expected stale-sync to be included in packages needing update (7-day resync)")
-	}
 }
 
 func TestBatchUpsertShellPackages(t *testing.T) {

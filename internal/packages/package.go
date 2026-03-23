@@ -280,9 +280,9 @@ func GetPackagesNeedingUpdate(ctx context.Context, db *sql.DB, opts UpdateQueryO
 
 	if !opts.Force && opts.Name == "" {
 		if opts.IncludeInactive {
-			query += ` AND (last_synced_at IS NULL OR last_committed > last_synced_at OR last_synced_at < datetime('now', '-7 days') OR (is_active = 0 AND (last_synced_at IS NULL OR last_synced_at < datetime('now', '-30 days'))))`
+			query += ` AND (last_synced_at IS NULL OR last_committed > last_synced_at OR (is_active = 0 AND (last_synced_at IS NULL OR last_synced_at < datetime('now', '-30 days'))))`
 		} else {
-			query += ` AND is_active = 1 AND (last_synced_at IS NULL OR last_committed > last_synced_at OR last_synced_at < datetime('now', '-7 days'))`
+			query += ` AND is_active = 1 AND (last_synced_at IS NULL OR last_committed > last_synced_at)`
 		}
 	} else if !opts.IncludeInactive && opts.Name == "" {
 		query += ` AND is_active = 1`
