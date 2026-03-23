@@ -302,12 +302,13 @@ func handleAdminDashboard(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		// Get current build — set it on the Stats struct
 		currentBuild, _ := deploy.CurrentBuildID("storage/repository")
 		s := stats["Stats"].(struct {
-			TotalPackages int64
-			ActivePlugins int64
-			ActiveThemes  int64
-			TotalInstalls int64
-			Installs30d   int64
-			CurrentBuild  string
+			TotalPackages  int64
+			ActivePlugins  int64
+			ActiveThemes   int64
+			TotalInstalls  int64
+			Installs30d    int64
+			CurrentBuild   string
+			StatsUpdatedAt string
 		})
 		s.CurrentBuild = currentBuild
 		stats["Stats"] = s
