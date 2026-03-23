@@ -10,8 +10,9 @@
 </div>
 <div class="bg-white rounded-lg border border-gray-200 p-4">
 <div class="text-sm text-gray-500">Composer Installs</div>
-<div class="text-2xl font-bold">{{formatNumber .Stats.TotalInstalls}}</div>
-<div class="text-xs text-gray-500">{{formatNumber .Stats.Installs30d}} in last 30d{{if .Stats.StatsUpdatedAt}} · updated {{timeAgo .Stats.StatsUpdatedAt}}{{end}}</div>
+<div class="text-2xl font-bold">{{formatNumberComma .Stats.TotalInstalls}}</div>
+<div class="text-xs text-gray-500">{{formatNumberComma .Stats.PluginInstalls}} plugins · {{formatNumberComma .Stats.ThemeInstalls}} themes</div>
+<div class="text-xs text-gray-500">{{formatNumberComma .Stats.Installs30d}} in last 30d{{if .Stats.StatsUpdatedAt}} · updated {{formatCST .Stats.StatsUpdatedAt}}{{end}}</div>
 </div>
 <div class="bg-white rounded-lg border border-gray-200 p-4">
 <div class="text-sm text-gray-500">Current Build</div>

@@ -120,7 +120,7 @@ func formatNumber(n int64) string {
 	return fmt.Sprintf("%d", n)
 }
 
-func formatNumberComma(n int) string {
+func formatNumberComma(n int64) string {
 	s := fmt.Sprintf("%d", n)
 	if n < 1000 {
 		return s

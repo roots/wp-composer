@@ -306,6 +306,8 @@ func handleAdminDashboard(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			ActivePlugins  int64
 			ActiveThemes   int64
 			TotalInstalls  int64
+			PluginInstalls int64
+			ThemeInstalls  int64
 			Installs30d    int64
 			CurrentBuild   string
 			StatsUpdatedAt string
@@ -827,6 +829,8 @@ func queryDashboardStats(ctx context.Context, db *sql.DB) map[string]any {
 			ActivePlugins  int64
 			ActiveThemes   int64
 			TotalInstalls  int64
+			PluginInstalls int64
+			ThemeInstalls  int64
 			Installs30d    int64
 			CurrentBuild   string
 			StatsUpdatedAt string
@@ -838,14 +842,16 @@ func queryDashboardStats(ctx context.Context, db *sql.DB) map[string]any {
 		ActivePlugins  int64
 		ActiveThemes   int64
 		TotalInstalls  int64
+		PluginInstalls int64
+		ThemeInstalls  int64
 		Installs30d    int64
 		CurrentBuild   string
 		StatsUpdatedAt string
 	}
 
 	_ = db.QueryRowContext(ctx, `SELECT active_plugins, active_themes, active_plugins + active_themes,
-		plugin_installs + theme_installs, installs_30d, COALESCE(updated_at,'') FROM package_stats WHERE id = 1`).Scan(
-		&s.ActivePlugins, &s.ActiveThemes, &s.TotalPackages, &s.TotalInstalls, &s.Installs30d, &s.StatsUpdatedAt)
+		plugin_installs + theme_installs, plugin_installs, theme_installs, installs_30d, COALESCE(updated_at,'') FROM package_stats WHERE id = 1`).Scan(
+		&s.ActivePlugins, &s.ActiveThemes, &s.TotalPackages, &s.TotalInstalls, &s.PluginInstalls, &s.ThemeInstalls, &s.Installs30d, &s.StatsUpdatedAt)
 
 	stats["Stats"] = s
 	return stats
