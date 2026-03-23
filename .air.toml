@@ -1,6 +1,6 @@
 [build]
   cmd = "make build"
-  full_bin = "ADMIN_ALLOW_CIDR= ./wppackages dev --addr :8080"
+  full_bin = "./wppackages migrate && ./wppackages serve --addr :8080"
   exclude_dir = ["storage", "bin", "test", "docs", ".git"]
   include_ext = ["go", "html", "css", "tmpl"]
   kill_delay = "1s"

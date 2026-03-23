@@ -33,7 +33,16 @@ build: tailwind
 install:
 	go install ./cmd/wppackages
 
-# Live-reload dev server (migrations, seed data, serve)
+# One-time setup: migrate, create admin, seed packages, build artifacts
+dev-bootstrap: build
+	./wppackages migrate
+	echo admin | ./wppackages admin create --email admin@localhost --name Admin --password-stdin
+	./wppackages discover --source config
+	./wppackages update --force
+	./wppackages build --force
+	./wppackages deploy
+
+# Live-reload dev server (rebuild binary + serve on file changes)
 dev: tailwind-install
 	air
 
