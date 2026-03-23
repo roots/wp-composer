@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -68,9 +69,10 @@ func TestAPIRateLimiter_Middleware(t *testing.T) {
 	})
 	handler := l.RateLimit(inner)
 
+	// Use varying source ports to verify the middleware normalizes to IP only.
 	for i := 0; i < apiRateLimitPerIP+2; i++ {
 		req := httptest.NewRequest("GET", "/api/stats", nil)
-		req.RemoteAddr = "10.0.0.1"
+		req.RemoteAddr = fmt.Sprintf("10.0.0.1:%d", 10000+i)
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, req)
 

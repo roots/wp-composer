@@ -65,7 +65,7 @@ func (l *apiRateLimiter) sweepLocked(now time.Time) {
 // RateLimit wraps a handler and rejects requests that exceed the per-IP limit.
 func (l *apiRateLimiter) RateLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip := r.RemoteAddr
+		ip := clientIP(r)
 		if ip != "" && !l.limiterFor(ip).Allow() {
 			w.Header().Set("Retry-After", "60")
 			http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
