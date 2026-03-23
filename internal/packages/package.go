@@ -98,8 +98,12 @@ func UpsertPackage(ctx context.Context, db *sql.DB, pkg *Package) error {
 			rating = excluded.rating,
 			num_ratings = excluded.num_ratings,
 			is_active = excluded.is_active,
-			last_committed = excluded.last_committed,
-			last_synced_at = excluded.last_synced_at,
+			last_committed = CASE
+				WHEN excluded.last_committed > COALESCE(packages.last_committed, '')
+				THEN excluded.last_committed
+				ELSE packages.last_committed
+			END,
+			last_synced_at = COALESCE(excluded.last_synced_at, packages.last_synced_at),
 			last_sync_run_id = COALESCE(excluded.last_sync_run_id, packages.last_sync_run_id),
 			updated_at = excluded.updated_at`,
 		pkg.Type, pkg.Name, pkg.DisplayName, pkg.Description, pkg.Author,
@@ -212,8 +216,12 @@ func BatchUpsertPackages(ctx context.Context, db *sql.DB, pkgs []*Package) error
 			rating = excluded.rating,
 			num_ratings = excluded.num_ratings,
 			is_active = excluded.is_active,
-			last_committed = excluded.last_committed,
-			last_synced_at = excluded.last_synced_at,
+			last_committed = CASE
+				WHEN excluded.last_committed > COALESCE(packages.last_committed, '')
+				THEN excluded.last_committed
+				ELSE packages.last_committed
+			END,
+			last_synced_at = COALESCE(excluded.last_synced_at, packages.last_synced_at),
 			last_sync_run_id = COALESCE(excluded.last_sync_run_id, packages.last_sync_run_id),
 			updated_at = excluded.updated_at`)
 	if err != nil {
@@ -272,9 +280,9 @@ func GetPackagesNeedingUpdate(ctx context.Context, db *sql.DB, opts UpdateQueryO
 
 	if !opts.Force && opts.Name == "" {
 		if opts.IncludeInactive {
-			query += ` AND (last_synced_at IS NULL OR last_committed > last_synced_at OR (is_active = 0 AND (last_synced_at IS NULL OR last_synced_at < datetime('now', '-30 days'))))`
+			query += ` AND (last_synced_at IS NULL OR last_committed > last_synced_at OR last_synced_at < datetime('now', '-7 days') OR (is_active = 0 AND (last_synced_at IS NULL OR last_synced_at < datetime('now', '-30 days'))))`
 		} else {
-			query += ` AND is_active = 1 AND (last_synced_at IS NULL OR last_committed > last_synced_at)`
+			query += ` AND is_active = 1 AND (last_synced_at IS NULL OR last_committed > last_synced_at OR last_synced_at < datetime('now', '-7 days'))`
 		}
 	} else if !opts.IncludeInactive && opts.Name == "" {
 		query += ` AND is_active = 1`
