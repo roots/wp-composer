@@ -57,6 +57,12 @@ func setupTestDB(t *testing.T) *sql.DB {
 			created_at TEXT NOT NULL,
 			UNIQUE(dedupe_hash, dedupe_bucket)
 		);
+		CREATE TABLE monthly_installs (
+			package_id INTEGER NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+			month TEXT NOT NULL,
+			installs INTEGER NOT NULL DEFAULT 0,
+			PRIMARY KEY (package_id, month)
+		);
 	`)
 	if err != nil {
 		t.Fatalf("creating tables: %v", err)
@@ -263,6 +269,30 @@ func TestAggregateInstalls(t *testing.T) {
 	if lastInstalled == nil {
 		t.Error("last_installed_at should be set")
 	}
+
+	// Check monthly_installs: akismet should have 2 months (recent + 60d ago), astra 1 month
+	var monthlyCount int
+	_ = database.QueryRow("SELECT COUNT(*) FROM monthly_installs WHERE package_id = 1").Scan(&monthlyCount)
+	if monthlyCount != 2 {
+		t.Errorf("akismet monthly rows = %d, want 2", monthlyCount)
+	}
+	_ = database.QueryRow("SELECT COUNT(*) FROM monthly_installs WHERE package_id = 2").Scan(&monthlyCount)
+	if monthlyCount != 1 {
+		t.Errorf("astra monthly rows = %d, want 1", monthlyCount)
+	}
+
+	// Verify counts per month for akismet
+	var installs int
+	recentMonth := now.Add(-24 * time.Hour).Format("2006-01")
+	oldMonth := now.Add(-60 * 24 * time.Hour).Format("2006-01")
+	_ = database.QueryRow("SELECT installs FROM monthly_installs WHERE package_id = 1 AND month = ?", recentMonth).Scan(&installs)
+	if installs != 2 {
+		t.Errorf("akismet %s installs = %d, want 2", recentMonth, installs)
+	}
+	_ = database.QueryRow("SELECT installs FROM monthly_installs WHERE package_id = 1 AND month = ?", oldMonth).Scan(&installs)
+	if installs != 1 {
+		t.Errorf("akismet %s installs = %d, want 1", oldMonth, installs)
+	}
 }
 
 func TestAggregateInstalls_Resets30d(t *testing.T) {
@@ -288,5 +318,36 @@ func TestAggregateInstalls_Resets30d(t *testing.T) {
 	_ = database.QueryRow("SELECT wp_packages_installs_30d FROM packages WHERE name='akismet'").Scan(&recent30d)
 	if recent30d != 0 {
 		t.Errorf("30d should be reset to 0, got %d", recent30d)
+	}
+}
+
+func TestAggregateInstalls_CleansStaleMonthlyRows(t *testing.T) {
+	database := setupTestDB(t)
+	ctx := context.Background()
+
+	// Pre-populate a stale monthly row that has no backing install_events
+	_, _ = database.Exec(`INSERT INTO monthly_installs (package_id, month, installs) VALUES (1, '2025-01', 999)`)
+
+	// Add one real event
+	recent := time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339)
+	_, _ = database.Exec(`INSERT INTO install_events (package_id, version, ip_hash, user_agent_hash, dedupe_bucket, dedupe_hash, created_at) VALUES (1, '5.0', 'a', 'b', 1, 'h1', ?)`, recent)
+
+	_, err := AggregateInstalls(ctx, database)
+	if err != nil {
+		t.Fatalf("aggregate: %v", err)
+	}
+
+	// Stale row should be gone
+	var staleCount int
+	_ = database.QueryRow("SELECT COUNT(*) FROM monthly_installs WHERE month = '2025-01'").Scan(&staleCount)
+	if staleCount != 0 {
+		t.Errorf("stale monthly row still exists, got count %d", staleCount)
+	}
+
+	// Real row should exist
+	var totalRows int
+	_ = database.QueryRow("SELECT COUNT(*) FROM monthly_installs").Scan(&totalRows)
+	if totalRows != 1 {
+		t.Errorf("expected 1 monthly row, got %d", totalRows)
 	}
 }

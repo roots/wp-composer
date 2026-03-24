@@ -98,6 +98,7 @@ func NewRouter(a *app.App) http.Handler {
 
 	apiLimiter := newAPIRateLimiter()
 	route("GET /api/stats", apiLimiter.RateLimit(http.HandlerFunc(handleAPIStats(a))))
+	route("GET /api/stats/packages/{type}/{name}", apiLimiter.RateLimit(http.HandlerFunc(handleAPIMonthlyInstalls(a))))
 
 	// Serve static repository files from current build (local/dev mode)
 	repoRoot := filepath.Join("storage", "repository", "current")

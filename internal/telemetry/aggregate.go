@@ -70,6 +70,31 @@ func AggregateInstalls(ctx context.Context, db *sql.DB) (AggregateResult, error)
 	}
 	resetCount, _ := resetResult.RowsAffected()
 
+	// Recompute monthly install counts (atomic DELETE + INSERT)
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return AggregateResult{}, fmt.Errorf("beginning monthly installs tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	_, err = tx.ExecContext(ctx, `DELETE FROM monthly_installs`)
+	if err != nil {
+		return AggregateResult{}, fmt.Errorf("clearing monthly installs: %w", err)
+	}
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO monthly_installs (package_id, month, installs)
+		SELECT package_id,
+			strftime('%Y-%m', created_at, 'utc') AS month,
+			COUNT(*) AS installs
+		FROM install_events
+		GROUP BY package_id, strftime('%Y-%m', created_at, 'utc')`)
+	if err != nil {
+		return AggregateResult{}, fmt.Errorf("populating monthly installs: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return AggregateResult{}, fmt.Errorf("committing monthly installs: %w", err)
+	}
+
 	if err := packages.RefreshSiteStats(ctx, db); err != nil {
 		return AggregateResult{}, err
 	}
