@@ -24,6 +24,7 @@ type Package struct {
 	Downloads               int64
 	ActiveInstalls          int64
 	CurrentVersion          *string
+	WporgVersion            *string
 	Rating                  *float64
 	NumRatings              int
 	IsActive                bool
@@ -81,10 +82,10 @@ func UpsertPackage(ctx context.Context, db *sql.DB, pkg *Package) error {
 		INSERT INTO packages (
 			type, name, display_name, description, author, homepage, slug_url,
 			versions_json, downloads, active_installs,
-			current_version, rating, num_ratings, is_active,
+			current_version, wporg_version, rating, num_ratings, is_active,
 			last_committed, last_synced_at, last_sync_run_id,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(type, name) DO UPDATE SET
 			display_name = excluded.display_name,
 			description = excluded.description,
@@ -95,6 +96,7 @@ func UpsertPackage(ctx context.Context, db *sql.DB, pkg *Package) error {
 			downloads = excluded.downloads,
 			active_installs = excluded.active_installs,
 			current_version = excluded.current_version,
+			wporg_version = excluded.wporg_version,
 			rating = excluded.rating,
 			num_ratings = excluded.num_ratings,
 			is_active = excluded.is_active,
@@ -108,7 +110,7 @@ func UpsertPackage(ctx context.Context, db *sql.DB, pkg *Package) error {
 			updated_at = excluded.updated_at`,
 		pkg.Type, pkg.Name, pkg.DisplayName, pkg.Description, pkg.Author,
 		pkg.Homepage, pkg.SlugURL, pkg.VersionsJSON,
-		pkg.Downloads, pkg.ActiveInstalls, pkg.CurrentVersion, pkg.Rating,
+		pkg.Downloads, pkg.ActiveInstalls, pkg.CurrentVersion, pkg.WporgVersion, pkg.Rating,
 		pkg.NumRatings, boolToInt(pkg.IsActive),
 		timeStr(pkg.LastCommitted), timeStr(pkg.LastSyncedAt), pkg.LastSyncRunID,
 		now, now,
@@ -199,10 +201,10 @@ func BatchUpsertPackages(ctx context.Context, db *sql.DB, pkgs []*Package) error
 		INSERT INTO packages (
 			type, name, display_name, description, author, homepage, slug_url,
 			versions_json, downloads, active_installs,
-			current_version, rating, num_ratings, is_active,
+			current_version, wporg_version, rating, num_ratings, is_active,
 			last_committed, last_synced_at, last_sync_run_id,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(type, name) DO UPDATE SET
 			display_name = excluded.display_name,
 			description = excluded.description,
@@ -213,6 +215,7 @@ func BatchUpsertPackages(ctx context.Context, db *sql.DB, pkgs []*Package) error
 			downloads = excluded.downloads,
 			active_installs = excluded.active_installs,
 			current_version = excluded.current_version,
+			wporg_version = excluded.wporg_version,
 			rating = excluded.rating,
 			num_ratings = excluded.num_ratings,
 			is_active = excluded.is_active,
@@ -234,7 +237,7 @@ func BatchUpsertPackages(ctx context.Context, db *sql.DB, pkgs []*Package) error
 		if _, err := stmt.ExecContext(ctx,
 			pkg.Type, pkg.Name, pkg.DisplayName, pkg.Description, pkg.Author,
 			pkg.Homepage, pkg.SlugURL, pkg.VersionsJSON,
-			pkg.Downloads, pkg.ActiveInstalls, pkg.CurrentVersion, pkg.Rating,
+			pkg.Downloads, pkg.ActiveInstalls, pkg.CurrentVersion, pkg.WporgVersion, pkg.Rating,
 			pkg.NumRatings, boolToInt(pkg.IsActive),
 			timeStr(pkg.LastCommitted), timeStr(pkg.LastSyncedAt), pkg.LastSyncRunID,
 			now, now,

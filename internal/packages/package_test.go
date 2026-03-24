@@ -32,6 +32,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			downloads INTEGER NOT NULL DEFAULT 0,
 			active_installs INTEGER NOT NULL DEFAULT 0,
 			current_version TEXT,
+			wporg_version TEXT,
 			rating REAL,
 			num_ratings INTEGER NOT NULL DEFAULT 0,
 			is_active INTEGER NOT NULL DEFAULT 1,

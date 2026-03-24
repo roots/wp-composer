@@ -39,6 +39,7 @@ func PackageFromAPIData(data map[string]any, pkgType string) *Package {
 	}
 	if v := getString(data, "version"); v != "" {
 		pkg.CurrentVersion = &v
+		pkg.WporgVersion = &v
 	}
 
 	pkg.Downloads = getInt64(data, "downloaded")

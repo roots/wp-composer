@@ -67,34 +67,44 @@ var funcMap = template.FuncMap{
 	"formatCST":         formatCST,
 	"timeAgo":           timeAgo,
 	"formatDuration":    formatDuration,
+	"pct": func(n, total int64) string {
+		if total == 0 {
+			return "0"
+		}
+		return fmt.Sprintf("%.1f", float64(n)*100/float64(total))
+	},
 }
 
 type templateSet struct {
-	index          *template.Template
-	indexPartial   *template.Template
-	detail         *template.Template
-	compare        *template.Template
-	rootsWordpress *template.Template
-	notFound       *template.Template
-	adminDashboard *template.Template
-	adminPackages  *template.Template
-	adminBuilds    *template.Template
-	adminLogs      *template.Template
+	index           *template.Template
+	indexPartial    *template.Template
+	detail          *template.Template
+	compare         *template.Template
+	rootsWordpress  *template.Template
+	untagged        *template.Template
+	untaggedPartial *template.Template
+	notFound        *template.Template
+	adminDashboard  *template.Template
+	adminPackages   *template.Template
+	adminBuilds     *template.Template
+	adminLogs       *template.Template
 }
 
 func loadTemplates(env string) *templateSet {
 	funcMap["isProduction"] = func() bool { return env == "production" }
 	return &templateSet{
-		index:          parse("templates/layout.html", "templates/index.html", "templates/package_results.html"),
-		indexPartial:   parse("templates/package_results.html"),
-		detail:         parse("templates/layout.html", "templates/detail.html"),
-		compare:        parse("templates/layout.html", "templates/compare.html"),
-		rootsWordpress: parse("templates/layout.html", "templates/roots_wordpress.html"),
-		notFound:       parse("templates/layout.html", "templates/404.html"),
-		adminDashboard: parse("templates/admin_layout.html", "templates/admin_dashboard.html"),
-		adminPackages:  parse("templates/admin_layout.html", "templates/admin_packages.html"),
-		adminBuilds:    parse("templates/admin_layout.html", "templates/admin_builds.html"),
-		adminLogs:      parse("templates/admin_layout.html", "templates/admin_logs.html"),
+		index:           parse("templates/layout.html", "templates/index.html", "templates/package_results.html"),
+		indexPartial:    parse("templates/package_results.html"),
+		detail:          parse("templates/layout.html", "templates/detail.html"),
+		compare:         parse("templates/layout.html", "templates/compare.html"),
+		rootsWordpress:  parse("templates/layout.html", "templates/roots_wordpress.html"),
+		untagged:        parse("templates/layout.html", "templates/untagged.html", "templates/untagged_results.html"),
+		untaggedPartial: parse("templates/untagged_results.html"),
+		notFound:        parse("templates/layout.html", "templates/404.html"),
+		adminDashboard:  parse("templates/admin_layout.html", "templates/admin_dashboard.html"),
+		adminPackages:   parse("templates/admin_layout.html", "templates/admin_packages.html"),
+		adminBuilds:     parse("templates/admin_layout.html", "templates/admin_builds.html"),
+		adminLogs:       parse("templates/admin_layout.html", "templates/admin_logs.html"),
 	}
 }
 

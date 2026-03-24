@@ -311,6 +311,7 @@ func generateSitemaps(ctx context.Context, db *sql.DB, appURL string) (index []b
 			{Loc: appURL + "/"},
 			{Loc: appURL + "/roots-wordpress"},
 			{Loc: appURL + "/wp-packages-vs-wpackagist"},
+			{Loc: appURL + "/untagged"},
 		},
 	}
 	pages, err = marshalXML(pagesURLSet)

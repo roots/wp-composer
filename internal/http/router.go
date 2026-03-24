@@ -90,6 +90,8 @@ func NewRouter(a *app.App) http.Handler {
 	})
 	routeFunc("GET /wp-packages-vs-wpackagist", handleCompare(a, tmpl))
 	routeFunc("GET /roots-wordpress", handleRootsWordpress(a, tmpl))
+	routeFunc("GET /untagged", handleUntagged(a, tmpl))
+	routeFunc("GET /untagged-partial", handleUntaggedPartial(a, tmpl))
 
 	routeFunc("POST /downloads", handleDownloads(a))
 	routeFunc("GET /metadata/changes.json", handleMetadataChanges(a))

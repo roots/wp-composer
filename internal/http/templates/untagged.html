@@ -1,0 +1,91 @@
+{{template "layout" .}}
+{{define "title"}}Untagged Plugins — WP Packages{{end}}
+{{define "meta_seo"}}
+<meta name="description" content="WordPress plugins that only release via SVN trunk instead of tagging versions. These plugins are unavailable for pinned Composer installs.">
+{{if .AppURL}}<link rel="canonical" href="{{.AppURL}}/untagged">{{end}}
+{{if and .Page (gt .Page 1)}}<meta name="robots" content="noindex, follow">{{end}}
+{{end}}
+{{define "json_ld"}}{{end}}
+{{define "og_meta"}}
+<meta property="og:title" content="Untagged Plugins — WP Packages">
+<meta property="og:description" content="WordPress plugins that only release via SVN trunk instead of tagging versions.">
+{{if .OGImage}}<meta property="og:image" content="{{.OGImage}}">{{end}}
+{{if .AppURL}}<meta property="og:url" content="{{.AppURL}}/untagged">{{end}}
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Untagged Plugins — WP Packages">
+<meta name="twitter:description" content="WordPress plugins that only release via SVN trunk instead of tagging versions.">
+{{if .OGImage}}<meta name="twitter:image" content="{{.OGImage}}">{{end}}
+{{end}}
+{{define "content"}}
+<section class="relative border-b border-gray-200/50">
+<div class="absolute inset-0 bg-gradient-to-b from-brand-lightest/40 to-transparent"></div>
+<div class="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 pt-16 pb-12 sm:pt-24 sm:pb-16 text-center">
+<h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-gray-900 mb-4 text-balance">Untagged Plugins</h1>
+<p class="text-lg text-gray-500 max-w-2xl mx-auto mb-6 text-balance">These WordPress plugins have a latest version on wordpress.org that isn't tagged in SVN. Some release exclusively via trunk, while others have older tags but not for the current version.</p>
+<div class="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+<svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
+<span><strong>{{formatNumberComma .Total}}</strong> plugins affected ({{pct .Total .TotalPlugins}}% of all plugins)</span>
+</div>
+</div>
+</section>
+
+<article class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+
+<div class="prose prose-gray max-w-none mb-12 space-y-4">
+<p class="text-gray-600 leading-relaxed">WordPress <a href="https://developer.wordpress.org/plugins/wordpress-org/how-to-use-subversion/#tags" class="text-brand-primary hover:underline">officially recommends</a> tagging every release in SVN and is <a href="https://meta.trac.wordpress.org/ticket/6380" class="text-brand-primary hover:underline">working on disabling trunk as a release mechanism</a>. Until then, these plugins can't be pinned to specific versions in Composer.</p>
+<p class="text-gray-600 leading-relaxed">If you depend on one of these plugins, the best path forward is to <strong>ask the plugin author to tag their releases in SVN</strong>. It takes one command and makes the version available for Composer installs. See <a href="https://github.com/roots/wp-packages/issues/15" class="text-brand-primary hover:underline">issue #15</a> for more details.</p>
+</div>
+
+<details class="mb-12 rounded-xl border border-gray-200/60 overflow-hidden">
+<summary class="px-4 py-3 bg-gray-50/50 text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-100/50 transition-colors">Workaround: install an untagged plugin via Composer</summary>
+<div class="px-4 py-4 space-y-3">
+<p class="text-sm text-gray-600">You can define a custom package repository in your <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">composer.json</code> that downloads the plugin from trunk. This must be listed <strong>above</strong> the WP Packages repository &mdash; Composer resolves in order.</p>
+<div class="rounded-lg border border-gray-200/60 overflow-hidden">
+<div class="bg-gray-50/50 px-4 py-2 text-xs text-gray-500 border-b border-gray-200/40">composer.json</div>
+<pre class="p-4 text-sm font-mono leading-relaxed overflow-x-auto"><code>{
+  <span class="text-green-700">"repositories"</span>: [
+    {
+      <span class="text-green-700">"type"</span>: <span class="text-green-700">"package"</span>,
+      <span class="text-green-700">"package"</span>: {
+        <span class="text-green-700">"name"</span>: <span class="text-green-700">"wp-plugin/example-plugin"</span>,
+        <span class="text-green-700">"version"</span>: <span class="text-green-700">"1.0.0"</span>,
+        <span class="text-green-700">"type"</span>: <span class="text-green-700">"wordpress-plugin"</span>,
+        <span class="text-green-700">"dist"</span>: {
+          <span class="text-green-700">"type"</span>: <span class="text-green-700">"zip"</span>,
+          <span class="text-green-700">"url"</span>: <span class="text-green-700">"https://downloads.wordpress.org/plugin/example-plugin.zip"</span>
+        }
+      }
+    },
+    {
+      <span class="text-green-700">"type"</span>: <span class="text-green-700">"composer"</span>,
+      <span class="text-green-700">"url"</span>: <span class="text-green-700">"https://repo.wp-packages.org"</span>
+    }
+  ]
+}</code></pre>
+</div>
+<p class="text-xs text-gray-500">Note: this downloads from trunk, which is mutable &mdash; the contents may change without the version number changing.</p>
+</div>
+</details>
+
+<div id="untagged-heading" class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 scroll-mt-24">
+<h2 class="text-xl font-bold text-gray-900">Sorted by active installs</h2>
+<div class="relative">
+<select id="untagged-filter" name="filter" hx-get="/untagged-partial" hx-target="#untagged-results" hx-swap="innerHTML show:#untagged-heading:top" hx-include="[name=filter]" class="h-9 pl-3 pr-8 text-sm border border-gray-200 rounded-lg bg-white select-chevron focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
+<option value=""{{if eq .Filter ""}}} selected{{end}}>All</option>
+<option value="trunk-only"{{if eq .Filter "trunk-only"}} selected{{end}}>Trunk only</option>
+<option value="latest-not-tagged"{{if eq .Filter "latest-not-tagged"}} selected{{end}}>Latest not tagged</option>
+</select>
+</div>
+</div>
+
+<div id="untagged-results">
+{{template "untagged-results" .}}
+</div>
+
+</article>
+<script>
+function copyWorkaround(slug,ver){var s=JSON.stringify({"type":"package","package":{"name":"wp-plugin/"+slug,"version":ver,"type":"wordpress-plugin","dist":{"type":"zip","url":"https://downloads.wordpress.org/plugin/"+slug+".zip"}}},null,2);navigator.clipboard.writeText(s).then(function(){var b=event.target;var t=b.textContent;b.textContent="Copied!";setTimeout(function(){b.textContent=t},1500)})}
+document.addEventListener('htmx:afterRequest',function(e){var xhr=e.detail.xhr;if(!xhr)return;var u=new URL(xhr.responseURL);if(u.pathname==='/untagged-partial'){var p=u.searchParams.get('page');var f=u.searchParams.get('filter');var q=[];if(f)q.push('filter='+f);if(p&&p!=='1')q.push('page='+p);history.pushState(null,'',q.length?'/untagged?'+q.join('&'):'/untagged')}});
+</script>
+{{end}}

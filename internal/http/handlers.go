@@ -67,6 +67,7 @@ type packageRow struct {
 	Author                  string
 	Homepage                string
 	CurrentVersion          string
+	WporgVersion            string
 	Downloads               int64
 	ActiveInstalls          int64
 	IsActive                bool
@@ -187,6 +188,73 @@ func handleCompare(a *app.App, tmpl *templateSet) http.HandlerFunc {
 	}
 }
 
+const untaggedPerPage = 20
+
+func handleUntagged(a *app.App, tmpl *templateSet) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+		if page < 1 {
+			page = 1
+		}
+		filter := r.URL.Query().Get("filter")
+
+		packages, total, err := queryUntaggedPackages(r.Context(), a.DB, filter, page, untaggedPerPage)
+		if err != nil {
+			a.Logger.Error("querying untagged packages", "error", err)
+			captureError(r, err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		totalPages := (total + untaggedPerPage - 1) / untaggedPerPage
+
+		var totalPlugins int64
+		_ = a.DB.QueryRowContext(r.Context(), "SELECT active_plugins FROM package_stats WHERE id = 1").Scan(&totalPlugins)
+
+		w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
+		render(w, r, tmpl.untagged, "layout", map[string]any{
+			"Packages":     packages,
+			"Filter":       filter,
+			"Page":         page,
+			"Total":        int64(total),
+			"TotalPlugins": totalPlugins,
+			"TotalPages":   totalPages,
+			"AppURL":       a.Config.AppURL,
+			"CDNURL":       a.Config.R2.CDNPublicURL,
+			"OGImage":      ogImageURL(a.Config, "social/default.png"),
+		})
+	}
+}
+
+func handleUntaggedPartial(a *app.App, tmpl *templateSet) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+		if page < 1 {
+			page = 1
+		}
+		filter := r.URL.Query().Get("filter")
+
+		packages, total, err := queryUntaggedPackages(r.Context(), a.DB, filter, page, untaggedPerPage)
+		if err != nil {
+			a.Logger.Error("querying untagged packages", "error", err)
+			captureError(r, err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		totalPages := (total + untaggedPerPage - 1) / untaggedPerPage
+
+		w.Header().Set("X-Robots-Tag", "noindex")
+		render(w, r, tmpl.untaggedPartial, "untagged-results", map[string]any{
+			"Packages":   packages,
+			"Filter":     filter,
+			"Page":       page,
+			"Total":      int64(total),
+			"TotalPages": totalPages,
+		})
+	}
+}
+
 func handleRootsWordpress(a *app.App, tmpl *templateSet) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
@@ -220,6 +288,9 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		}
 
 		versions := parseVersions(pkg)
+
+		untagged := pkg.Type == "plugin" && pkg.WporgVersion != "" && !versionIsTagged(versions, pkg.WporgVersion)
+		trunkOnly := untagged && !hasTaggedVersion(versions)
 
 		var ogImage string
 		if pkg.OGImageGeneratedAt != nil {
@@ -285,12 +356,14 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		}
 
 		render(w, r, tmpl.detail, "layout", map[string]any{
-			"Package":  pkg,
-			"Versions": versions,
-			"AppURL":   a.Config.AppURL,
-			"CDNURL":   a.Config.R2.CDNPublicURL,
-			"OGImage":  ogImage,
-			"JSONLD":   []any{softwareApp, breadcrumbs},
+			"Package":   pkg,
+			"Versions":  versions,
+			"Untagged":  untagged,
+			"TrunkOnly": trunkOnly,
+			"AppURL":    a.Config.AppURL,
+			"CDNURL":    a.Config.R2.CDNPublicURL,
+			"OGImage":   ogImage,
+			"JSONLD":    []any{softwareApp, breadcrumbs},
 		})
 	}
 }
@@ -770,6 +843,7 @@ func queryPackages(ctx context.Context, db *sql.DB, f publicFilters, page, limit
 type packageDetail struct {
 	packageRow
 	VersionsJSON       string
+	WporgVersion       string
 	UpdatedAt          string
 	OGImageGeneratedAt *string
 }
@@ -786,11 +860,11 @@ func queryPackageDetail(ctx context.Context, db *sql.DB, pkgType, name string) (
 	err := db.QueryRowContext(ctx, `SELECT type, name, COALESCE(display_name,''), COALESCE(description,''),
 		COALESCE(author,''), COALESCE(homepage,''), COALESCE(current_version,''),
 		downloads, active_installs, wp_packages_installs_total, versions_json,
-		COALESCE(updated_at,''), og_image_generated_at
+		COALESCE(wporg_version,''), COALESCE(updated_at,''), og_image_generated_at
 		FROM packages WHERE type = ? AND name = ? AND is_active = 1`, pkgType, name,
 	).Scan(&p.Type, &p.Name, &p.DisplayName, &p.Description, &p.Author, &p.Homepage,
 		&p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpPackagesInstallsTotal,
-		&p.VersionsJSON, &p.UpdatedAt, &p.OGImageGeneratedAt)
+		&p.VersionsJSON, &p.WporgVersion, &p.UpdatedAt, &p.OGImageGeneratedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -820,6 +894,24 @@ func parseVersions(pkg *packageDetail) []versionRow {
 		return version.Compare(b.Version, a.Version)
 	})
 	return rows
+}
+
+func versionIsTagged(versions []versionRow, cv string) bool {
+	for _, v := range versions {
+		if v.Version == cv {
+			return true
+		}
+	}
+	return false
+}
+
+func hasTaggedVersion(versions []versionRow) bool {
+	for _, v := range versions {
+		if v.Version != "dev-trunk" {
+			return true
+		}
+	}
+	return false
 }
 
 func queryDashboardStats(ctx context.Context, db *sql.DB) map[string]any {
@@ -896,6 +988,43 @@ func queryAdminPackages(ctx context.Context, db *sql.DB, f adminFilters, page, l
 		var isActive int
 		_ = rows.Scan(&p.Type, &p.Name, &p.DisplayName, &p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpPackagesInstallsTotal, &isActive, &p.LastSyncedAt)
 		p.IsActive = isActive == 1
+		pkgs = append(pkgs, p)
+	}
+	return pkgs, total, rows.Err()
+}
+
+func queryUntaggedPackages(ctx context.Context, db *sql.DB, filter string, page, limit int) ([]packageRow, int, error) {
+	where := `is_active = 1 AND type = 'plugin' AND wporg_version IS NOT NULL AND wporg_version != '' AND NOT EXISTS (SELECT 1 FROM json_each(versions_json) WHERE key = wporg_version)`
+
+	switch filter {
+	case "trunk-only":
+		where += ` AND (SELECT COUNT(*) FROM json_each(versions_json) WHERE key != 'dev-trunk') = 0`
+	case "latest-not-tagged":
+		where += ` AND (SELECT COUNT(*) FROM json_each(versions_json) WHERE key != 'dev-trunk') > 0`
+	}
+
+	var total int
+	if err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM packages WHERE "+where).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * limit
+	q := fmt.Sprintf(`SELECT type, name, COALESCE(display_name,''), COALESCE(description,''),
+		COALESCE(current_version,''), COALESCE(wporg_version,''), downloads, active_installs, wp_packages_installs_total
+		FROM packages WHERE %s ORDER BY active_installs DESC LIMIT ? OFFSET ?`, where)
+
+	rows, err := db.QueryContext(ctx, q, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var pkgs []packageRow
+	for rows.Next() {
+		var p packageRow
+		if err := rows.Scan(&p.Type, &p.Name, &p.DisplayName, &p.Description, &p.CurrentVersion, &p.WporgVersion, &p.Downloads, &p.ActiveInstalls, &p.WpPackagesInstallsTotal); err != nil {
+			return nil, 0, fmt.Errorf("scanning untagged package row: %w", err)
+		}
 		pkgs = append(pkgs, p)
 	}
 	return pkgs, total, rows.Err()
