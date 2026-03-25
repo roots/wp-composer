@@ -168,41 +168,82 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 			meta.LastUpdated = *lastCommitted
 		}
 
-		// Build per-version entries
-		composerVersions := make(map[string]any, len(versions))
+		// Split versions into tagged and dev
+		taggedVersions := make(map[string]any)
+		devVersions := make(map[string]any)
 		for ver, dlURL := range versions {
-			composerVersions[ver] = ComposerVersion(pkgType, name, ver, dlURL, meta)
+			entry := ComposerVersion(pkgType, name, ver, dlURL, meta)
+			if strings.HasPrefix(ver, "dev-") {
+				devVersions[ver] = entry
+			} else {
+				taggedVersions[ver] = entry
+			}
 		}
 
-		// Build p2/ file payload
-		pkgPayload := map[string]any{
-			"packages": map[string]any{
-				composerName: composerVersions,
-			},
-		}
-		_, data, err := HashJSON(pkgPayload)
-		if err != nil {
-			return nil, fmt.Errorf("hashing %s: %w", composerName, err)
-		}
+		// Write tagged versions to p2/<name>.json
+		if len(taggedVersions) > 0 {
+			pkgPayload := map[string]any{
+				"packages": map[string]any{
+					composerName: taggedVersions,
+				},
+			}
+			_, data, err := HashJSON(pkgPayload)
+			if err != nil {
+				return nil, fmt.Errorf("hashing %s: %w", composerName, err)
+			}
 
-		p2Rel := filepath.Join("p2", composerName+".json")
-		p2File := filepath.Join(buildDir, p2Rel)
-		if err := os.WriteFile(p2File, data, 0644); err != nil {
-			return nil, fmt.Errorf("writing %s: %w", p2File, err)
-		}
-		artifactCount++
+			p2Rel := filepath.Join("p2", composerName+".json")
+			p2File := filepath.Join(buildDir, p2Rel)
+			if err := os.WriteFile(p2File, data, 0644); err != nil {
+				return nil, fmt.Errorf("writing %s: %w", p2File, err)
+			}
+			artifactCount++
 
-		// Compare against previous build to determine if this package changed
-		if opts.PreviousBuildDir != "" {
-			prevData, err := os.ReadFile(filepath.Join(opts.PreviousBuildDir, p2Rel))
-			if err != nil || !bytes.Equal(prevData, data) {
+			if opts.PreviousBuildDir != "" {
+				prevData, err := os.ReadFile(filepath.Join(opts.PreviousBuildDir, p2Rel))
+				if err != nil || !bytes.Equal(prevData, data) {
+					changedPkgs++
+					changedPackages = append(changedPackages, PackageChange{Name: composerName, Action: "update"})
+					opts.Logger.Info("package changed", "package", composerName)
+				}
+			} else {
 				changedPkgs++
-				changedPackages = append(changedPackages, PackageChange{Name: composerName, Action: "update"})
 				opts.Logger.Info("package changed", "package", composerName)
 			}
-		} else {
-			changedPkgs++
-			opts.Logger.Info("package changed", "package", composerName)
+		}
+
+		// Write dev versions to p2/<name>~dev.json
+		if len(devVersions) > 0 {
+			devPayload := map[string]any{
+				"packages": map[string]any{
+					composerName: devVersions,
+				},
+			}
+			_, devData, err := HashJSON(devPayload)
+			if err != nil {
+				return nil, fmt.Errorf("hashing %s~dev: %w", composerName, err)
+			}
+
+			devRel := filepath.Join("p2", composerName+"~dev.json")
+			devFile := filepath.Join(buildDir, devRel)
+			if err := os.WriteFile(devFile, devData, 0644); err != nil {
+				return nil, fmt.Errorf("writing %s: %w", devFile, err)
+			}
+			artifactCount++
+
+			if opts.PreviousBuildDir != "" {
+				prevData, err := os.ReadFile(filepath.Join(opts.PreviousBuildDir, devRel))
+				if err != nil || !bytes.Equal(prevData, devData) {
+					if len(taggedVersions) == 0 {
+						changedPkgs++
+						changedPackages = append(changedPackages, PackageChange{Name: composerName, Action: "update"})
+						opts.Logger.Info("package changed", "package", composerName)
+					}
+				}
+			} else if len(taggedVersions) == 0 {
+				changedPkgs++
+				opts.Logger.Info("package changed", "package", composerName)
+			}
 		}
 
 		if totalPkgs%500 == 0 {
@@ -350,8 +391,9 @@ func validateIntegrityInMemory(buildDir string, expectedPackages int) []string {
 		return nil
 	})
 
-	if p2Count != expectedPackages {
-		errs = append(errs, fmt.Sprintf("expected %d p2/ files, found %d", expectedPackages, p2Count))
+	// Each package produces at least one p2 file, and possibly a ~dev.json too
+	if p2Count < expectedPackages {
+		errs = append(errs, fmt.Sprintf("expected at least %d p2/ files, found %d", expectedPackages, p2Count))
 	}
 
 	return errs
@@ -387,8 +429,8 @@ func ValidateIntegrity(buildDir string) []string {
 	if err == nil {
 		var manifest map[string]any
 		if json.Unmarshal(manifestData, &manifest) == nil {
-			if expected, ok := manifest["packages_total"].(float64); ok && int(expected) != p2Count {
-				return []string{fmt.Sprintf("manifest says %d packages but found %d p2/ files", int(expected), p2Count)}
+			if expected, ok := manifest["packages_total"].(float64); ok && p2Count < int(expected) {
+				return []string{fmt.Sprintf("manifest says %d packages but found only %d p2/ files", int(expected), p2Count)}
 			}
 		}
 	}

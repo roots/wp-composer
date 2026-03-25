@@ -35,10 +35,6 @@ func ComposerVersion(pkgType, slug, ver, downloadURL string, meta PackageMeta) m
 		"name":    composerName,
 		"version": ver,
 		"type":    composerType,
-		"dist": map[string]any{
-			"type": "zip",
-			"url":  downloadURL,
-		},
 		"source": map[string]any{
 			"type":      "svn",
 			"url":       svnBase + "/",
@@ -53,6 +49,15 @@ func ComposerVersion(pkgType, slug, ver, downloadURL string, meta PackageMeta) m
 			"changelog": supportChangelog,
 		},
 		"uid": crc32.ChecksumIEEE([]byte(fmt.Sprintf("%s/%s", composerName, ver))),
+	}
+
+	// Only include dist for tagged versions. Trunk zips are mutable so
+	// Composer should check out via SVN source and lock the revision.
+	if ver != "dev-trunk" {
+		entry["dist"] = map[string]any{
+			"type": "zip",
+			"url":  downloadURL,
+		}
 	}
 
 	if meta.Description != "" {

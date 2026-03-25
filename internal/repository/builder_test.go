@@ -178,6 +178,83 @@ func TestBuildParallelWrites(t *testing.T) {
 	}
 }
 
+func TestBuildDevTrunkSplit(t *testing.T) {
+	database := setupTestDB(t)
+
+	// Package with both tagged and dev-trunk versions
+	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, versions_json, is_active, last_sync_run_id, created_at, updated_at)
+		VALUES ('plugin', 'akismet', 'Akismet',
+			'{"5.0":"https://downloads.wordpress.org/plugin/akismet.5.0.zip","dev-trunk":"https://downloads.wordpress.org/plugin/akismet.zip"}',
+			1, 1, datetime('now'), datetime('now'))`)
+
+	// Package with only dev-trunk
+	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, versions_json, is_active, last_sync_run_id, created_at, updated_at)
+		VALUES ('plugin', 'trunk-only', 'Trunk Only',
+			'{"dev-trunk":"https://downloads.wordpress.org/plugin/trunk-only.zip"}',
+			1, 1, datetime('now'), datetime('now'))`)
+
+	tmpDir := t.TempDir()
+	result, err := Build(context.Background(), database, BuildOpts{
+		OutputDir: tmpDir,
+		Logger:    slog.Default(),
+	})
+	if err != nil {
+		t.Fatalf("build failed: %v", err)
+	}
+
+	if result.PackagesTotal != 2 {
+		t.Errorf("packages_total = %d, want 2", result.PackagesTotal)
+	}
+
+	// akismet should have both .json and ~dev.json
+	for _, path := range []string{"p2/wp-plugin/akismet.json", "p2/wp-plugin/akismet~dev.json"} {
+		if _, err := os.Stat(filepath.Join(result.BuildDir, path)); err != nil {
+			t.Errorf("file missing: %s", path)
+		}
+	}
+
+	// akismet.json should NOT contain dev-trunk
+	data, _ := os.ReadFile(filepath.Join(result.BuildDir, "p2/wp-plugin/akismet.json"))
+	var tagged map[string]any
+	_ = json.Unmarshal(data, &tagged)
+	pkgs := tagged["packages"].(map[string]any)
+	versions := pkgs["wp-plugin/akismet"].(map[string]any)
+	if _, ok := versions["dev-trunk"]; ok {
+		t.Error("akismet.json should not contain dev-trunk")
+	}
+	if _, ok := versions["5.0"]; !ok {
+		t.Error("akismet.json should contain version 5.0")
+	}
+
+	// akismet~dev.json should contain dev-trunk with source but no dist
+	devData, _ := os.ReadFile(filepath.Join(result.BuildDir, "p2/wp-plugin/akismet~dev.json"))
+	var dev map[string]any
+	_ = json.Unmarshal(devData, &dev)
+	devPkgs := dev["packages"].(map[string]any)
+	devVersions := devPkgs["wp-plugin/akismet"].(map[string]any)
+	devTrunk := devVersions["dev-trunk"].(map[string]any)
+	if _, ok := devTrunk["dist"]; ok {
+		t.Error("dev-trunk should not have dist")
+	}
+	if _, ok := devTrunk["source"]; !ok {
+		t.Error("dev-trunk should have source")
+	}
+
+	// trunk-only should only have ~dev.json, not .json
+	if _, err := os.Stat(filepath.Join(result.BuildDir, "p2/wp-plugin/trunk-only.json")); !os.IsNotExist(err) {
+		t.Error("trunk-only.json should not exist")
+	}
+	if _, err := os.Stat(filepath.Join(result.BuildDir, "p2/wp-plugin/trunk-only~dev.json")); err != nil {
+		t.Errorf("trunk-only~dev.json missing: %v", err)
+	}
+
+	// Integrity validation should pass
+	errors := ValidateIntegrity(result.BuildDir)
+	if len(errors) > 0 {
+		t.Errorf("integrity validation failed: %v", errors)
+	}
+}
+
 func TestBuildEmpty(t *testing.T) {
 	database := setupTestDB(t)
 	tmpDir := t.TempDir()
