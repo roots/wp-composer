@@ -23,7 +23,7 @@
 <div class="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-16 pb-12 sm:pt-24 sm:pb-16 text-center">
 <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 mb-4 text-balance">WordPress Packages<br><span class="text-brand-primary">for Composer</span></h1>
 <h2 class="text-lg text-gray-500 max-w-xl mx-auto mb-8 text-balance">A modern, community-funded Composer repository for WordPress plugins and themes.</h2>
-<div class="inline-flex items-center gap-3 rounded-xl border border-gray-200/80 bg-gray-100/50 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors max-w-full overflow-x-auto" onclick="navigator.clipboard.writeText('composer config repositories.wp-packages composer https://repo.wp-packages.org')">
+<div class="inline-flex items-center gap-3 rounded-xl border border-gray-200/80 bg-gray-100/50 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors max-w-full overflow-x-auto" onclick="copyCmd(this,'composer config repositories.wp-packages composer https://repo.wp-packages.org')">
 <span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
 <code class="text-sm font-mono text-gray-900 select-all whitespace-nowrap">composer config repositories.wp-packages composer https://repo.wp-packages.org</code>
 <button aria-label="Copy to clipboard" class="text-gray-400 hover:text-gray-900 transition-colors ml-1 cursor-pointer">
@@ -166,7 +166,7 @@
 </div>
 </div>
 <p class="text-gray-500 text-sm mb-6">Or use the <a href="https://github.com/roots/wp-packages/blob/main/scripts/migrate-from-wpackagist.sh" class="text-brand-primary hover:underline">migration script</a> to automatically update your <code class="text-sm font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">composer.json</code>:</p>
-<div class="inline-flex items-center gap-3 rounded-xl border border-gray-200/80 bg-gray-100/50 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors max-w-full overflow-x-auto mb-6" onclick="navigator.clipboard.writeText('curl -sO https://raw.githubusercontent.com/roots/wp-packages/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh')">
+<div class="inline-flex items-center gap-3 rounded-xl border border-gray-200/80 bg-gray-100/50 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors max-w-full overflow-x-auto mb-6" onclick="copyCmd(this,'curl -sO https://raw.githubusercontent.com/roots/wp-packages/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh')">
 <span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
 <code class="text-sm font-mono text-gray-900 select-all whitespace-nowrap">curl -sO https://raw.githubusercontent.com/roots/wp-packages/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh</code>
 <button aria-label="Copy to clipboard" class="text-gray-400 hover:text-gray-900 transition-colors ml-1 cursor-pointer">
