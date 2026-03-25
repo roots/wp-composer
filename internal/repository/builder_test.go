@@ -181,16 +181,16 @@ func TestBuildParallelWrites(t *testing.T) {
 func TestBuildDevTrunkSplit(t *testing.T) {
 	database := setupTestDB(t)
 
-	// Package with both tagged and dev-trunk versions
+	// Package with tagged versions
 	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, versions_json, is_active, last_sync_run_id, created_at, updated_at)
 		VALUES ('plugin', 'akismet', 'Akismet',
-			'{"5.0":"https://downloads.wordpress.org/plugin/akismet.5.0.zip","dev-trunk":"https://downloads.wordpress.org/plugin/akismet.zip"}',
+			'{"5.0":"https://downloads.wordpress.org/plugin/akismet.5.0.zip"}',
 			1, 1, datetime('now'), datetime('now'))`)
 
-	// Package with only dev-trunk
+	// Package with no tagged versions (trunk-only in SVN)
 	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, versions_json, is_active, last_sync_run_id, created_at, updated_at)
 		VALUES ('plugin', 'trunk-only', 'Trunk Only',
-			'{"dev-trunk":"https://downloads.wordpress.org/plugin/trunk-only.zip"}',
+			'{}',
 			1, 1, datetime('now'), datetime('now'))`)
 
 	tmpDir := t.TempDir()

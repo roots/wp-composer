@@ -141,16 +141,10 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 			opts.Logger.Warn("skipping package with invalid versions_json", "name", name, "error", err)
 			continue
 		}
-		if len(versions) == 0 {
-			continue
-		}
-
 		// Defense-in-depth: re-filter versions through normalization so stale
 		// DB rows with invalid versions (e.g. "3.1.0-dev1") never reach artifacts.
+		// Note: even packages with zero tagged versions still get a ~dev.json.
 		versions = version.NormalizeVersions(versions)
-		if len(versions) == 0 {
-			continue
-		}
 
 		totalPkgs++
 		composerName := ComposerName(pkgType, name)
@@ -168,16 +162,17 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 			meta.LastUpdated = *lastCommitted
 		}
 
-		// Split versions into tagged and dev
+		// Split versions into tagged (for .json) and build all entries
 		taggedVersions := make(map[string]any)
-		devVersions := make(map[string]any)
 		for ver, dlURL := range versions {
-			entry := ComposerVersion(pkgType, name, ver, dlURL, meta)
-			if strings.HasPrefix(ver, "dev-") {
-				devVersions[ver] = entry
-			} else {
-				taggedVersions[ver] = entry
+			if !strings.HasPrefix(ver, "dev-") {
+				taggedVersions[ver] = ComposerVersion(pkgType, name, ver, dlURL, meta)
 			}
+		}
+
+		// Every active package gets a ~dev.json with dev-trunk pointing to SVN trunk
+		devVersions := map[string]any{
+			"dev-trunk": ComposerVersion(pkgType, name, "dev-trunk", "", meta),
 		}
 
 		// Track whether this package has been marked as changed (avoid double-counting)
@@ -213,33 +208,31 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 		}
 
 		// Write dev versions to p2/<name>~dev.json
-		if len(devVersions) > 0 {
-			devPayload := map[string]any{
-				"packages": map[string]any{
-					composerName: devVersions,
-				},
-			}
-			_, devData, err := HashJSON(devPayload)
-			if err != nil {
-				return nil, fmt.Errorf("hashing %s~dev: %w", composerName, err)
-			}
+		devPayload := map[string]any{
+			"packages": map[string]any{
+				composerName: devVersions,
+			},
+		}
+		_, devData, err := HashJSON(devPayload)
+		if err != nil {
+			return nil, fmt.Errorf("hashing %s~dev: %w", composerName, err)
+		}
 
-			devRel := filepath.Join("p2", composerName+"~dev.json")
-			devFile := filepath.Join(buildDir, devRel)
-			if err := os.WriteFile(devFile, devData, 0644); err != nil {
-				return nil, fmt.Errorf("writing %s: %w", devFile, err)
-			}
-			artifactCount++
+		devRel := filepath.Join("p2", composerName+"~dev.json")
+		devFile := filepath.Join(buildDir, devRel)
+		if err := os.WriteFile(devFile, devData, 0644); err != nil {
+			return nil, fmt.Errorf("writing %s: %w", devFile, err)
+		}
+		artifactCount++
 
-			if !pkgChanged {
-				if opts.PreviousBuildDir != "" {
-					prevData, err := os.ReadFile(filepath.Join(opts.PreviousBuildDir, devRel))
-					if err != nil || !bytes.Equal(prevData, devData) {
-						pkgChanged = true
-					}
-				} else {
+		if !pkgChanged {
+			if opts.PreviousBuildDir != "" {
+				prevData, err := os.ReadFile(filepath.Join(opts.PreviousBuildDir, devRel))
+				if err != nil || !bytes.Equal(prevData, devData) {
 					pkgChanged = true
 				}
+			} else {
+				pkgChanged = true
 			}
 		}
 
