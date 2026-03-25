@@ -60,7 +60,7 @@
 </div>
 </div>
 <script>
-function copyDetailWorkaround(){var s=document.getElementById('detail-workaround-code').textContent;navigator.clipboard.writeText(s).then(function(){var b=document.getElementById('detail-workaround-btn');var t=b.textContent;b.textContent='Copied!';setTimeout(function(){b.textContent=t},1500)})}
+function copyDetailWorkaround(){var s=document.getElementById('detail-workaround-code').textContent;navigator.clipboard.writeText(s).then(function(){var b=document.getElementById('detail-workaround-btn');var t=b.textContent;b.textContent='Copied!';b.style.color='#16a34a';setTimeout(function(){b.textContent=t;b.style.color=''},1500)})}
 </script>
 {{end}}
 <div class="flex items-start gap-4 mb-6">
@@ -76,7 +76,7 @@ function copyDetailWorkaround(){var s=document.getElementById('detail-workaround
 <p class="text-sm text-gray-500 font-mono mt-1">wp-{{.Package.Type}}/{{.Package.Name}}</p>
 </div>
 </div>
-<div class="flex items-center gap-3 mb-10 px-4 py-3 rounded-xl border border-gray-200/60 bg-gray-100/30 cursor-pointer hover:border-gray-300 transition-colors group" onclick="navigator.clipboard.writeText('composer require wp-{{.Package.Type}}/{{.Package.Name}}')">
+<div class="flex items-center gap-3 mb-10 px-4 py-3 rounded-xl border border-gray-200/60 bg-gray-100/30 cursor-pointer hover:border-gray-300 transition-colors group" onclick="copyCmd(this,'composer require wp-{{.Package.Type}}/{{.Package.Name}}')">
 <span class="text-gray-500 text-sm font-mono select-none">$</span>
 <code class="flex-1 text-sm font-mono text-gray-900 select-all truncate">composer require wp-{{.Package.Type}}/{{.Package.Name}}</code>
 <span class="shrink-0 text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity mr-1">Click to copy</span>
@@ -101,7 +101,7 @@ function copyDetailWorkaround(){var s=document.getElementById('detail-workaround
 <span class="font-mono text-gray-900">{{$v.Version}}</span>
 {{if $v.IsLatest}}<span class="inline-flex items-center rounded-md bg-brand-primary px-2 py-0.5 text-[10px] font-medium text-white">latest</span>{{end}}
 </div>
-<code class="inline-flex items-center gap-1.5 mt-1 text-xs font-mono text-gray-400 cursor-pointer hover:text-gray-600 transition-colors" onclick="navigator.clipboard.writeText('composer require wp-{{$.Package.Type}}/{{$.Package.Name}}:{{$v.Version}}')"><span>composer require wp-{{$.Package.Type}}/{{$.Package.Name}}:{{$v.Version}}</span><svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></code>
+<code class="inline-flex items-center gap-1.5 mt-1 text-xs font-mono text-gray-400 cursor-pointer hover:text-gray-600 transition-colors" onclick="copyCmd(this,'composer require wp-{{$.Package.Type}}/{{$.Package.Name}}:{{$v.Version}}')"><span>composer require wp-{{$.Package.Type}}/{{$.Package.Name}}:{{$v.Version}}</span><svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></code>
 </li>
 {{end}}
 </ol>
