@@ -33,9 +33,9 @@
 
 {{if gt .TotalPages 1}}
 <div class="flex justify-center items-center gap-2 pt-8">
-{{if gt .Page 1}}<a href="/untagged?{{if .Filter}}filter={{.Filter}}&amp;{{end}}{{if gt (sub .Page 1) 1}}page={{sub .Page 1}}{{end}}" hx-get="/untagged-partial?{{if .Filter}}filter={{.Filter}}&amp;{{end}}{{if gt (sub .Page 1) 1}}page={{sub .Page 1}}{{end}}" hx-target="#untagged-results" hx-swap="innerHTML show:#untagged-heading:top" hx-include="" class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer">&laquo; Previous</a>{{end}}
+{{if gt .Page 1}}<a href="/untagged?{{if .Filter}}filter={{.Filter}}&amp;{{end}}{{if .Search}}search={{.Search}}&amp;{{end}}{{if gt (sub .Page 1) 1}}page={{sub .Page 1}}{{end}}" hx-get="/untagged-partial?{{if .Filter}}filter={{.Filter}}&amp;{{end}}{{if .Search}}search={{.Search}}&amp;{{end}}{{if gt (sub .Page 1) 1}}page={{sub .Page 1}}{{end}}" hx-target="#untagged-results" hx-swap="innerHTML show:#untagged-form:top" hx-include="" class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer">&laquo; Previous</a>{{end}}
 <span class="px-4 py-2 text-sm text-gray-500">Page {{.Page}} of {{.TotalPages}}</span>
-{{if lt .Page .TotalPages}}<a href="/untagged?{{if .Filter}}filter={{.Filter}}&amp;{{end}}page={{add .Page 1}}" hx-get="/untagged-partial?{{if .Filter}}filter={{.Filter}}&amp;{{end}}page={{add .Page 1}}" hx-target="#untagged-results" hx-swap="innerHTML show:#untagged-heading:top" hx-include="" class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer">Next &raquo;</a>{{end}}
+{{if lt .Page .TotalPages}}<a href="/untagged?{{if .Filter}}filter={{.Filter}}&amp;{{end}}{{if .Search}}search={{.Search}}&amp;{{end}}page={{add .Page 1}}" hx-get="/untagged-partial?{{if .Filter}}filter={{.Filter}}&amp;{{end}}{{if .Search}}search={{.Search}}&amp;{{end}}page={{add .Page 1}}" hx-target="#untagged-results" hx-swap="innerHTML show:#untagged-form:top" hx-include="" class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer">Next &raquo;</a>{{end}}
 </div>
 {{end}}
 {{end}}

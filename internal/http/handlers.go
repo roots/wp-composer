@@ -197,8 +197,9 @@ func handleUntagged(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			page = 1
 		}
 		filter := r.URL.Query().Get("filter")
+		search := strings.TrimSpace(r.URL.Query().Get("search"))
 
-		packages, total, err := queryUntaggedPackages(r.Context(), a.DB, filter, page, untaggedPerPage)
+		packages, total, err := queryUntaggedPackages(r.Context(), a.DB, filter, search, page, untaggedPerPage)
 		if err != nil {
 			a.Logger.Error("querying untagged packages", "error", err)
 			captureError(r, err)
@@ -215,6 +216,7 @@ func handleUntagged(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		render(w, r, tmpl.untagged, "layout", map[string]any{
 			"Packages":     packages,
 			"Filter":       filter,
+			"Search":       search,
 			"Page":         page,
 			"Total":        int64(total),
 			"TotalPlugins": totalPlugins,
@@ -233,8 +235,9 @@ func handleUntaggedPartial(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			page = 1
 		}
 		filter := r.URL.Query().Get("filter")
+		search := strings.TrimSpace(r.URL.Query().Get("search"))
 
-		packages, total, err := queryUntaggedPackages(r.Context(), a.DB, filter, page, untaggedPerPage)
+		packages, total, err := queryUntaggedPackages(r.Context(), a.DB, filter, search, page, untaggedPerPage)
 		if err != nil {
 			a.Logger.Error("querying untagged packages", "error", err)
 			captureError(r, err)
@@ -248,6 +251,7 @@ func handleUntaggedPartial(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		render(w, r, tmpl.untaggedPartial, "untagged-results", map[string]any{
 			"Packages":   packages,
 			"Filter":     filter,
+			"Search":     search,
 			"Page":       page,
 			"Total":      int64(total),
 			"TotalPages": totalPages,
@@ -993,8 +997,10 @@ func queryAdminPackages(ctx context.Context, db *sql.DB, f adminFilters, page, l
 	return pkgs, total, rows.Err()
 }
 
-func queryUntaggedPackages(ctx context.Context, db *sql.DB, filter string, page, limit int) ([]packageRow, int, error) {
+func queryUntaggedPackages(ctx context.Context, db *sql.DB, filter, search string, page, limit int) ([]packageRow, int, error) {
 	where := `is_active = 1 AND type = 'plugin' AND wporg_version IS NOT NULL AND wporg_version != '' AND NOT EXISTS (SELECT 1 FROM json_each(versions_json) WHERE key = wporg_version)`
+
+	var args []any
 
 	switch filter {
 	case "trunk-only":
@@ -1003,8 +1009,14 @@ func queryUntaggedPackages(ctx context.Context, db *sql.DB, filter string, page,
 		where += ` AND (SELECT COUNT(*) FROM json_each(versions_json) WHERE key != 'dev-trunk') > 0`
 	}
 
+	if search != "" {
+		where += ` AND (name LIKE ? OR display_name LIKE ?)`
+		pat := "%" + search + "%"
+		args = append(args, pat, pat)
+	}
+
 	var total int
-	if err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM packages WHERE "+where).Scan(&total); err != nil {
+	if err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM packages WHERE "+where, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
@@ -1013,7 +1025,7 @@ func queryUntaggedPackages(ctx context.Context, db *sql.DB, filter string, page,
 		COALESCE(current_version,''), COALESCE(wporg_version,''), downloads, active_installs, wp_packages_installs_total
 		FROM packages WHERE %s ORDER BY active_installs DESC LIMIT ? OFFSET ?`, where)
 
-	rows, err := db.QueryContext(ctx, q, limit, offset)
+	rows, err := db.QueryContext(ctx, q, append(args, limit, offset)...)
 	if err != nil {
 		return nil, 0, err
 	}
