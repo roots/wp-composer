@@ -89,7 +89,7 @@
 
 </article>
 <script>
-function copyWorkaround(slug,ver){var s=JSON.stringify({"type":"package","package":{"name":"wp-plugin/"+slug,"version":ver,"type":"wordpress-plugin","dist":{"type":"zip","url":"https://downloads.wordpress.org/plugin/"+slug+".zip"}}},null,2);navigator.clipboard.writeText(s).then(function(){var b=event.target;var t=b.textContent;b.textContent="Copied!";setTimeout(function(){b.textContent=t},1500)})}
+function copyWorkaround(slug,ver){var s=JSON.stringify({"type":"package","package":{"name":"wp-plugin/"+slug,"version":ver,"type":"wordpress-plugin","dist":{"type":"zip","url":"https://downloads.wordpress.org/plugin/"+slug+".zip"}}},null,2);navigator.clipboard.writeText(s).then(function(){var b=event.target;var t=b.textContent;b.textContent="Copied!";b.style.color="#16a34a";setTimeout(function(){b.textContent=t;b.style.color=""},1500)})}
 document.addEventListener('htmx:afterRequest',function(e){var xhr=e.detail.xhr;if(!xhr)return;var u=new URL(xhr.responseURL);if(u.pathname==='/untagged-partial'){var p=u.searchParams.get('page');var f=u.searchParams.get('filter');var s=u.searchParams.get('search');var q=[];if(f)q.push('filter='+f);if(s)q.push('search='+encodeURIComponent(s));if(p&&p!=='1')q.push('page='+p);history.pushState(null,'',q.length?'/untagged?'+q.join('&'):'/untagged')}});
 </script>
 {{end}}
