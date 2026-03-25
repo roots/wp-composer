@@ -146,7 +146,6 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 		// Note: even packages with zero tagged versions still get a ~dev.json.
 		versions = version.NormalizeVersions(versions)
 
-		totalPkgs++
 		composerName := ComposerName(pkgType, name)
 		meta := PackageMeta{}
 		if description != nil {
@@ -191,6 +190,7 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 			// Theme with no tagged versions — skip
 			continue
 		}
+		totalPkgs++
 		pkgPayload := map[string]any{
 			"packages": map[string]any{
 				composerName: mainVersions,

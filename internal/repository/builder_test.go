@@ -455,6 +455,72 @@ func TestBuildDevOnlyChangeDetection(t *testing.T) {
 	}
 }
 
+func TestBuildThemeNoTaggedVersions(t *testing.T) {
+	database := setupTestDB(t)
+
+	// Theme with no tagged versions — should be skipped entirely
+	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, versions_json, is_active, last_sync_run_id, created_at, updated_at)
+		VALUES ('theme', 'empty-theme', 'Empty Theme',
+			'{}',
+			1, 1, datetime('now'), datetime('now'))`)
+
+	// Plugin with no tagged versions — should still get .json and ~dev.json
+	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, versions_json, is_active, last_sync_run_id, created_at, updated_at)
+		VALUES ('plugin', 'empty-plugin', 'Empty Plugin',
+			'{}',
+			1, 1, datetime('now'), datetime('now'))`)
+
+	// Theme with tagged versions — should work normally (no ~dev.json)
+	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, versions_json, is_active, last_sync_run_id, created_at, updated_at)
+		VALUES ('theme', 'astra', 'Astra',
+			'{"4.0":"https://downloads.wordpress.org/theme/astra.4.0.zip"}',
+			1, 1, datetime('now'), datetime('now'))`)
+
+	tmpDir := t.TempDir()
+	result, err := Build(context.Background(), database, BuildOpts{
+		OutputDir: tmpDir,
+		Logger:    slog.Default(),
+	})
+	if err != nil {
+		t.Fatalf("build failed: %v", err)
+	}
+
+	// Only plugin and astra should be counted (empty theme skipped)
+	if result.PackagesTotal != 2 {
+		t.Errorf("packages_total = %d, want 2", result.PackagesTotal)
+	}
+
+	// Empty theme should have no files
+	if _, err := os.Stat(filepath.Join(result.BuildDir, "p2/wp-theme/empty-theme.json")); !os.IsNotExist(err) {
+		t.Error("empty-theme.json should not exist")
+	}
+	if _, err := os.Stat(filepath.Join(result.BuildDir, "p2/wp-theme/empty-theme~dev.json")); !os.IsNotExist(err) {
+		t.Error("empty-theme~dev.json should not exist")
+	}
+
+	// Astra should have .json but no ~dev.json
+	if _, err := os.Stat(filepath.Join(result.BuildDir, "p2/wp-theme/astra.json")); err != nil {
+		t.Errorf("astra.json missing: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(result.BuildDir, "p2/wp-theme/astra~dev.json")); !os.IsNotExist(err) {
+		t.Error("astra~dev.json should not exist")
+	}
+
+	// Empty plugin should have both .json (with dev-trunk) and ~dev.json
+	if _, err := os.Stat(filepath.Join(result.BuildDir, "p2/wp-plugin/empty-plugin.json")); err != nil {
+		t.Errorf("empty-plugin.json missing: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(result.BuildDir, "p2/wp-plugin/empty-plugin~dev.json")); err != nil {
+		t.Errorf("empty-plugin~dev.json missing: %v", err)
+	}
+
+	// Integrity should pass
+	errors := ValidateIntegrity(result.BuildDir)
+	if len(errors) > 0 {
+		t.Errorf("integrity validation failed: %v", errors)
+	}
+}
+
 func TestBuildEmpty(t *testing.T) {
 	database := setupTestDB(t)
 	tmpDir := t.TempDir()
