@@ -51,9 +51,17 @@ func ComposerVersion(pkgType, slug, ver, downloadURL string, meta PackageMeta) m
 		"uid": crc32.ChecksumIEEE([]byte(fmt.Sprintf("%s/%s", composerName, ver))),
 	}
 
-	// Only include dist for tagged versions. Trunk zips are mutable so
-	// Composer should check out via SVN source and lock the revision.
-	if ver != "dev-trunk" {
+	if ver == "dev-trunk" {
+		// Trunk zip is unversioned (e.g. /plugin/akismet.zip)
+		trunkURL := fmt.Sprintf("https://downloads.wordpress.org/plugin/%s.zip", slug)
+		if pkgType == "theme" {
+			trunkURL = fmt.Sprintf("https://downloads.wordpress.org/theme/%s.zip", slug)
+		}
+		entry["dist"] = map[string]any{
+			"type": "zip",
+			"url":  trunkURL,
+		}
+	} else if downloadURL != "" {
 		entry["dist"] = map[string]any{
 			"type": "zip",
 			"url":  downloadURL,

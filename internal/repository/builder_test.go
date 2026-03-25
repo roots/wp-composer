@@ -226,18 +226,19 @@ func TestBuildDevTrunkSplit(t *testing.T) {
 		t.Error("akismet.json should contain version 5.0")
 	}
 
-	// akismet~dev.json should contain dev-trunk with source but no dist
+	// akismet~dev.json should contain dev-trunk with source and unversioned dist
 	devData, _ := os.ReadFile(filepath.Join(result.BuildDir, "p2/wp-plugin/akismet~dev.json"))
 	var dev map[string]any
 	_ = json.Unmarshal(devData, &dev)
 	devPkgs := dev["packages"].(map[string]any)
 	devVersions := devPkgs["wp-plugin/akismet"].(map[string]any)
 	devTrunk := devVersions["dev-trunk"].(map[string]any)
-	if _, ok := devTrunk["dist"]; ok {
-		t.Error("dev-trunk should not have dist")
-	}
 	if _, ok := devTrunk["source"]; !ok {
 		t.Error("dev-trunk should have source")
+	}
+	dist := devTrunk["dist"].(map[string]any)
+	if dist["url"] != "https://downloads.wordpress.org/plugin/akismet.zip" {
+		t.Errorf("dev-trunk dist url = %q, want unversioned trunk zip", dist["url"])
 	}
 
 	// trunk-only should only have ~dev.json, not .json
