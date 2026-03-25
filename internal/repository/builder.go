@@ -178,33 +178,35 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 		// Track whether this package has been marked as changed (avoid double-counting)
 		pkgChanged := false
 
-		// Write tagged versions to p2/<name>.json
-		if len(taggedVersions) > 0 {
-			pkgPayload := map[string]any{
-				"packages": map[string]any{
-					composerName: taggedVersions,
-				},
-			}
-			_, data, err := HashJSON(pkgPayload)
-			if err != nil {
-				return nil, fmt.Errorf("hashing %s: %w", composerName, err)
-			}
+		// Write p2/<name>.json — tagged versions, or dev-trunk for trunk-only packages
+		mainVersions := taggedVersions
+		if len(mainVersions) == 0 {
+			mainVersions = devVersions
+		}
+		pkgPayload := map[string]any{
+			"packages": map[string]any{
+				composerName: mainVersions,
+			},
+		}
+		_, data, err := HashJSON(pkgPayload)
+		if err != nil {
+			return nil, fmt.Errorf("hashing %s: %w", composerName, err)
+		}
 
-			p2Rel := filepath.Join("p2", composerName+".json")
-			p2File := filepath.Join(buildDir, p2Rel)
-			if err := os.WriteFile(p2File, data, 0644); err != nil {
-				return nil, fmt.Errorf("writing %s: %w", p2File, err)
-			}
-			artifactCount++
+		p2Rel := filepath.Join("p2", composerName+".json")
+		p2File := filepath.Join(buildDir, p2Rel)
+		if err := os.WriteFile(p2File, data, 0644); err != nil {
+			return nil, fmt.Errorf("writing %s: %w", p2File, err)
+		}
+		artifactCount++
 
-			if opts.PreviousBuildDir != "" {
-				prevData, err := os.ReadFile(filepath.Join(opts.PreviousBuildDir, p2Rel))
-				if err != nil || !bytes.Equal(prevData, data) {
-					pkgChanged = true
-				}
-			} else {
+		if opts.PreviousBuildDir != "" {
+			prevData, err := os.ReadFile(filepath.Join(opts.PreviousBuildDir, p2Rel))
+			if err != nil || !bytes.Equal(prevData, data) {
 				pkgChanged = true
 			}
+		} else {
+			pkgChanged = true
 		}
 
 		// Write dev versions to p2/<name>~dev.json

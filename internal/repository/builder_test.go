@@ -241,12 +241,11 @@ func TestBuildDevTrunkSplit(t *testing.T) {
 		t.Errorf("dev-trunk dist url = %q, want unversioned trunk zip", dist["url"])
 	}
 
-	// trunk-only should only have ~dev.json, not .json
-	if _, err := os.Stat(filepath.Join(result.BuildDir, "p2/wp-plugin/trunk-only.json")); !os.IsNotExist(err) {
-		t.Error("trunk-only.json should not exist")
-	}
-	if _, err := os.Stat(filepath.Join(result.BuildDir, "p2/wp-plugin/trunk-only~dev.json")); err != nil {
-		t.Errorf("trunk-only~dev.json missing: %v", err)
+	// trunk-only should have both .json (with dev-trunk) and ~dev.json
+	for _, path := range []string{"p2/wp-plugin/trunk-only.json", "p2/wp-plugin/trunk-only~dev.json"} {
+		if _, err := os.Stat(filepath.Join(result.BuildDir, path)); err != nil {
+			t.Errorf("file missing: %s", path)
+		}
 	}
 
 	// Integrity validation should pass
