@@ -180,6 +180,9 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 			}
 		}
 
+		// Track whether this package has been marked as changed (avoid double-counting)
+		pkgChanged := false
+
 		// Write tagged versions to p2/<name>.json
 		if len(taggedVersions) > 0 {
 			pkgPayload := map[string]any{
@@ -202,13 +205,10 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 			if opts.PreviousBuildDir != "" {
 				prevData, err := os.ReadFile(filepath.Join(opts.PreviousBuildDir, p2Rel))
 				if err != nil || !bytes.Equal(prevData, data) {
-					changedPkgs++
-					changedPackages = append(changedPackages, PackageChange{Name: composerName, Action: "update"})
-					opts.Logger.Info("package changed", "package", composerName)
+					pkgChanged = true
 				}
 			} else {
-				changedPkgs++
-				opts.Logger.Info("package changed", "package", composerName)
+				pkgChanged = true
 			}
 		}
 
@@ -231,19 +231,22 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 			}
 			artifactCount++
 
-			if opts.PreviousBuildDir != "" {
-				prevData, err := os.ReadFile(filepath.Join(opts.PreviousBuildDir, devRel))
-				if err != nil || !bytes.Equal(prevData, devData) {
-					if len(taggedVersions) == 0 {
-						changedPkgs++
-						changedPackages = append(changedPackages, PackageChange{Name: composerName, Action: "update"})
-						opts.Logger.Info("package changed", "package", composerName)
+			if !pkgChanged {
+				if opts.PreviousBuildDir != "" {
+					prevData, err := os.ReadFile(filepath.Join(opts.PreviousBuildDir, devRel))
+					if err != nil || !bytes.Equal(prevData, devData) {
+						pkgChanged = true
 					}
+				} else {
+					pkgChanged = true
 				}
-			} else if len(taggedVersions) == 0 {
-				changedPkgs++
-				opts.Logger.Info("package changed", "package", composerName)
 			}
+		}
+
+		if pkgChanged {
+			changedPkgs++
+			changedPackages = append(changedPackages, PackageChange{Name: composerName, Action: "update"})
+			opts.Logger.Info("package changed", "package", composerName)
 		}
 
 		if totalPkgs%500 == 0 {
@@ -269,9 +272,14 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 			if err != nil {
 				return fmt.Errorf("rel path for %s: %w", path, err)
 			}
+			// Skip ~dev.json files — only track deletes via the main .json
+			relSlash := filepath.ToSlash(rel)
+			if strings.HasSuffix(relSlash, "~dev.json") {
+				return nil
+			}
 			newPath := filepath.Join(buildDir, "p2", rel)
 			if _, err := os.Stat(newPath); os.IsNotExist(err) {
-				name := strings.TrimSuffix(filepath.ToSlash(rel), ".json")
+				name := strings.TrimSuffix(relSlash, ".json")
 				changedPackages = append(changedPackages, PackageChange{Name: name, Action: "delete"})
 				opts.Logger.Info("package deleted", "package", name)
 			}
