@@ -145,11 +145,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 			}
 
 			if validVersions == 0 {
-				pkg.IsActive = false
-				if err := packages.DeactivatePackage(gCtx, application.DB, p.ID); err != nil {
-					application.Logger.Warn("failed to deactivate", "type", p.Type, "name", p.Name, "error", err)
-				}
-				deactivated.Add(1)
+				application.Logger.Debug("package has no tagged versions", "type", p.Type, "name", p.Name)
 			}
 
 			now := time.Now().UTC()

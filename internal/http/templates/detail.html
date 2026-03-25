@@ -29,6 +29,31 @@
 <div class="text-sm text-amber-900 min-w-0">
 {{if .TrunkOnly}}<p class="font-medium">No tagged releases in SVN</p>
 <p class="mt-1">This plugin releases exclusively via SVN trunk. Installing it will use <code class="text-xs font-mono bg-amber-100 px-1 py-0.5 rounded">dev-trunk</code> which is mutable &mdash; the contents may change without the version number changing, and it can't be pinned to a specific version. <a href="https://wordpress.org/support/plugin/{{.Package.Name}}/" class="font-medium underline underline-offset-2 hover:no-underline" rel="noopener">Ask the author to tag their releases</a> or see <a href="/untagged" class="font-medium underline underline-offset-2 hover:no-underline">all untagged plugins</a>.</p>
+<details class="mt-3">
+<summary class="font-medium cursor-pointer hover:underline">Workaround: install from trunk</summary>
+<div class="mt-2">
+<p class="text-amber-800 mb-2">Add this to your <code class="text-xs font-mono bg-amber-100 px-1 py-0.5 rounded">composer.json</code> repositories array <strong>above</strong> the WP Packages repository:</p>
+<div class="rounded-lg border border-amber-200 bg-white overflow-hidden">
+<div class="flex items-center justify-between px-3 py-1.5 bg-amber-50 border-b border-amber-200">
+<span class="text-xs text-amber-700">composer.json</span>
+<button onclick="copyDetailWorkaround()" class="text-xs text-amber-700 hover:text-amber-900 cursor-pointer" id="detail-workaround-btn">Copy</button>
+</div>
+<pre class="p-3 text-xs font-mono leading-relaxed overflow-x-auto text-gray-800" id="detail-workaround-code">{
+  "type": "package",
+  "package": {
+    "name": "wp-{{.Package.Type}}/{{.Package.Name}}",
+    "version": "{{.Package.WporgVersion}}",
+    "type": "wordpress-plugin",
+    "dist": {
+      "type": "zip",
+      "url": "https://downloads.wordpress.org/plugin/{{.Package.Name}}.zip"
+    }
+  }
+}</pre>
+</div>
+<p class="mt-2 text-xs text-amber-700">Note: this downloads from trunk, which is mutable &mdash; the contents may change without the version number changing.</p>
+</div>
+</details>
 {{else}}<p class="font-medium">Latest version not tagged in SVN</p>
 <p class="mt-1">WordPress.org reports version {{.Package.WporgVersion}} but it doesn't match any tagged release, so the latest version isn't available as a tagged release via Composer. <a href="https://wordpress.org/support/plugin/{{.Package.Name}}/" class="font-medium underline underline-offset-2 hover:no-underline" rel="noopener">Ask the author to tag their releases</a> or see <a href="/untagged" class="font-medium underline underline-offset-2 hover:no-underline">all untagged plugins</a>.</p>
 <details class="mt-3">
