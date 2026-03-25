@@ -16,6 +16,7 @@ var aggregateInstallsCmd = &cobra.Command{
 		application.Logger.Info("aggregation complete",
 			"packages_updated", result.PackagesUpdated,
 			"packages_reset", result.PackagesReset,
+			"events_pruned", result.EventsPruned,
 		)
 		return nil
 	},

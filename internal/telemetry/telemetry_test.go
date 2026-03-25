@@ -57,6 +57,16 @@ func setupTestDB(t *testing.T) *sql.DB {
 			created_at TEXT NOT NULL,
 			UNIQUE(dedupe_hash, dedupe_bucket)
 		);
+		CREATE TABLE monthly_installs (
+			package_id INTEGER NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+			month TEXT NOT NULL,
+			installs INTEGER NOT NULL DEFAULT 0,
+			PRIMARY KEY (package_id, month)
+		);
+		CREATE TABLE site_meta (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL
+		);
 	`)
 	if err != nil {
 		t.Fatalf("creating tables: %v", err)
@@ -222,7 +232,7 @@ func TestAggregateInstalls(t *testing.T) {
 
 	now := time.Now().UTC()
 	recent := now.Add(-24 * time.Hour).Format(time.RFC3339)
-	old := now.Add(-60 * 24 * time.Hour).Format(time.RFC3339) // 60 days ago
+	old := now.AddDate(0, 0, -400).Format(time.RFC3339) // 400 days ago, beyond retention
 
 	// Insert events: 2 recent for akismet, 1 old for akismet, 1 recent for astra
 	_, _ = database.Exec(`INSERT INTO install_events (package_id, version, ip_hash, user_agent_hash, dedupe_bucket, dedupe_hash, created_at) VALUES (1, '5.0', 'a', 'b', 1, 'h1', ?)`, recent)
@@ -238,7 +248,12 @@ func TestAggregateInstalls(t *testing.T) {
 		t.Errorf("packages_updated = %d, want 2", result.PackagesUpdated)
 	}
 
-	// Check akismet: total=3, 30d=2
+	// Old event (60 days ago) should be pruned (retention = 45 days)
+	if result.EventsPruned != 1 {
+		t.Errorf("events_pruned = %d, want 1", result.EventsPruned)
+	}
+
+	// Check akismet: total=3 (from monthly_installs), 30d=2 (from recent events)
 	var total, recent30d int
 	_ = database.QueryRow("SELECT wp_packages_installs_total, wp_packages_installs_30d FROM packages WHERE name='akismet'").Scan(&total, &recent30d)
 	if total != 3 {
@@ -263,6 +278,109 @@ func TestAggregateInstalls(t *testing.T) {
 	if lastInstalled == nil {
 		t.Error("last_installed_at should be set")
 	}
+
+	// Check monthly_installs: akismet should have 2 months (recent + 60d ago), astra 1 month
+	var monthlyCount int
+	_ = database.QueryRow("SELECT COUNT(*) FROM monthly_installs WHERE package_id = 1").Scan(&monthlyCount)
+	if monthlyCount != 2 {
+		t.Errorf("akismet monthly rows = %d, want 2", monthlyCount)
+	}
+	_ = database.QueryRow("SELECT COUNT(*) FROM monthly_installs WHERE package_id = 2").Scan(&monthlyCount)
+	if monthlyCount != 1 {
+		t.Errorf("astra monthly rows = %d, want 1", monthlyCount)
+	}
+
+	// Verify counts per month for akismet
+	var installs int
+	recentMonth := now.Add(-24 * time.Hour).Format("2006-01")
+	oldMonth := now.AddDate(0, 0, -400).Format("2006-01")
+	_ = database.QueryRow("SELECT installs FROM monthly_installs WHERE package_id = 1 AND month = ?", recentMonth).Scan(&installs)
+	if installs != 2 {
+		t.Errorf("akismet %s installs = %d, want 2", recentMonth, installs)
+	}
+	_ = database.QueryRow("SELECT installs FROM monthly_installs WHERE package_id = 1 AND month = ?", oldMonth).Scan(&installs)
+	if installs != 1 {
+		t.Errorf("akismet %s installs = %d, want 1", oldMonth, installs)
+	}
+
+	// Verify watermark was saved
+	var wm string
+	_ = database.QueryRow("SELECT value FROM site_meta WHERE key = 'aggregate_watermark'").Scan(&wm)
+	if wm == "" || wm == "0" {
+		t.Error("watermark should be saved after aggregation")
+	}
+}
+
+func TestAggregateInstalls_Incremental(t *testing.T) {
+	database := setupTestDB(t)
+	ctx := context.Background()
+
+	now := time.Now().UTC()
+	recent := now.Add(-24 * time.Hour).Format(time.RFC3339)
+
+	// First batch: 2 events
+	_, _ = database.Exec(`INSERT INTO install_events (package_id, version, ip_hash, user_agent_hash, dedupe_bucket, dedupe_hash, created_at) VALUES (1, '5.0', 'a', 'b', 1, 'h1', ?)`, recent)
+	_, _ = database.Exec(`INSERT INTO install_events (package_id, version, ip_hash, user_agent_hash, dedupe_bucket, dedupe_hash, created_at) VALUES (1, '4.0', 'a', 'b', 1, 'h2', ?)`, recent)
+
+	_, err := AggregateInstalls(ctx, database)
+	if err != nil {
+		t.Fatalf("first aggregate: %v", err)
+	}
+
+	var total int
+	_ = database.QueryRow("SELECT wp_packages_installs_total FROM packages WHERE name='akismet'").Scan(&total)
+	if total != 2 {
+		t.Errorf("after first run: total = %d, want 2", total)
+	}
+
+	// Second batch: 1 more event in the same month
+	_, _ = database.Exec(`INSERT INTO install_events (package_id, version, ip_hash, user_agent_hash, dedupe_bucket, dedupe_hash, created_at) VALUES (1, '3.0', 'a', 'b', 1, 'h3', ?)`, recent)
+
+	_, err = AggregateInstalls(ctx, database)
+	if err != nil {
+		t.Fatalf("second aggregate: %v", err)
+	}
+
+	// Total should be 3, not 5 (no double-counting)
+	_ = database.QueryRow("SELECT wp_packages_installs_total FROM packages WHERE name='akismet'").Scan(&total)
+	if total != 3 {
+		t.Errorf("after second run: total = %d, want 3", total)
+	}
+
+	// Monthly should show 3 for the recent month
+	recentMonth := now.Add(-24 * time.Hour).Format("2006-01")
+	var installs int
+	_ = database.QueryRow("SELECT installs FROM monthly_installs WHERE package_id = 1 AND month = ?", recentMonth).Scan(&installs)
+	if installs != 3 {
+		t.Errorf("monthly installs = %d, want 3", installs)
+	}
+}
+
+func TestAggregateInstalls_NoNewEvents(t *testing.T) {
+	database := setupTestDB(t)
+	ctx := context.Background()
+
+	recent := time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339)
+	_, _ = database.Exec(`INSERT INTO install_events (package_id, version, ip_hash, user_agent_hash, dedupe_bucket, dedupe_hash, created_at) VALUES (1, '5.0', 'a', 'b', 1, 'h1', ?)`, recent)
+
+	// First run processes the event
+	_, err := AggregateInstalls(ctx, database)
+	if err != nil {
+		t.Fatalf("first aggregate: %v", err)
+	}
+
+	// Second run with no new events should be a no-op for monthly
+	_, err = AggregateInstalls(ctx, database)
+	if err != nil {
+		t.Fatalf("second aggregate: %v", err)
+	}
+
+	// Total should still be 1
+	var total int
+	_ = database.QueryRow("SELECT wp_packages_installs_total FROM packages WHERE name='akismet'").Scan(&total)
+	if total != 1 {
+		t.Errorf("total = %d, want 1", total)
+	}
 }
 
 func TestAggregateInstalls_Resets30d(t *testing.T) {
@@ -273,7 +391,7 @@ func TestAggregateInstalls_Resets30d(t *testing.T) {
 	_, _ = database.Exec("UPDATE packages SET wp_packages_installs_30d = 50 WHERE name='akismet'")
 
 	// Only old events
-	old := time.Now().UTC().Add(-60 * 24 * time.Hour).Format(time.RFC3339)
+	old := time.Now().UTC().AddDate(0, 0, -400).Format(time.RFC3339)
 	_, _ = database.Exec(`INSERT INTO install_events (package_id, version, ip_hash, user_agent_hash, dedupe_bucket, dedupe_hash, created_at) VALUES (1, '5.0', 'a', 'b', 1, 'h1', ?)`, old)
 
 	result, err := AggregateInstalls(ctx, database)
@@ -288,5 +406,40 @@ func TestAggregateInstalls_Resets30d(t *testing.T) {
 	_ = database.QueryRow("SELECT wp_packages_installs_30d FROM packages WHERE name='akismet'").Scan(&recent30d)
 	if recent30d != 0 {
 		t.Errorf("30d should be reset to 0, got %d", recent30d)
+	}
+}
+
+func TestAggregateInstalls_PrunesOldEvents(t *testing.T) {
+	database := setupTestDB(t)
+	ctx := context.Background()
+
+	now := time.Now().UTC()
+	recent := now.Add(-24 * time.Hour).Format(time.RFC3339)
+	old := now.AddDate(0, 0, -400).Format(time.RFC3339)
+
+	_, _ = database.Exec(`INSERT INTO install_events (package_id, version, ip_hash, user_agent_hash, dedupe_bucket, dedupe_hash, created_at) VALUES (1, '5.0', 'a', 'b', 1, 'h1', ?)`, recent)
+	_, _ = database.Exec(`INSERT INTO install_events (package_id, version, ip_hash, user_agent_hash, dedupe_bucket, dedupe_hash, created_at) VALUES (1, '4.0', 'a', 'b', 1, 'h2', ?)`, old)
+
+	result, err := AggregateInstalls(ctx, database)
+	if err != nil {
+		t.Fatalf("aggregate: %v", err)
+	}
+
+	if result.EventsPruned != 1 {
+		t.Errorf("events_pruned = %d, want 1", result.EventsPruned)
+	}
+
+	// Old event should be gone
+	var count int
+	_ = database.QueryRow("SELECT COUNT(*) FROM install_events").Scan(&count)
+	if count != 1 {
+		t.Errorf("expected 1 remaining event, got %d", count)
+	}
+
+	// But monthly_installs should still reflect the old event's month
+	var monthlyCount int
+	_ = database.QueryRow("SELECT COUNT(*) FROM monthly_installs WHERE package_id = 1").Scan(&monthlyCount)
+	if monthlyCount != 2 {
+		t.Errorf("expected 2 monthly rows (data preserved after pruning), got %d", monthlyCount)
 	}
 }

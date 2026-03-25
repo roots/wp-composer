@@ -20,6 +20,7 @@ func TestMigrateCreatesPackageStatsAndFTS(t *testing.T) {
 	}
 
 	assertObjectExists(t, database, "table", "package_stats")
+	assertObjectExists(t, database, "table", "monthly_installs")
 	assertObjectExists(t, database, "table", "packages_fts")
 	assertObjectExists(t, database, "trigger", "packages_fts_insert")
 	assertObjectExists(t, database, "trigger", "packages_fts_update")
