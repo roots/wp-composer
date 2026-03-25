@@ -192,4 +192,8 @@ else
   echo "  - Replaced WPackagist repository with WP Packages"
   echo ""
   echo "Run 'composer update' to install packages from WP Packages."
+
+  script_name="$(basename -- "${BASH_SOURCE[0]}")"
+  read -r -p "Delete the downloaded migration script ($script_name)? [y/N] " reply
+  [[ "$reply" =~ ^[Yy]$ ]] && rm -- "${BASH_SOURCE[0]}"
 fi
