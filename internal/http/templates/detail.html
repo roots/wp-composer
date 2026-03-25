@@ -24,9 +24,9 @@
 <span class="text-gray-900 font-medium truncate">{{if .Package.DisplayName}}{{.Package.DisplayName}}{{else}}{{.Package.Name}}{{end}}</span>
 </nav>
 {{if .Untagged}}
-<div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 mb-6 flex items-start gap-3">
+<div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 mb-6 flex items-start gap-3 overflow-hidden">
 <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
-<div class="text-sm text-amber-900">
+<div class="text-sm text-amber-900 min-w-0">
 {{if .TrunkOnly}}<p class="font-medium">No tagged releases in SVN</p>
 <p class="mt-1">This plugin releases exclusively via SVN trunk. Installing it will use <code class="text-xs font-mono bg-amber-100 px-1 py-0.5 rounded">dev-trunk</code> which is mutable &mdash; the contents may change without the version number changing, and it can't be pinned to a specific version. <a href="https://wordpress.org/support/plugin/{{.Package.Name}}/" class="font-medium underline underline-offset-2 hover:no-underline" rel="noopener">Ask the author to tag their releases</a> or see <a href="/untagged" class="font-medium underline underline-offset-2 hover:no-underline">all untagged plugins</a>.</p>
 {{else}}<p class="font-medium">Latest version not tagged in SVN</p>
