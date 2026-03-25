@@ -135,7 +135,6 @@ func UpsertShellPackage(ctx context.Context, db *sql.DB, pkgType, name string, l
 				THEN excluded.last_committed
 				ELSE packages.last_committed
 			END,
-			is_active = 1,
 			updated_at = excluded.updated_at`,
 		pkgType, name, timeStr(lastCommitted), now, now,
 	)
@@ -172,7 +171,6 @@ func BatchUpsertShellPackages(ctx context.Context, db *sql.DB, entries []ShellEn
 				THEN excluded.last_committed
 				ELSE packages.last_committed
 			END,
-			is_active = 1,
 			updated_at = excluded.updated_at`)
 	if err != nil {
 		return fmt.Errorf("preparing statement: %w", err)
