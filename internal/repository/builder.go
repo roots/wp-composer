@@ -143,7 +143,7 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 		}
 		// Defense-in-depth: re-filter versions through normalization so stale
 		// DB rows with invalid versions (e.g. "3.1.0-dev1") never reach artifacts.
-		// Note: even packages with zero tagged versions still get a ~dev.json.
+		// Plugins with zero tagged versions still get a ~dev.json; themes are skipped.
 		versions = version.NormalizeVersions(versions)
 
 		composerName := ComposerName(pkgType, name)
