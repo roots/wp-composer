@@ -26,12 +26,14 @@ func handleAPIMonthlyInstalls(a *app.App) http.HandlerFunc {
 			return
 		}
 		if err != nil {
+			a.Logger.Error("looking up package", "error", err, "type", pkgType, "name", name)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
 
 		installs, err := telemetry.GetMonthlyInstalls(r.Context(), a.DB, packageID)
 		if err != nil {
+			a.Logger.Error("querying monthly installs", "error", err, "package_id", packageID)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
