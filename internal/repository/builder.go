@@ -170,18 +170,26 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 			}
 		}
 
-		// Every active package gets a ~dev.json with dev-trunk pointing to SVN trunk
-		devVersions := map[string]any{
-			"dev-trunk": ComposerVersion(pkgType, name, "dev-trunk", "", meta),
+		// Plugins get a ~dev.json with dev-trunk pointing to SVN trunk.
+		// Themes don't have trunk in SVN so they only get tagged versions.
+		var devVersions map[string]any
+		if pkgType == "plugin" {
+			devVersions = map[string]any{
+				"dev-trunk": ComposerVersion(pkgType, name, "dev-trunk", "", meta),
+			}
 		}
 
 		// Track whether this package has been marked as changed (avoid double-counting)
 		pkgChanged := false
 
-		// Write p2/<name>.json — tagged versions, or dev-trunk for trunk-only packages
+		// Write p2/<name>.json — tagged versions, or dev-trunk for trunk-only plugins
 		mainVersions := taggedVersions
-		if len(mainVersions) == 0 {
+		if len(mainVersions) == 0 && devVersions != nil {
 			mainVersions = devVersions
+		}
+		if len(mainVersions) == 0 {
+			// Theme with no tagged versions — skip
+			continue
 		}
 		pkgPayload := map[string]any{
 			"packages": map[string]any{
@@ -209,32 +217,34 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 			pkgChanged = true
 		}
 
-		// Write dev versions to p2/<name>~dev.json
-		devPayload := map[string]any{
-			"packages": map[string]any{
-				composerName: devVersions,
-			},
-		}
-		_, devData, err := HashJSON(devPayload)
-		if err != nil {
-			return nil, fmt.Errorf("hashing %s~dev: %w", composerName, err)
-		}
+		// Write ~dev.json for plugins only
+		if devVersions != nil {
+			devPayload := map[string]any{
+				"packages": map[string]any{
+					composerName: devVersions,
+				},
+			}
+			_, devData, err := HashJSON(devPayload)
+			if err != nil {
+				return nil, fmt.Errorf("hashing %s~dev: %w", composerName, err)
+			}
 
-		devRel := filepath.Join("p2", composerName+"~dev.json")
-		devFile := filepath.Join(buildDir, devRel)
-		if err := os.WriteFile(devFile, devData, 0644); err != nil {
-			return nil, fmt.Errorf("writing %s: %w", devFile, err)
-		}
-		artifactCount++
+			devRel := filepath.Join("p2", composerName+"~dev.json")
+			devFile := filepath.Join(buildDir, devRel)
+			if err := os.WriteFile(devFile, devData, 0644); err != nil {
+				return nil, fmt.Errorf("writing %s: %w", devFile, err)
+			}
+			artifactCount++
 
-		if !pkgChanged {
-			if opts.PreviousBuildDir != "" {
-				prevData, err := os.ReadFile(filepath.Join(opts.PreviousBuildDir, devRel))
-				if err != nil || !bytes.Equal(prevData, devData) {
+			if !pkgChanged {
+				if opts.PreviousBuildDir != "" {
+					prevData, err := os.ReadFile(filepath.Join(opts.PreviousBuildDir, devRel))
+					if err != nil || !bytes.Equal(prevData, devData) {
+						pkgChanged = true
+					}
+				} else {
 					pkgChanged = true
 				}
-			} else {
-				pkgChanged = true
 			}
 		}
 
