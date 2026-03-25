@@ -33,38 +33,15 @@
 <article class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
 
 <div class="prose prose-gray max-w-none mb-12 space-y-4">
-<p class="text-gray-600 leading-relaxed">WordPress <a href="https://developer.wordpress.org/plugins/wordpress-org/how-to-use-subversion/#tags" class="text-brand-primary hover:underline">officially recommends</a> tagging every release in SVN and is <a href="https://meta.trac.wordpress.org/ticket/6380" class="text-brand-primary hover:underline">working on disabling trunk as a release mechanism</a>. Until then, these plugins can't be pinned to specific versions in Composer.</p>
+<p class="text-gray-600 leading-relaxed">WordPress <a href="https://developer.wordpress.org/plugins/wordpress-org/how-to-use-subversion/#tags" class="text-brand-primary hover:underline">officially recommends</a> tagging every release in SVN and is <a href="https://meta.trac.wordpress.org/ticket/6380" class="text-brand-primary hover:underline">working on disabling trunk as a release mechanism</a>. Until then, these plugins can be installed via <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">dev-trunk</code> but can't be pinned to specific versions.</p>
 <p class="text-gray-600 leading-relaxed">If you depend on one of these plugins, the best path forward is to <strong>ask the plugin author to tag their releases in SVN</strong>. It takes one command and makes the version available for Composer installs. See <a href="https://github.com/roots/wp-packages/issues/15" class="text-brand-primary hover:underline">issue #15</a> for more details.</p>
 </div>
 
 <details class="mb-12 rounded-xl border border-gray-200/60 overflow-hidden">
-<summary class="px-4 py-3 bg-gray-50/50 text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-100/50 transition-colors">Workaround: install an untagged plugin via Composer</summary>
+<summary class="px-4 py-3 bg-gray-50/50 text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-100/50 transition-colors">Install an untagged plugin via Composer</summary>
 <div class="px-4 py-4 space-y-3">
-<p class="text-sm text-gray-600">You can define a custom package repository in your <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">composer.json</code> that downloads the plugin from trunk. This must be listed <strong>above</strong> the WP Packages repository &mdash; Composer resolves in order.</p>
-<div class="rounded-lg border border-gray-200/60 overflow-hidden">
-<div class="bg-gray-50/50 px-4 py-2 text-xs text-gray-500 border-b border-gray-200/40">composer.json</div>
-<pre class="p-4 text-sm font-mono leading-relaxed overflow-x-auto"><code>{
-  <span class="text-green-700">"repositories"</span>: [
-    {
-      <span class="text-green-700">"type"</span>: <span class="text-green-700">"package"</span>,
-      <span class="text-green-700">"package"</span>: {
-        <span class="text-green-700">"name"</span>: <span class="text-green-700">"wp-plugin/example-plugin"</span>,
-        <span class="text-green-700">"version"</span>: <span class="text-green-700">"1.0.0"</span>,
-        <span class="text-green-700">"type"</span>: <span class="text-green-700">"wordpress-plugin"</span>,
-        <span class="text-green-700">"dist"</span>: {
-          <span class="text-green-700">"type"</span>: <span class="text-green-700">"zip"</span>,
-          <span class="text-green-700">"url"</span>: <span class="text-green-700">"https://downloads.wordpress.org/plugin/example-plugin.zip"</span>
-        }
-      }
-    },
-    {
-      <span class="text-green-700">"type"</span>: <span class="text-green-700">"composer"</span>,
-      <span class="text-green-700">"url"</span>: <span class="text-green-700">"https://repo.wp-packages.org"</span>
-    }
-  ]
-}</code></pre>
-</div>
-<p class="text-xs text-gray-500">Note: this downloads from trunk, which is mutable &mdash; the contents may change without the version number changing.</p>
+<p class="text-sm text-gray-600">You can install any plugin from trunk using <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">dev-trunk</code>. Note that trunk is mutable &mdash; the contents may change without the version number changing.</p>
+<div class="bg-gray-50 rounded-lg px-4 py-2.5 font-mono text-sm">composer require wp-plugin/example-plugin:dev-trunk</div>
 </div>
 </details>
 
