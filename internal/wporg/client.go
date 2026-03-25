@@ -186,8 +186,13 @@ func (c *Client) fetchJSON(ctx context.Context, rawURL string) (map[string]any, 
 			return nil, fmt.Errorf("parsing JSON response: %w", err)
 		}
 
-		// WordPress API returns {"error":"...","slug":"..."} for failures
+		// WordPress API returns {"error":"...","slug":"..."} for failures.
+		// Closed plugins return {"error":"closed",...} with a 200 status —
+		// treat them the same as a 404.
 		if errMsg, ok := result["error"]; ok {
+			if errMsg == "closed" {
+				return nil, ErrNotFound
+			}
 			return nil, fmt.Errorf("API error: %v", errMsg)
 		}
 
