@@ -306,6 +306,92 @@ func TestBuildDeleteDetectionWithDevFiles(t *testing.T) {
 	}
 }
 
+func TestBuildDeleteTrunkOnlyPackage(t *testing.T) {
+	database := setupTestDB(t)
+	tmpDir := t.TempDir()
+
+	// Trunk-only package (only ~dev.json, no .json)
+	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, versions_json, is_active, last_sync_run_id, created_at, updated_at)
+		VALUES ('plugin', 'trunk-pkg', 'Trunk',
+			'{"dev-trunk":"https://downloads.wordpress.org/plugin/trunk-pkg.zip"}',
+			1, 1, datetime('now'), datetime('now'))`)
+
+	first, err := Build(context.Background(), database, BuildOpts{
+		OutputDir: tmpDir,
+		BuildID:   "build-1",
+		Logger:    slog.Default(),
+	})
+	if err != nil {
+		t.Fatalf("first build failed: %v", err)
+	}
+
+	// Remove trunk-only package
+	_, _ = database.Exec(`UPDATE packages SET is_active = 0 WHERE name = 'trunk-pkg'`)
+
+	second, err := Build(context.Background(), database, BuildOpts{
+		OutputDir:        tmpDir,
+		BuildID:          "build-2",
+		Logger:           slog.Default(),
+		PreviousBuildDir: first.BuildDir,
+	})
+	if err != nil {
+		t.Fatalf("second build failed: %v", err)
+	}
+
+	var deletes []PackageChange
+	for _, c := range second.ChangedPackages {
+		if c.Action == "delete" {
+			deletes = append(deletes, c)
+		}
+	}
+	if len(deletes) != 1 {
+		t.Fatalf("expected 1 delete, got %d: %v", len(deletes), deletes)
+	}
+	if deletes[0].Name != "wp-plugin/trunk-pkg" {
+		t.Errorf("delete name = %q, want wp-plugin/trunk-pkg", deletes[0].Name)
+	}
+}
+
+func TestBuildTaggedToDevOnlyNoFalseDelete(t *testing.T) {
+	database := setupTestDB(t)
+	tmpDir := t.TempDir()
+
+	// Package starts with tagged + dev versions
+	_, _ = database.Exec(`INSERT INTO packages (type, name, display_name, versions_json, is_active, last_sync_run_id, created_at, updated_at)
+		VALUES ('plugin', 'migrating', 'Migrating',
+			'{"1.0":"https://downloads.wordpress.org/plugin/migrating.1.0.zip","dev-trunk":"https://downloads.wordpress.org/plugin/migrating.zip"}',
+			1, 1, datetime('now'), datetime('now'))`)
+
+	first, err := Build(context.Background(), database, BuildOpts{
+		OutputDir: tmpDir,
+		BuildID:   "build-1",
+		Logger:    slog.Default(),
+	})
+	if err != nil {
+		t.Fatalf("first build failed: %v", err)
+	}
+
+	// Transition to dev-only (tagged versions removed, e.g. author untagged)
+	_, _ = database.Exec(`UPDATE packages SET versions_json = '{"dev-trunk":"https://downloads.wordpress.org/plugin/migrating.zip"}' WHERE name = 'migrating'`)
+
+	second, err := Build(context.Background(), database, BuildOpts{
+		OutputDir:        tmpDir,
+		BuildID:          "build-2",
+		Logger:           slog.Default(),
+		PreviousBuildDir: first.BuildDir,
+	})
+	if err != nil {
+		t.Fatalf("second build failed: %v", err)
+	}
+
+	// Should NOT emit a delete — the package still exists via ~dev.json
+	for _, c := range second.ChangedPackages {
+		if c.Action == "delete" {
+			t.Errorf("unexpected delete for %s — package still exists as dev-only", c.Name)
+		}
+	}
+}
+
 func TestBuildDevOnlyChangeDetection(t *testing.T) {
 	database := setupTestDB(t)
 	tmpDir := t.TempDir()
