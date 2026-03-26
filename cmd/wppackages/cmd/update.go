@@ -70,7 +70,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 
 	const writeBatchSize = 100
 
-	var succeeded, failed, deactivated, staleRetried, staleExpired atomic.Int64
+	var succeeded, failed, deactivated, changed, staleRetried, staleExpired atomic.Int64
 	g, gCtx := errgroup.WithContext(ctx)
 	g.SetLimit(concurrency)
 
@@ -157,7 +157,11 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 			now := time.Now().UTC()
 			pkg.LastSyncRunID = &syncRun.RunID
 
-			switch shouldAdvanceSyncedAt(pkg.VersionsJSON, p.VersionsJSON, p.LastCommitted, now) {
+			decision := shouldAdvanceSyncedAt(pkg.VersionsJSON, p.VersionsJSON, p.LastCommitted, now)
+			if pkg.VersionsJSON != p.VersionsJSON {
+				changed.Add(1)
+			}
+			switch decision {
 			case syncAdvance:
 				pkg.LastSyncedAt = &now
 			case syncRetry:
@@ -199,6 +203,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 
 	stats := map[string]any{
 		"updated":       succeeded.Load(),
+		"changed":       changed.Load(),
 		"failed":        failed.Load(),
 		"deactivated":   deactivated.Load(),
 		"stale_retried": staleRetried.Load(),
@@ -220,6 +225,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 
 	application.Logger.Info("update complete",
 		"updated", succeeded.Load(),
+		"changed", changed.Load(),
 		"failed", failed.Load(),
 		"deactivated", deactivated.Load(),
 		"stale_retried", staleRetried.Load(),
