@@ -259,7 +259,7 @@ type UpdateQueryOpts struct {
 
 // GetPackagesNeedingUpdate returns packages that should be updated.
 func GetPackagesNeedingUpdate(ctx context.Context, db *sql.DB, opts UpdateQueryOpts) ([]*Package, error) {
-	query := `SELECT id, type, name, last_committed, last_synced_at, is_active FROM packages WHERE 1=1`
+	query := `SELECT id, type, name, last_committed, last_synced_at, is_active, versions_json FROM packages WHERE 1=1`
 	var args []any
 
 	if opts.Name != "" {
@@ -308,7 +308,7 @@ func GetPackagesNeedingUpdate(ctx context.Context, db *sql.DB, opts UpdateQueryO
 		var p Package
 		var isActive int
 		var lastCommitted, lastSyncedAt *string
-		if err := rows.Scan(&p.ID, &p.Type, &p.Name, &lastCommitted, &lastSyncedAt, &isActive); err != nil {
+		if err := rows.Scan(&p.ID, &p.Type, &p.Name, &lastCommitted, &lastSyncedAt, &isActive, &p.VersionsJSON); err != nil {
 			return nil, fmt.Errorf("scanning package row: %w", err)
 		}
 		p.IsActive = isActive == 1
