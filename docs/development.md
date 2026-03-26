@@ -84,6 +84,23 @@ Env-first with optional YAML config file (env overrides YAML).
 | Config | env-first + optional YAML |
 | Admin access | In-app auth (email/password + session) |
 
+## Testing with a Local WordPress Install
+
+You can test the local dev server against a live [Bedrock](https://github.com/roots/bedrock) WordPress install:
+
+```bash
+composer create-project roots/bedrock
+```
+
+Then configure the Bedrock project to use your local packages server:
+
+```bash
+composer config repositories.wp-packages composer http://localhost:8080
+composer config secure-http false
+```
+
+This points the Bedrock install at your local dev server and allows non-HTTPS requests.
+
 ## Make Targets
 
 ```bash
