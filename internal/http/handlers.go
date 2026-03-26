@@ -283,11 +283,11 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		if err != nil {
 			gone := packageExistsInactive(r.Context(), a.DB, pkgType, name)
 			if gone {
-				w.WriteHeader(http.StatusGone)
+				http.Redirect(w, r, "https://wp-packages.org/", http.StatusFound)
 			} else {
 				w.WriteHeader(http.StatusNotFound)
+				render(w, r, tmpl.notFound, "layout", map[string]any{"Gone": false, "CDNURL": a.Config.R2.CDNPublicURL})
 			}
-			render(w, r, tmpl.notFound, "layout", map[string]any{"Gone": gone, "CDNURL": a.Config.R2.CDNPublicURL})
 			return
 		}
 
