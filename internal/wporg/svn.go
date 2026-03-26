@@ -136,8 +136,9 @@ type svnLogItem struct {
 }
 
 // FetchSVNChangedSlugs queries the SVN DAV log between two revisions and returns
-// the set of unique top-level slugs (plugin/theme names) that were modified.
-func (c *Client) FetchSVNChangedSlugs(ctx context.Context, baseURL string, fromRev, toRev int64) ([]string, error) {
+// a map of unique top-level slugs (plugin/theme names) to the highest SVN revision
+// that touched them within the queried range.
+func (c *Client) FetchSVNChangedSlugs(ctx context.Context, baseURL string, fromRev, toRev int64) (map[string]int64, error) {
 	body := fmt.Sprintf(`<?xml version="1.0" encoding="utf-8"?>`+
 		`<S:log-report xmlns:S="svn:" xmlns:D="DAV:">`+
 		`<S:start-revision>%d</S:start-revision>`+
@@ -175,38 +176,32 @@ func (c *Client) FetchSVNChangedSlugs(ctx context.Context, baseURL string, fromR
 	return parseSVNLogSlugs(data)
 }
 
-// parseSVNLogSlugs extracts unique top-level slugs from SVN log XML.
+// parseSVNLogSlugs extracts unique top-level slugs from SVN log XML and maps
+// each slug to the highest revision that touched it.
 // Paths look like "/plugin-name/trunk/file.php" — we extract "plugin-name".
-func parseSVNLogSlugs(data []byte) ([]string, error) {
+func parseSVNLogSlugs(data []byte) (map[string]int64, error) {
 	var report svnLogReport
 	if err := xml.Unmarshal(data, &report); err != nil {
 		return nil, fmt.Errorf("parsing SVN log XML: %w", err)
 	}
 
-	seen := make(map[string]struct{})
+	slugRevisions := make(map[string]int64)
 	for _, item := range report.Items {
-		for _, p := range item.AddedPaths {
+		allPaths := make([]string, 0, len(item.AddedPaths)+len(item.ModifiedPaths)+len(item.DeletedPaths))
+		allPaths = append(allPaths, item.AddedPaths...)
+		allPaths = append(allPaths, item.ModifiedPaths...)
+		allPaths = append(allPaths, item.DeletedPaths...)
+
+		for _, p := range allPaths {
 			if slug := slugFromPath(p); slug != "" {
-				seen[slug] = struct{}{}
-			}
-		}
-		for _, p := range item.ModifiedPaths {
-			if slug := slugFromPath(p); slug != "" {
-				seen[slug] = struct{}{}
-			}
-		}
-		for _, p := range item.DeletedPaths {
-			if slug := slugFromPath(p); slug != "" {
-				seen[slug] = struct{}{}
+				if item.Revision > slugRevisions[slug] {
+					slugRevisions[slug] = item.Revision
+				}
 			}
 		}
 	}
 
-	slugs := make([]string, 0, len(seen))
-	for slug := range seen {
-		slugs = append(slugs, slug)
-	}
-	return slugs, nil
+	return slugRevisions, nil
 }
 
 // slugFromPath extracts the top-level directory (slug) from an SVN path.

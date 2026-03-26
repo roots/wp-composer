@@ -39,6 +39,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			last_committed TEXT,
 			last_synced_at TEXT,
 			last_sync_run_id INTEGER,
+			trunk_revision INTEGER,
 			wp_packages_installs_total INTEGER NOT NULL DEFAULT 0,
 			wp_packages_installs_30d INTEGER NOT NULL DEFAULT 0,
 			last_installed_at TEXT,

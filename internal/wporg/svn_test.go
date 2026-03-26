@@ -118,24 +118,23 @@ func TestParseSVNLogSlugs(t *testing.T) {
 </S:log-item>
 </S:log-report>`
 
-	slugs, err := parseSVNLogSlugs([]byte(xml))
+	slugRevisions, err := parseSVNLogSlugs([]byte(xml))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	slugMap := make(map[string]bool)
-	for _, s := range slugs {
-		slugMap[s] = true
+	if len(slugRevisions) != 2 {
+		t.Fatalf("expected 2 unique slugs, got %d: %v", len(slugRevisions), slugRevisions)
 	}
-
-	if len(slugMap) != 2 {
-		t.Fatalf("expected 2 unique slugs, got %d: %v", len(slugMap), slugs)
-	}
-	if !slugMap["akismet"] {
+	if rev, ok := slugRevisions["akismet"]; !ok {
 		t.Error("expected akismet in slugs")
+	} else if rev != 101 {
+		t.Errorf("akismet revision = %d, want 101 (highest revision that touched it)", rev)
 	}
-	if !slugMap["jetpack"] {
+	if rev, ok := slugRevisions["jetpack"]; !ok {
 		t.Error("expected jetpack in slugs")
+	} else if rev != 101 {
+		t.Errorf("jetpack revision = %d, want 101", rev)
 	}
 }
 

@@ -31,6 +31,7 @@ type Package struct {
 	LastCommitted           *time.Time
 	LastSyncedAt            *time.Time
 	LastSyncRunID           *int64
+	TrunkRevision           *int64
 	WpPackagesInstallsTotal int
 	WpPackagesInstalls30d   int
 	LastInstalledAt         *time.Time
@@ -358,10 +359,11 @@ func RefreshSiteStats(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
-// MarkPackagesChanged sets last_committed = now for the given slugs of a
-// specific type, so they'll be picked up by GetPackagesNeedingUpdate.
-func MarkPackagesChanged(ctx context.Context, db *sql.DB, pkgType string, slugs []string) (int64, error) {
-	if len(slugs) == 0 {
+// MarkPackagesChanged sets last_committed = now and trunk_revision for the given
+// slugs of a specific type, so they'll be picked up by GetPackagesNeedingUpdate.
+// slugRevisions maps each slug to its highest SVN revision from the changelog.
+func MarkPackagesChanged(ctx context.Context, db *sql.DB, pkgType string, slugRevisions map[string]int64) (int64, error) {
+	if len(slugRevisions) == 0 {
 		return 0, nil
 	}
 
@@ -375,7 +377,7 @@ func MarkPackagesChanged(ctx context.Context, db *sql.DB, pkgType string, slugs 
 
 	stmt, err := tx.PrepareContext(ctx, `
 		UPDATE packages
-		SET last_committed = ?, updated_at = ?
+		SET last_committed = ?, updated_at = ?, trunk_revision = ?
 		WHERE type = ? AND name = ? AND is_active = 1`)
 	if err != nil {
 		return 0, fmt.Errorf("preparing statement: %w", err)
@@ -383,8 +385,8 @@ func MarkPackagesChanged(ctx context.Context, db *sql.DB, pkgType string, slugs 
 	defer func() { _ = stmt.Close() }()
 
 	var affected int64
-	for _, slug := range slugs {
-		res, err := stmt.ExecContext(ctx, now, now, pkgType, slug)
+	for slug, rev := range slugRevisions {
+		res, err := stmt.ExecContext(ctx, now, now, rev, pkgType, slug)
 		if err != nil {
 			return affected, fmt.Errorf("marking package %s/%s changed: %w", pkgType, slug, err)
 		}

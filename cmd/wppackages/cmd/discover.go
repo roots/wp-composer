@@ -242,18 +242,18 @@ func markChangedFromSVNLog(ctx context.Context, client *wporg.Client, src struct
 		application.Logger.Info("fetching SVN changelog",
 			"type", src.pkgType, "from_rev", lastRev, "to_rev", currentRev)
 
-		slugs, err := client.FetchSVNChangedSlugs(ctx, src.url, lastRev+1, currentRev)
+		slugRevisions, err := client.FetchSVNChangedSlugs(ctx, src.url, lastRev+1, currentRev)
 		if err != nil {
 			return err
 		}
 
-		if len(slugs) > 0 {
-			affected, err := packages.MarkPackagesChanged(ctx, application.DB, src.pkgType, slugs)
+		if len(slugRevisions) > 0 {
+			affected, err := packages.MarkPackagesChanged(ctx, application.DB, src.pkgType, slugRevisions)
 			if err != nil {
 				return fmt.Errorf("marking changed packages: %w", err)
 			}
 			application.Logger.Info("marked changed packages from SVN log",
-				"type", src.pkgType, "slugs_in_log", len(slugs), "packages_marked", affected)
+				"type", src.pkgType, "slugs_in_log", len(slugRevisions), "packages_marked", affected)
 		}
 	} else if lastRev == 0 {
 		application.Logger.Info("no previous SVN revision stored, skipping changelog (first run)",

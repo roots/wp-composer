@@ -29,6 +29,9 @@ func ComposerVersion(pkgType, slug, ver, downloadURL string, meta PackageMeta) m
 	}
 	if ver == "dev-trunk" {
 		ref = "trunk"
+		if meta.TrunkRevision != nil {
+			ref = fmt.Sprintf("trunk@%d", *meta.TrunkRevision)
+		}
 	}
 
 	entry := map[string]any{
@@ -51,17 +54,7 @@ func ComposerVersion(pkgType, slug, ver, downloadURL string, meta PackageMeta) m
 		"uid": crc32.ChecksumIEEE([]byte(fmt.Sprintf("%s/%s", composerName, ver))),
 	}
 
-	if ver == "dev-trunk" {
-		// Trunk zip is unversioned (e.g. /plugin/akismet.zip)
-		trunkURL := fmt.Sprintf("https://downloads.wordpress.org/plugin/%s.zip", slug)
-		if pkgType == "theme" {
-			trunkURL = fmt.Sprintf("https://downloads.wordpress.org/theme/%s.zip", slug)
-		}
-		entry["dist"] = map[string]any{
-			"type": "zip",
-			"url":  trunkURL,
-		}
-	} else if downloadURL != "" {
+	if ver != "dev-trunk" && downloadURL != "" {
 		entry["dist"] = map[string]any{
 			"type": "zip",
 			"url":  downloadURL,
@@ -106,11 +99,12 @@ func DownloadURL(pkgType, slug, version string) string {
 
 // PackageMeta holds optional metadata for Composer version entries.
 type PackageMeta struct {
-	Description string
-	Homepage    string
-	Author      string
-	RequiresPHP string
-	LastUpdated string
+	Description   string
+	Homepage      string
+	Author        string
+	RequiresPHP   string
+	LastUpdated   string
+	TrunkRevision *int64
 }
 
 // VendorFromComposerName extracts the path portion for filesystem layout.
