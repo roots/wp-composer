@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync/atomic"
+	"time"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -270,6 +271,101 @@ func markChangedFromSVNLog(ctx context.Context, client *wporg.Client, src struct
 
 var errLimitReached = fmt.Errorf("limit reached")
 
+var backfillRevisionsCmd = &cobra.Command{
+	Use:   "backfill-revisions",
+	Short: "Backfill trunk_revision for plugins missing it",
+	Long:  "Scans SVN changelog backwards to populate trunk_revision for active plugins that don't have one yet.",
+	RunE:  runBackfillRevisions,
+}
+
+func runBackfillRevisions(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	client := wporg.NewClient(application.Config.Discovery, application.Logger)
+	baseURL := "https://plugins.svn.wordpress.org/"
+
+	// Get current SVN revision
+	chunkSize, _ := cmd.Flags().GetInt64("chunk-size")
+
+	// Count how many plugins need backfill
+	var remaining int
+	if err := application.DB.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM packages WHERE is_active = 1 AND type = 'plugin' AND trunk_revision IS NULL`,
+	).Scan(&remaining); err != nil {
+		return fmt.Errorf("counting packages: %w", err)
+	}
+	application.Logger.Info("plugins needing trunk_revision backfill", "count", remaining)
+
+	if remaining == 0 {
+		application.Logger.Info("nothing to backfill")
+		return nil
+	}
+
+	// Get current revision from SVN listing
+	var currentRev int64
+	result, err := client.ParseSVNListing(ctx, baseURL, func(entry wporg.SVNEntry) error {
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("fetching current SVN revision: %w", err)
+	}
+	if result != nil {
+		currentRev = result.Revision
+	}
+	if currentRev == 0 {
+		return fmt.Errorf("could not determine current SVN revision")
+	}
+
+	application.Logger.Info("starting backfill", "current_rev", currentRev, "chunk_size", chunkSize)
+
+	// Scan backwards in chunks
+	var totalUpdated int64
+	fromRev := currentRev
+	for fromRev > 0 && remaining > 0 {
+		toRev := fromRev - chunkSize
+		if toRev < 1 {
+			toRev = 1
+		}
+
+		application.Logger.Info("fetching SVN changelog chunk",
+			"from_rev", toRev, "to_rev", fromRev, "remaining", remaining)
+
+		var slugRevisions map[string]int64
+		var fetchErr error
+		for attempt := 1; attempt <= 3; attempt++ {
+			slugRevisions, fetchErr = client.FetchSVNChangedSlugs(ctx, baseURL, toRev, fromRev)
+			if fetchErr == nil {
+				break
+			}
+			application.Logger.Warn("SVN log chunk fetch failed, retrying",
+				"from_rev", toRev, "to_rev", fromRev, "attempt", attempt, "error", fetchErr)
+			time.Sleep(time.Duration(attempt) * 5 * time.Second)
+		}
+		if fetchErr != nil {
+			application.Logger.Warn("skipping chunk after retries",
+				"from_rev", toRev, "to_rev", fromRev, "error", fetchErr)
+			fromRev = toRev - 1
+			continue
+		}
+
+		if len(slugRevisions) > 0 {
+			updated, err := packages.BackfillTrunkRevisions(ctx, application.DB, slugRevisions)
+			if err != nil {
+				return fmt.Errorf("backfilling trunk revisions: %w", err)
+			}
+			totalUpdated += updated
+			remaining -= int(updated)
+			application.Logger.Info("backfill chunk complete",
+				"slugs_in_chunk", len(slugRevisions), "updated", updated,
+				"total_updated", totalUpdated, "remaining", remaining)
+		}
+
+		fromRev = toRev - 1
+	}
+
+	application.Logger.Info("backfill complete", "total_updated", totalUpdated)
+	return nil
+}
+
 func init() {
 	appCommand(discoverCmd)
 	discoverCmd.Flags().String("source", "config", "discovery source (config or svn)")
@@ -277,4 +373,8 @@ func init() {
 	discoverCmd.Flags().Int("limit", 0, "maximum packages to discover (0 = unlimited)")
 	discoverCmd.Flags().Int("concurrency", 0, "concurrent API requests (0 = use config default)")
 	rootCmd.AddCommand(discoverCmd)
+
+	appCommand(backfillRevisionsCmd)
+	backfillRevisionsCmd.Flags().Int64("chunk-size", 10000, "number of SVN revisions per chunk")
+	rootCmd.AddCommand(backfillRevisionsCmd)
 }

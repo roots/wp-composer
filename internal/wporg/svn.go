@@ -176,10 +176,22 @@ func (c *Client) FetchSVNChangedSlugs(ctx context.Context, baseURL string, fromR
 	return parseSVNLogSlugs(data)
 }
 
+// sanitizeXML strips illegal XML 1.0 characters (control chars except tab, newline, carriage return).
+func sanitizeXML(data []byte) []byte {
+	out := make([]byte, 0, len(data))
+	for _, b := range data {
+		if b == 0x09 || b == 0x0A || b == 0x0D || b >= 0x20 {
+			out = append(out, b)
+		}
+	}
+	return out
+}
+
 // parseSVNLogSlugs extracts unique top-level slugs from SVN log XML and maps
 // each slug to the highest revision that touched it.
 // Paths look like "/plugin-name/trunk/file.php" — we extract "plugin-name".
 func parseSVNLogSlugs(data []byte) (map[string]int64, error) {
+	data = sanitizeXML(data)
 	var report svnLogReport
 	if err := xml.Unmarshal(data, &report); err != nil {
 		return nil, fmt.Errorf("parsing SVN log XML: %w", err)

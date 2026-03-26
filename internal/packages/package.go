@@ -400,6 +400,44 @@ func MarkPackagesChanged(ctx context.Context, db *sql.DB, pkgType string, slugRe
 	return affected, nil
 }
 
+// BackfillTrunkRevisions sets trunk_revision for active plugins that don't have one yet.
+// Only updates rows where trunk_revision IS NULL to avoid overwriting newer data.
+func BackfillTrunkRevisions(ctx context.Context, db *sql.DB, slugRevisions map[string]int64) (int64, error) {
+	if len(slugRevisions) == 0 {
+		return 0, nil
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	stmt, err := tx.PrepareContext(ctx, `
+		UPDATE packages
+		SET trunk_revision = ?
+		WHERE type = 'plugin' AND name = ? AND is_active = 1 AND trunk_revision IS NULL`)
+	if err != nil {
+		return 0, fmt.Errorf("preparing statement: %w", err)
+	}
+	defer func() { _ = stmt.Close() }()
+
+	var affected int64
+	for slug, rev := range slugRevisions {
+		res, err := stmt.ExecContext(ctx, rev, slug)
+		if err != nil {
+			return affected, fmt.Errorf("backfilling trunk_revision for %s: %w", slug, err)
+		}
+		n, _ := res.RowsAffected()
+		affected += n
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("committing: %w", err)
+	}
+	return affected, nil
+}
+
 func boolToInt(b bool) int {
 	if b {
 		return 1
