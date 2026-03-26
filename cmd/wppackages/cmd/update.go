@@ -157,19 +157,15 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 			now := time.Now().UTC()
 			pkg.LastSyncRunID = &syncRun.RunID
 
-			// If versions_json changed, the sync succeeded — advance last_synced_at.
-			// If unchanged, the wp.org API may have returned cached/stale data.
-			// Keep the package dirty (don't advance last_synced_at) for up to
-			// staleRetryWindow after last_committed, then give up and assume it
-			// was a non-version change (readme/assets commit).
-			if pkg.VersionsJSON != p.VersionsJSON {
+			switch shouldAdvanceSyncedAt(pkg.VersionsJSON, p.VersionsJSON, p.LastCommitted, now) {
+			case syncAdvance:
 				pkg.LastSyncedAt = &now
-			} else if p.LastCommitted != nil && now.Sub(*p.LastCommitted) <= staleRetryWindow {
+			case syncRetry:
 				pkg.LastSyncedAt = p.LastSyncedAt
 				staleRetried.Add(1)
 				application.Logger.Debug("versions unchanged, keeping dirty for retry",
 					"type", p.Type, "name", p.Name, "last_committed", p.LastCommitted)
-			} else {
+			case syncExpire:
 				pkg.LastSyncedAt = &now
 				staleExpired.Add(1)
 				application.Logger.Debug("versions unchanged, retry window expired",
@@ -230,6 +226,28 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		"stale_expired", staleExpired.Load(),
 	)
 	return nil
+}
+
+type syncDecision int
+
+const (
+	syncAdvance syncDecision = iota // versions changed — advance last_synced_at
+	syncRetry                       // versions unchanged, within retry window — keep dirty
+	syncExpire                      // versions unchanged, window expired — advance last_synced_at
+)
+
+// shouldAdvanceSyncedAt decides whether to advance last_synced_at after an update.
+// If versions changed, always advance. If unchanged, keep dirty within the retry
+// window to handle wp.org API cache delays. After the window, advance to avoid
+// infinite retries from non-version SVN changes (readme, assets).
+func shouldAdvanceSyncedAt(newVersions, oldVersions string, lastCommitted *time.Time, now time.Time) syncDecision {
+	if newVersions != oldVersions {
+		return syncAdvance
+	}
+	if lastCommitted != nil && now.Sub(*lastCommitted) <= staleRetryWindow {
+		return syncRetry
+	}
+	return syncExpire
 }
 
 func init() {
