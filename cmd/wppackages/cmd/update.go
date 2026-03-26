@@ -13,6 +13,12 @@ import (
 	"github.com/roots/wp-packages/internal/wporg"
 )
 
+// staleRetryWindow is how long to keep retrying a package when the wp.org API
+// returns unchanged versions after an SVN commit is detected. After this window,
+// we assume the commit was a non-version change (readme, assets, etc.).
+// Set high (24h) to account for extended wp.org API cache delays.
+const staleRetryWindow = 24 * time.Hour
+
 var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Fetch and update package metadata from WordPress.org",
@@ -64,7 +70,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 
 	const writeBatchSize = 100
 
-	var succeeded, failed, deactivated atomic.Int64
+	var succeeded, failed, deactivated, changed, staleRetried, staleExpired atomic.Int64
 	g, gCtx := errgroup.WithContext(ctx)
 	g.SetLimit(concurrency)
 
@@ -149,8 +155,26 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 			}
 
 			now := time.Now().UTC()
-			pkg.LastSyncedAt = &now
 			pkg.LastSyncRunID = &syncRun.RunID
+
+			decision := shouldAdvanceSyncedAt(pkg.VersionsJSON, p.VersionsJSON, p.LastCommitted, now)
+			if pkg.VersionsJSON != p.VersionsJSON {
+				changed.Add(1)
+			}
+			switch decision {
+			case syncAdvance:
+				pkg.LastSyncedAt = &now
+			case syncRetry:
+				pkg.LastSyncedAt = p.LastSyncedAt
+				staleRetried.Add(1)
+				application.Logger.Debug("versions unchanged, keeping dirty for retry",
+					"type", p.Type, "name", p.Name, "last_committed", p.LastCommitted)
+			case syncExpire:
+				pkg.LastSyncedAt = &now
+				staleExpired.Add(1)
+				application.Logger.Debug("versions unchanged, retry window expired",
+					"type", p.Type, "name", p.Name)
+			}
 
 			succeeded.Add(1)
 			writeCh <- pkg
@@ -178,9 +202,12 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 	<-writeErrCh // wait for writer to finish
 
 	stats := map[string]any{
-		"updated":     succeeded.Load(),
-		"failed":      failed.Load(),
-		"deactivated": deactivated.Load(),
+		"updated":       succeeded.Load(),
+		"changed":       changed.Load(),
+		"failed":        failed.Load(),
+		"deactivated":   deactivated.Load(),
+		"stale_retried": staleRetried.Load(),
+		"stale_expired": staleExpired.Load(),
 	}
 
 	status := "completed"
@@ -198,10 +225,35 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 
 	application.Logger.Info("update complete",
 		"updated", succeeded.Load(),
+		"changed", changed.Load(),
 		"failed", failed.Load(),
 		"deactivated", deactivated.Load(),
+		"stale_retried", staleRetried.Load(),
+		"stale_expired", staleExpired.Load(),
 	)
 	return nil
+}
+
+type syncDecision int
+
+const (
+	syncAdvance syncDecision = iota // versions changed — advance last_synced_at
+	syncRetry                       // versions unchanged, within retry window — keep dirty
+	syncExpire                      // versions unchanged, window expired — advance last_synced_at
+)
+
+// shouldAdvanceSyncedAt decides whether to advance last_synced_at after an update.
+// If versions changed, always advance. If unchanged, keep dirty within the retry
+// window to handle wp.org API cache delays. After the window, advance to avoid
+// infinite retries from non-version SVN changes (readme, assets).
+func shouldAdvanceSyncedAt(newVersions, oldVersions string, lastCommitted *time.Time, now time.Time) syncDecision {
+	if newVersions != oldVersions {
+		return syncAdvance
+	}
+	if lastCommitted != nil && now.Sub(*lastCommitted) <= staleRetryWindow {
+		return syncRetry
+	}
+	return syncExpire
 }
 
 func init() {
