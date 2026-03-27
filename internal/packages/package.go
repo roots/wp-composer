@@ -32,6 +32,9 @@ type Package struct {
 	LastSyncedAt            *time.Time
 	LastSyncRunID           *int64
 	TrunkRevision           *int64
+	ContentHash             *string
+	DeployedHash            *string
+	ContentChangedAt        *time.Time
 	WpPackagesInstallsTotal int
 	WpPackagesInstalls30d   int
 	LastInstalledAt         *time.Time
@@ -85,8 +88,9 @@ func UpsertPackage(ctx context.Context, db *sql.DB, pkg *Package) error {
 			versions_json, downloads, active_installs,
 			current_version, wporg_version, rating, num_ratings, is_active,
 			last_committed, last_synced_at, last_sync_run_id,
+			content_hash, content_changed_at,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(type, name) DO UPDATE SET
 			display_name = excluded.display_name,
 			description = excluded.description,
@@ -108,12 +112,15 @@ func UpsertPackage(ctx context.Context, db *sql.DB, pkg *Package) error {
 			END,
 			last_synced_at = COALESCE(excluded.last_synced_at, packages.last_synced_at),
 			last_sync_run_id = COALESCE(excluded.last_sync_run_id, packages.last_sync_run_id),
+			content_hash = COALESCE(excluded.content_hash, packages.content_hash),
+			content_changed_at = COALESCE(excluded.content_changed_at, packages.content_changed_at),
 			updated_at = excluded.updated_at`,
 		pkg.Type, pkg.Name, pkg.DisplayName, pkg.Description, pkg.Author,
 		pkg.Homepage, pkg.SlugURL, pkg.VersionsJSON,
 		pkg.Downloads, pkg.ActiveInstalls, pkg.CurrentVersion, pkg.WporgVersion, pkg.Rating,
 		pkg.NumRatings, boolToInt(pkg.IsActive),
 		timeStr(pkg.LastCommitted), timeStr(pkg.LastSyncedAt), pkg.LastSyncRunID,
+		pkg.ContentHash, timeStr(pkg.ContentChangedAt),
 		now, now,
 	)
 	if err != nil {
@@ -204,8 +211,9 @@ func BatchUpsertPackages(ctx context.Context, db *sql.DB, pkgs []*Package) error
 			versions_json, downloads, active_installs,
 			current_version, wporg_version, rating, num_ratings, is_active,
 			last_committed, last_synced_at, last_sync_run_id,
+			content_hash, content_changed_at,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(type, name) DO UPDATE SET
 			display_name = excluded.display_name,
 			description = excluded.description,
@@ -227,6 +235,8 @@ func BatchUpsertPackages(ctx context.Context, db *sql.DB, pkgs []*Package) error
 			END,
 			last_synced_at = COALESCE(excluded.last_synced_at, packages.last_synced_at),
 			last_sync_run_id = COALESCE(excluded.last_sync_run_id, packages.last_sync_run_id),
+			content_hash = COALESCE(excluded.content_hash, packages.content_hash),
+			content_changed_at = COALESCE(excluded.content_changed_at, packages.content_changed_at),
 			updated_at = excluded.updated_at`)
 	if err != nil {
 		return fmt.Errorf("preparing statement: %w", err)
@@ -241,6 +251,7 @@ func BatchUpsertPackages(ctx context.Context, db *sql.DB, pkgs []*Package) error
 			pkg.Downloads, pkg.ActiveInstalls, pkg.CurrentVersion, pkg.WporgVersion, pkg.Rating,
 			pkg.NumRatings, boolToInt(pkg.IsActive),
 			timeStr(pkg.LastCommitted), timeStr(pkg.LastSyncedAt), pkg.LastSyncRunID,
+			pkg.ContentHash, timeStr(pkg.ContentChangedAt),
 			now, now,
 		); err != nil {
 			return fmt.Errorf("upserting package %s/%s: %w", pkg.Type, pkg.Name, err)
@@ -260,7 +271,7 @@ type UpdateQueryOpts struct {
 
 // GetPackagesNeedingUpdate returns packages that should be updated.
 func GetPackagesNeedingUpdate(ctx context.Context, db *sql.DB, opts UpdateQueryOpts) ([]*Package, error) {
-	query := `SELECT id, type, name, last_committed, last_synced_at, is_active, versions_json FROM packages WHERE 1=1`
+	query := `SELECT id, type, name, last_committed, last_synced_at, is_active, versions_json, content_hash, trunk_revision FROM packages WHERE 1=1`
 	var args []any
 
 	if opts.Name != "" {
@@ -309,7 +320,7 @@ func GetPackagesNeedingUpdate(ctx context.Context, db *sql.DB, opts UpdateQueryO
 		var p Package
 		var isActive int
 		var lastCommitted, lastSyncedAt *string
-		if err := rows.Scan(&p.ID, &p.Type, &p.Name, &lastCommitted, &lastSyncedAt, &isActive, &p.VersionsJSON); err != nil {
+		if err := rows.Scan(&p.ID, &p.Type, &p.Name, &lastCommitted, &lastSyncedAt, &isActive, &p.VersionsJSON, &p.ContentHash, &p.TrunkRevision); err != nil {
 			return nil, fmt.Errorf("scanning package row: %w", err)
 		}
 		p.IsActive = isActive == 1

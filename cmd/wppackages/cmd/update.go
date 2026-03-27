@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/roots/wp-packages/internal/composer"
 	"github.com/roots/wp-packages/internal/packages"
 	"github.com/roots/wp-packages/internal/wporg"
 )
@@ -152,6 +153,17 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 
 			if validVersions == 0 {
 				application.Logger.Debug("package has no tagged versions", "type", p.Type, "name", p.Name)
+			}
+
+			// Carry forward trunk_revision from DB (set by discover step)
+			pkg.TrunkRevision = p.TrunkRevision
+
+			// Compute content hash over normalized versions + trunk_revision
+			newHash := composer.HashVersions(pkg.VersionsJSON, pkg.TrunkRevision)
+			pkg.ContentHash = &newHash
+			if p.ContentHash == nil || *p.ContentHash != newHash {
+				now := time.Now().UTC()
+				pkg.ContentChangedAt = &now
 			}
 
 			now := time.Now().UTC()
