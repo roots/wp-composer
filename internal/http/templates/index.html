@@ -25,9 +25,12 @@
 <h2 class="text-lg text-gray-500 max-w-xl mx-auto mb-2 text-balance">Composer repository for WordPress plugins and themes.</h2>
 <h3 class="text-base text-gray-500 max-w-xl mx-auto mb-4 text-balance">A 17x faster, fully open-source alternative to WPackagist that updates every 5 minutes.</h3>
 <p class="mb-8"><a href="/wp-packages-vs-wpackagist" class="text-sm font-medium text-brand-primary hover:underline">See how WP Packages compares to WPackagist &rarr;</a></p>
-<div class="inline-flex items-center gap-3 rounded-xl border border-gray-200/80 bg-gray-100/50 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors max-w-full overflow-x-auto" onclick="copyCmd(this,'composer config repositories.wp-packages composer https://repo.wp-packages.org')">
+<div
+  class="inline-flex items-center gap-3 rounded-xl border border-gray-200/80 bg-gray-100/50 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors max-w-full overflow-x-auto"
+  onclick="copyCmd(this,'composer config repositories.wp-packages \'{&quot;type&quot;:&quot;composer&quot;,&quot;url&quot;:&quot;https://repo.wp-packages.org&quot;,&quot;only&quot;:[&quot;wp-plugin/*&quot;,&quot;wp-theme/*&quot;]}\'')"
+>
 <span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
-<code class="text-sm font-mono text-gray-900 select-all whitespace-nowrap">composer config repositories.wp-packages composer https://repo.wp-packages.org</code>
+<code class="text-xs font-mono text-gray-900 select-all whitespace-nowrap">composer config repositories.wp-packages '{"type":"composer","url":"https://repo.wp-packages.org","only":["wp-plugin/*","wp-theme/*"]}'</code>
 <button aria-label="Copy to clipboard" class="text-gray-400 hover:text-gray-900 transition-colors ml-1 cursor-pointer">
 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg>
 </button>
@@ -110,7 +113,11 @@
     {
       <span class="text-green-700">"name"</span>: <span class="text-green-700">"wp-packages"</span>,
       <span class="text-green-700">"type"</span>: <span class="text-green-700">"composer"</span>,
-      <span class="text-green-700">"url"</span>: <span class="text-green-700">"https://repo.wp-packages.org"</span>
+      <span class="text-green-700">"url"</span>: <span class="text-green-700">"https://repo.wp-packages.org"</span>,
+      <span class="text-green-700">"only"</span>: [
+          <span class="text-green-700">"wp-plugin/*"</span>,
+          <span class="text-green-700">"wp-theme/*"</span>
+      ]
     }
   ],
   <span class="text-green-700">"require"</span>: {
@@ -165,7 +172,7 @@
 <div class="flex w-8 h-8 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-sm font-bold">2</div>
 <div>
 <p class="text-gray-600 mb-2">Remove the wpackagist repository and add WP Packages:</p>
-<div class="bg-gray-50 rounded-lg px-4 py-2.5 font-mono text-sm overflow-x-auto">composer config --unset repositories.wpackagist &amp;&amp; composer config repositories.wp-packages composer https://repo.wp-packages.org</div>
+<div class="bg-gray-50 rounded-lg px-4 py-2.5 font-mono text-sm overflow-x-auto">composer config --unset repositories.wpackagist &amp;&amp; composer config repositories.wp-packages '{"type":"composer","url":"https://repo.wp-packages.org","only":["wp-plugin/*","wp-theme/*"]}'</div>
 </div>
 </div>
 <div class="flex gap-4">
