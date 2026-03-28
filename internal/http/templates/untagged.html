@@ -79,7 +79,7 @@ function copyInstall(btn,slug){navigator.clipboard.writeText("composer require w
 function toggleSort(desc,asc){var el=document.getElementById('sort-input');el.value=el.value===desc?asc:desc;htmx.trigger(document.getElementById('untagged-form'),'submit')}
 document.addEventListener('htmx:afterRequest',function(e){var xhr=e.detail.xhr;if(!xhr)return;var u=new URL(xhr.responseURL);if(u.pathname==='/untagged-partial'){var p=u.searchParams.get('page');var f=u.searchParams.get('filter');var s=u.searchParams.get('search');var a=u.searchParams.get('author');var so=u.searchParams.get('sort');var q=[];if(f)q.push('filter='+f);if(s)q.push('search='+encodeURIComponent(s));if(a)q.push('author='+encodeURIComponent(a));if(so&&so!=='active_installs')q.push('sort='+so);if(p&&p!=='1')q.push('page='+p);history.pushState(null,'',q.length?'/untagged?'+q.join('&'):'/untagged')}});
 (function(){
-var input=document.getElementById('author-input'),box=document.getElementById('author-suggestions'),clear=document.getElementById('author-clear'),timer=null,selected=-1;
+var input=document.getElementById('author-input'),box=document.getElementById('author-suggestions'),clear=document.getElementById('author-clear'),timer=null,selected=-1,ctrl=null;
 function show(authors){
 box.innerHTML='';selected=-1;
 if(!authors.length){box.classList.add('hidden');return}
@@ -95,7 +95,7 @@ var v=input.value.trim();
 clear.classList.toggle('hidden',!v);
 if(v.length<2){box.classList.add('hidden');return}
 clearTimeout(timer);
-timer=setTimeout(function(){fetch('/untagged-authors?q='+encodeURIComponent(v)).then(function(r){return r.json()}).then(show)},200)});
+timer=setTimeout(function(){if(ctrl)ctrl.abort();ctrl=new AbortController();fetch('/untagged-authors?q='+encodeURIComponent(v),{signal:ctrl.signal}).then(function(r){return r.json()}).then(show).catch(function(){})},200)});
 input.addEventListener('keydown',function(e){
 var items=box.querySelectorAll('div');if(!items.length)return;
 if(e.key==='ArrowDown'){e.preventDefault();selected=Math.min(selected+1,items.length-1);highlight(items)}

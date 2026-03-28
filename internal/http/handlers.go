@@ -1070,7 +1070,7 @@ func queryUntaggedPackages(ctx context.Context, db *sql.DB, filter, search, auth
 	}
 
 	if author != "" {
-		where += ` AND author = ?`
+		where += ` AND author = ? COLLATE NOCASE`
 		args = append(args, author)
 	}
 

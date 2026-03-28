@@ -66,6 +66,7 @@ var funcMap = template.FuncMap{
 	"jsonLD":            jsonLD,
 	"formatCST":         formatCST,
 	"timeAgo":           timeAgo,
+		"timeAgoShort":      timeAgoShort,
 	"formatDuration":    formatDuration,
 	"pct": func(n, total int64) string {
 		if total == 0 {
@@ -299,9 +300,18 @@ func timeAgo(raw string) string {
 		if days == 1 {
 			return "1 day ago"
 		}
-		if days > 30 {
-			return t.Format("Jan 2006")
-		}
 		return fmt.Sprintf("%d days ago", days)
 	}
+}
+
+// timeAgoShort is like timeAgo but shows "Jan 2006" for dates older than 30 days.
+func timeAgoShort(raw string) string {
+	t, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return raw
+	}
+	if time.Since(t).Hours()/24 > 30 {
+		return t.Format("Jan 2006")
+	}
+	return timeAgo(raw)
 }

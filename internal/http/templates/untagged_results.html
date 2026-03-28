@@ -33,7 +33,7 @@
 </div>
 </div>
 </td>
-<td class="px-4 py-3 text-right text-gray-500 align-top text-xs">{{if .LastCommitted}}{{timeAgo .LastCommitted}}{{else}}&mdash;{{end}}</td>
+<td class="px-4 py-3 text-right text-gray-500 align-top text-xs">{{if .LastCommitted}}{{timeAgoShort .LastCommitted}}{{else}}&mdash;{{end}}</td>
 <td class="px-4 py-3 text-right font-mono text-gray-600 align-top">{{formatNumberComma .ActiveInstalls}}</td>
 </tr>
 {{end}}
