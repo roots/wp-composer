@@ -66,7 +66,7 @@ var funcMap = template.FuncMap{
 	"jsonLD":            jsonLD,
 	"formatCST":         formatCST,
 	"timeAgo":           timeAgo,
-		"timeAgoShort":      timeAgoShort,
+	"timeAgoShort":      timeAgoShort,
 	"formatDuration":    formatDuration,
 	"pct": func(n, total int64) string {
 		if total == 0 {
