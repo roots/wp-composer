@@ -1,10 +1,19 @@
 {{define "untagged-results"}}
-<div class="rounded-xl border border-gray-200/60 overflow-hidden">
-<table class="w-full text-sm">
+<div class="rounded-xl border border-gray-200/60 overflow-x-auto">
+<table class="w-full text-sm min-w-[600px]">
 <thead class="bg-gray-50/50">
 <tr>
 <th class="text-left px-4 py-3 font-medium text-gray-500">Plugin</th>
-<th class="text-right px-4 py-3 font-medium text-gray-500 w-32">Active Installs</th>
+<th class="text-right px-4 py-3 font-medium text-gray-500 w-36">
+<button type="button" onclick="toggleSort('updated','least_updated')" class="inline-flex items-center gap-1 cursor-pointer hover:text-gray-900 transition-colors ml-auto whitespace-nowrap">Last Updated
+<svg class="w-3.5 h-3.5 {{if and (ne .Sort "updated") (ne .Sort "least_updated")}}text-gray-300{{end}}" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">{{if eq .Sort "least_updated"}}<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/>{{else}}<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>{{end}}</svg>
+</button>
+</th>
+<th class="text-right px-4 py-3 font-medium text-gray-500 w-36">
+<button type="button" onclick="toggleSort('active_installs','active_installs')" class="inline-flex items-center gap-1 cursor-pointer hover:text-gray-900 transition-colors ml-auto whitespace-nowrap">Active Installs
+<svg class="w-3.5 h-3.5 {{if and (ne .Sort "") (ne .Sort "active_installs")}}text-gray-300{{end}}" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+</button>
+</th>
 </tr>
 </thead>
 <tbody>
@@ -24,6 +33,7 @@
 </div>
 </div>
 </td>
+<td class="px-4 py-3 text-right text-gray-500 align-top text-xs">{{if .LastCommitted}}{{timeAgo .LastCommitted}}{{else}}&mdash;{{end}}</td>
 <td class="px-4 py-3 text-right font-mono text-gray-600 align-top">{{formatNumberComma .ActiveInstalls}}</td>
 </tr>
 {{end}}
@@ -33,9 +43,9 @@
 
 {{if gt .TotalPages 1}}
 <div class="flex justify-center items-center gap-2 pt-8">
-{{if gt .Page 1}}<a href="/untagged?{{if .Filter}}filter={{.Filter}}&amp;{{end}}{{if .Search}}search={{.Search}}&amp;{{end}}{{if gt (sub .Page 1) 1}}page={{sub .Page 1}}{{end}}" hx-get="/untagged-partial?{{if .Filter}}filter={{.Filter}}&amp;{{end}}{{if .Search}}search={{.Search}}&amp;{{end}}{{if gt (sub .Page 1) 1}}page={{sub .Page 1}}{{end}}" hx-target="#untagged-results" hx-swap="innerHTML show:#untagged-form:top" hx-include="" class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer">&laquo; Previous</a>{{end}}
+{{if gt .Page 1}}<a href="/untagged?{{if .Filter}}filter={{.Filter}}&amp;{{end}}{{if .Search}}search={{.Search}}&amp;{{end}}{{if .Author}}author={{.Author}}&amp;{{end}}{{if .Sort}}sort={{.Sort}}&amp;{{end}}{{if gt (sub .Page 1) 1}}page={{sub .Page 1}}{{end}}" hx-get="/untagged-partial?{{if .Filter}}filter={{.Filter}}&amp;{{end}}{{if .Search}}search={{.Search}}&amp;{{end}}{{if .Author}}author={{.Author}}&amp;{{end}}{{if .Sort}}sort={{.Sort}}&amp;{{end}}{{if gt (sub .Page 1) 1}}page={{sub .Page 1}}{{end}}" hx-target="#untagged-results" hx-swap="innerHTML show:#untagged-form:top" hx-include="" class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer">&laquo; Previous</a>{{end}}
 <span class="px-4 py-2 text-sm text-gray-500">Page {{.Page}} of {{.TotalPages}}</span>
-{{if lt .Page .TotalPages}}<a href="/untagged?{{if .Filter}}filter={{.Filter}}&amp;{{end}}{{if .Search}}search={{.Search}}&amp;{{end}}page={{add .Page 1}}" hx-get="/untagged-partial?{{if .Filter}}filter={{.Filter}}&amp;{{end}}{{if .Search}}search={{.Search}}&amp;{{end}}page={{add .Page 1}}" hx-target="#untagged-results" hx-swap="innerHTML show:#untagged-form:top" hx-include="" class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer">Next &raquo;</a>{{end}}
+{{if lt .Page .TotalPages}}<a href="/untagged?{{if .Filter}}filter={{.Filter}}&amp;{{end}}{{if .Search}}search={{.Search}}&amp;{{end}}{{if .Author}}author={{.Author}}&amp;{{end}}{{if .Sort}}sort={{.Sort}}&amp;{{end}}page={{add .Page 1}}" hx-get="/untagged-partial?{{if .Filter}}filter={{.Filter}}&amp;{{end}}{{if .Search}}search={{.Search}}&amp;{{end}}{{if .Author}}author={{.Author}}&amp;{{end}}{{if .Sort}}sort={{.Sort}}&amp;{{end}}page={{add .Page 1}}" hx-target="#untagged-results" hx-swap="innerHTML show:#untagged-form:top" hx-include="" class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer">Next &raquo;</a>{{end}}
 </div>
 {{end}}
 {{end}}

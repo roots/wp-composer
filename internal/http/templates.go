@@ -299,6 +299,9 @@ func timeAgo(raw string) string {
 		if days == 1 {
 			return "1 day ago"
 		}
+		if days > 30 {
+			return t.Format("Jan 2006")
+		}
 		return fmt.Sprintf("%d days ago", days)
 	}
 }

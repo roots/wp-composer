@@ -58,6 +58,15 @@
 <option value="latest-not-tagged"{{if eq .Filter "latest-not-tagged"}} selected{{end}}>Latest not tagged</option>
 </select>
 </div>
+<input type="hidden" name="sort" id="sort-input" value="{{.Sort}}">
+<div class="relative w-full sm:w-auto">
+<svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>
+<input type="text" id="author-input" name="author" value="{{.Author}}" placeholder="Filter by author..." autocomplete="off" class="w-full sm:w-48 pl-9 pr-8 h-9 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
+<button type="button" id="author-clear" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 {{if not .Author}}hidden{{end}}" onclick="var i=document.getElementById('author-input');i.value='';this.classList.add('hidden');htmx.trigger('#untagged-form','submit')">
+<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+</button>
+<div id="author-suggestions" class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg hidden max-h-48 overflow-y-auto"></div>
+</div>
 </form>
 
 <div id="untagged-results">
@@ -67,6 +76,32 @@
 </article>
 <script>
 function copyInstall(btn,slug){navigator.clipboard.writeText("composer require wp-plugin/"+slug+":dev-trunk").then(function(){var t=btn.textContent;btn.textContent="Copied!";setTimeout(function(){btn.textContent=t},1500)})}
-document.addEventListener('htmx:afterRequest',function(e){var xhr=e.detail.xhr;if(!xhr)return;var u=new URL(xhr.responseURL);if(u.pathname==='/untagged-partial'){var p=u.searchParams.get('page');var f=u.searchParams.get('filter');var s=u.searchParams.get('search');var q=[];if(f)q.push('filter='+f);if(s)q.push('search='+encodeURIComponent(s));if(p&&p!=='1')q.push('page='+p);history.pushState(null,'',q.length?'/untagged?'+q.join('&'):'/untagged')}});
+function toggleSort(desc,asc){var el=document.getElementById('sort-input');el.value=el.value===desc?asc:desc;htmx.trigger(document.getElementById('untagged-form'),'submit')}
+document.addEventListener('htmx:afterRequest',function(e){var xhr=e.detail.xhr;if(!xhr)return;var u=new URL(xhr.responseURL);if(u.pathname==='/untagged-partial'){var p=u.searchParams.get('page');var f=u.searchParams.get('filter');var s=u.searchParams.get('search');var a=u.searchParams.get('author');var so=u.searchParams.get('sort');var q=[];if(f)q.push('filter='+f);if(s)q.push('search='+encodeURIComponent(s));if(a)q.push('author='+encodeURIComponent(a));if(so&&so!=='active_installs')q.push('sort='+so);if(p&&p!=='1')q.push('page='+p);history.pushState(null,'',q.length?'/untagged?'+q.join('&'):'/untagged')}});
+(function(){
+var input=document.getElementById('author-input'),box=document.getElementById('author-suggestions'),clear=document.getElementById('author-clear'),timer=null,selected=-1;
+function show(authors){
+box.innerHTML='';selected=-1;
+if(!authors.length){box.classList.add('hidden');return}
+authors.forEach(function(a,i){
+var d=document.createElement('div');d.textContent=a;
+d.className='px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-100';
+d.addEventListener('mousedown',function(e){e.preventDefault();input.value=a;box.classList.add('hidden');clear.classList.remove('hidden');htmx.trigger(document.getElementById('untagged-form'),'submit')});
+box.appendChild(d)});
+box.classList.remove('hidden')}
+function highlight(items){items.forEach(function(el,i){el.classList.toggle('bg-gray-100',i===selected)})}
+input.addEventListener('input',function(){
+var v=input.value.trim();
+clear.classList.toggle('hidden',!v);
+if(v.length<2){box.classList.add('hidden');return}
+clearTimeout(timer);
+timer=setTimeout(function(){fetch('/untagged-authors?q='+encodeURIComponent(v)).then(function(r){return r.json()}).then(show)},200)});
+input.addEventListener('keydown',function(e){
+var items=box.querySelectorAll('div');if(!items.length)return;
+if(e.key==='ArrowDown'){e.preventDefault();selected=Math.min(selected+1,items.length-1);highlight(items)}
+else if(e.key==='ArrowUp'){e.preventDefault();selected=Math.max(selected-1,0);highlight(items)}
+else if(e.key==='Enter'&&selected>=0){e.preventDefault();items[selected].dispatchEvent(new Event('mousedown'))}});
+input.addEventListener('blur',function(){setTimeout(function(){box.classList.add('hidden')},150)});
+})();
 </script>
 {{end}}
