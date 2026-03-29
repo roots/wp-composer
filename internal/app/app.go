@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/roots/wp-packages/internal/blog"
 	"github.com/roots/wp-packages/internal/config"
 	"github.com/roots/wp-packages/internal/db"
 	"github.com/roots/wp-packages/internal/packagist"
@@ -19,6 +20,7 @@ type App struct {
 	DB        *sql.DB
 	Logger    *slog.Logger
 	Packagist *packagist.DownloadsCache
+	Blog      *blog.PostsCache
 }
 
 func New(cfg *config.Config) (*App, error) {
@@ -47,6 +49,7 @@ func New(cfg *config.Config) (*App, error) {
 		DB:        database,
 		Logger:    logger,
 		Packagist: packagist.NewDownloadsCache(logger),
+		Blog:      blog.NewPostsCache(logger),
 	}, nil
 }
 

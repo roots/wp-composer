@@ -138,6 +138,7 @@ func handleIndex(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			"CDNURL":     a.Config.R2.CDNPublicURL,
 			"OGImage":    ogImageURL(a.Config, "social/default.png"),
 			"JSONLD":     jsonLDData,
+			"BlogPosts":  a.Blog.Posts(),
 		})
 	}
 }

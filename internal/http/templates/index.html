@@ -90,4 +90,16 @@
 </div>
 
 </section>
+{{if .BlogPosts}}
+<section class="border-t border-gray-200/50 py-14">
+<div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 text-center">
+<h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">Latest updates</h2>
+<ul class="space-y-2 max-w-xl mx-auto">
+{{range .BlogPosts}}
+<li><a href="{{.Link}}" class="text-sm font-medium text-brand-primary hover:underline">{{.Title}}</a></li>
+{{end}}
+</ul>
+</div>
+</section>
+{{end}}
 {{end}}
