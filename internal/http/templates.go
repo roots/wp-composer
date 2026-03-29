@@ -68,6 +68,9 @@ var funcMap = template.FuncMap{
 	"timeAgo":           timeAgo,
 	"timeAgoShort":      timeAgoShort,
 	"formatDuration":    formatDuration,
+	"pageRange":         pageRange,
+	"untaggedPaginate":  untaggedPaginateURL,
+	"untaggedPaginateP": untaggedPaginatePartialURL,
 	"pct": func(n, total int64) string {
 		if total == 0 {
 			return "0"
@@ -226,6 +229,54 @@ func adminPaginateURL(f adminFilters, page int) string {
 	return "/admin/packages?" + q
 }
 
+func untaggedPaginateURL(filter, search, author, sort string, page int) string {
+	v := url.Values{}
+	if filter != "" {
+		v.Set("filter", filter)
+	}
+	if search != "" {
+		v.Set("search", search)
+	}
+	if author != "" {
+		v.Set("author", author)
+	}
+	if sort != "" && sort != "active_installs" {
+		v.Set("sort", sort)
+	}
+	if page > 1 {
+		v.Set("page", fmt.Sprintf("%d", page))
+	}
+	q := v.Encode()
+	if q == "" {
+		return "/untagged"
+	}
+	return "/untagged?" + q
+}
+
+func untaggedPaginatePartialURL(filter, search, author, sort string, page int) string {
+	v := url.Values{}
+	if filter != "" {
+		v.Set("filter", filter)
+	}
+	if search != "" {
+		v.Set("search", search)
+	}
+	if author != "" {
+		v.Set("author", author)
+	}
+	if sort != "" && sort != "active_installs" {
+		v.Set("sort", sort)
+	}
+	if page > 1 {
+		v.Set("page", fmt.Sprintf("%d", page))
+	}
+	q := v.Encode()
+	if q == "" {
+		return "/untagged-partial"
+	}
+	return "/untagged-partial?" + q
+}
+
 func jsonLD(data any) template.HTML {
 	if data == nil {
 		return ""
@@ -319,4 +370,33 @@ func timeAgoShort(raw string) string {
 		return t.Format("Jan 2006")
 	}
 	return timeAgo(raw)
+}
+
+// pageRange returns page numbers to display in pagination. 0 represents an ellipsis.
+// Shows current page with one neighbor on each side, plus first and last pages.
+func pageRange(current, total int) []int {
+	if total <= 5 {
+		pages := make([]int, total)
+		for i := range pages {
+			pages[i] = i + 1
+		}
+		return pages
+	}
+	seen := map[int]bool{}
+	var pages []int
+	for _, p := range []int{1, current - 1, current, current + 1, total} {
+		if p >= 1 && p <= total && !seen[p] {
+			seen[p] = true
+			pages = append(pages, p)
+		}
+	}
+	// Insert ellipses where there are gaps
+	var result []int
+	for i, p := range pages {
+		if i > 0 && p > pages[i-1]+1 {
+			result = append(result, 0)
+		}
+		result = append(result, p)
+	}
+	return result
 }

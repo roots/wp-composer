@@ -15,6 +15,7 @@
 
 @layer base {
   html { scroll-behavior: smooth; }
+  dialog[open] { margin: auto; }
 }
 
 @layer components {
