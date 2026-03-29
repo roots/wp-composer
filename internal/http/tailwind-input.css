@@ -10,6 +10,7 @@
   --color-brand-navy: #171c56;
   --font-sans: 'Public Sans', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  --breakpoint-nav: 900px;
 }
 
 @layer base {

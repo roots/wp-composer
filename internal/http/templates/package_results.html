@@ -28,9 +28,9 @@
 </div>
 {{if gt .TotalPages 1}}
 <div class="flex justify-center items-center gap-2 pb-8">
-{{if gt .Page 1}}<a href="{{paginate .Filters (sub .Page 1)}}" hx-get="{{paginatePartial .Filters (sub .Page 1)}}" hx-target="#package-results" hx-swap="innerHTML show:#filter-form:top" class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer">&laquo; Previous</a>{{end}}
+{{if gt .Page 1}}<a href="{{paginate .Filters (sub .Page 1)}}" hx-get="{{paginatePartial .Filters (sub .Page 1)}}" hx-target="#package-results" hx-swap="innerHTML show:#filter-form:top" class="inline-flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>Previous</a>{{end}}
 <span class="px-4 py-2 text-sm text-gray-500">Page {{.Page}} of {{.TotalPages}}</span>
-{{if lt .Page .TotalPages}}<a href="{{paginate .Filters (add .Page 1)}}" hx-get="{{paginatePartial .Filters (add .Page 1)}}" hx-target="#package-results" hx-swap="innerHTML show:#filter-form:top" class="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer">Next &raquo;</a>{{end}}
+{{if lt .Page .TotalPages}}<a href="{{paginate .Filters (add .Page 1)}}" hx-get="{{paginatePartial .Filters (add .Page 1)}}" hx-target="#package-results" hx-swap="innerHTML show:#filter-form:top" class="inline-flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer">Next<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg></a>{{end}}
 </div>
 {{end}}
 

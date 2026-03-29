@@ -1,0 +1,180 @@
+{{template "layout" .}}
+{{define "title"}}Documentation — WP Packages{{end}}
+{{define "meta_seo"}}
+<meta name="description" content="Documentation for WP Packages — how to use and how to migrate from WPackagist.">
+{{if .AppURL}}<link rel="canonical" href="{{.AppURL}}/docs">{{end}}
+{{end}}
+{{define "json_ld"}}{{end}}
+{{define "og_meta"}}
+<meta property="og:title" content="Documentation — WP Packages">
+<meta property="og:description" content="Documentation for WP Packages — how to use and how to migrate from WPackagist.">
+{{if .OGImage}}<meta property="og:image" content="{{.OGImage}}">{{end}}
+{{if .AppURL}}<meta property="og:url" content="{{.AppURL}}/docs">{{end}}
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Documentation — WP Packages">
+<meta name="twitter:description" content="Documentation for WP Packages — how to use and how to migrate from WPackagist.">
+{{if .OGImage}}<meta name="twitter:image" content="{{.OGImage}}">{{end}}
+{{end}}
+{{define "content"}}
+<section class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+<div class="max-w-4xl mx-auto md:max-w-none md:grid md:grid-cols-[minmax(0,3fr)_minmax(180px,1fr)] md:gap-12">
+<div>
+
+<h1 id="intro" class="text-4xl font-bold tracking-tight text-gray-900 mb-6 scroll-mt-20">Documentation</h1>
+<nav class="text-sm mb-8 md:hidden">
+<p class="font-medium text-gray-900 mb-3">On this page</p>
+<ul class="space-y-2 border-l border-gray-200 pl-4">
+<li><a href="#intro" class="text-gray-500 hover:text-gray-900 transition-colors">Introduction</a></li>
+<li><a href="#naming" class="text-gray-500 hover:text-gray-900 transition-colors">Package naming</a></li>
+<li><a href="#composer-json" class="text-gray-500 hover:text-gray-900 transition-colors">Example composer.json</a></li>
+<li><a href="#wordpress-core" class="text-gray-500 hover:text-gray-900 transition-colors">WordPress core packages</a></li>
+<li><a href="#migrate" class="text-gray-500 hover:text-gray-900 transition-colors">Migrating from WPackagist</a></li>
+</ul>
+</nav>
+<p class="text-gray-600 mb-4">Add the WP Packages repository to your project:</p>
+<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-4" onclick="copyCmd(this,'composer config repositories.wp-packages composer https://repo.wp-packages.org')">
+<span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
+<code class="flex-1 text-sm font-mono text-gray-900 truncate">composer config repositories.wp-packages composer https://repo.wp-packages.org</code>
+<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer">
+<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg>
+</button>
+</div>
+<p class="text-gray-600 mb-4">Every active plugin and theme from the WordPress.org directory is available as a Composer package. <a href="/#filter-form" class="text-brand-primary hover:underline">Search all packages &rarr;</a></p>
+<div class="inline-flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 mb-12">
+<svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
+<span>Some WordPress plugins have a latest version on WordPress.org that isn't tagged in SVN. These can be installed via <code class="text-xs font-mono bg-amber-100 px-1 py-0.5 rounded">dev-trunk</code>. <a href="/untagged" class="font-medium underline underline-offset-2 hover:no-underline">Learn more on our Untagged Plugins page</a>.</span>
+</div>
+
+<h2 id="naming" class="text-2xl font-bold mb-6 scroll-mt-20">Package naming</h2>
+<div class="rounded-xl border border-gray-200/60 overflow-hidden mb-12">
+<table class="w-full text-sm">
+<thead class="bg-gray-50/50"><tr><th class="text-left px-4 py-3 font-medium text-gray-500">Type</th><th class="text-left px-4 py-3 font-medium text-gray-500">Convention</th><th class="text-left px-4 py-3 font-medium text-gray-500">Example</th></tr></thead>
+<tbody>
+<tr class="border-t border-gray-200/40"><td class="px-4 py-3 font-medium">Plugin</td><td class="px-4 py-3 font-mono text-sm text-gray-500">wp-plugin/plugin-name</td><td class="px-4 py-3"><a href="/packages/wp-plugin/woocommerce" class="font-mono text-sm text-brand-primary hover:underline">wp-plugin/woocommerce</a></td></tr>
+<tr class="border-t border-gray-200/40"><td class="px-4 py-3 font-medium">Theme</td><td class="px-4 py-3 font-mono text-sm text-gray-500">wp-theme/theme-name</td><td class="px-4 py-3"><a href="/packages/wp-theme/twentytwentyfive" class="font-mono text-sm text-brand-primary hover:underline">wp-theme/twentytwentyfive</a></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="composer-json" class="text-2xl font-bold mb-4 scroll-mt-20">Example <code class="text-2xl font-mono">composer.json</code></h2>
+<div class="mb-12">
+<div class="flex border-b border-gray-200/60">
+<button onclick="document.getElementById('tab-traditional').classList.remove('hidden');document.getElementById('tab-bedrock').classList.add('hidden');this.classList.add('border-brand-primary','text-brand-primary');this.classList.remove('border-transparent','text-gray-500');this.nextElementSibling.classList.remove('border-brand-primary','text-brand-primary');this.nextElementSibling.classList.add('border-transparent','text-gray-500')" class="px-4 py-2 text-sm font-medium border-b-2 border-brand-primary text-brand-primary cursor-pointer">Traditional WordPress</button>
+<button onclick="document.getElementById('tab-bedrock').classList.remove('hidden');document.getElementById('tab-traditional').classList.add('hidden');this.classList.add('border-brand-primary','text-brand-primary');this.classList.remove('border-transparent','text-gray-500');this.previousElementSibling.classList.remove('border-brand-primary','text-brand-primary');this.previousElementSibling.classList.add('border-transparent','text-gray-500')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-900 cursor-pointer">Bedrock</button>
+</div>
+<div id="tab-traditional">
+<div class="rounded-b-xl border border-t-0 border-gray-200/60 overflow-hidden">
+<div class="bg-gray-50/50 px-4 py-2 text-xs text-gray-500 border-b border-gray-200/40">composer.json</div>
+<pre class="p-4 text-sm font-mono leading-relaxed overflow-x-auto"><code>{
+  <span class="text-green-700">"repositories"</span>: [
+    {
+      <span class="text-green-700">"name"</span>: <span class="text-green-700">"wp-packages"</span>,
+      <span class="text-green-700">"type"</span>: <span class="text-green-700">"composer"</span>,
+      <span class="text-green-700">"url"</span>: <span class="text-green-700">"https://repo.wp-packages.org"</span>
+    }
+  ],
+  <span class="text-green-700">"require"</span>: {
+    <span class="text-green-700">"composer/installers"</span>: <span class="text-green-700">"^2.2"</span>,
+    <span class="text-green-700">"wp-plugin/woocommerce"</span>: <span class="text-green-700">"^10.0"</span>,
+    <span class="text-green-700">"wp-theme/twentytwentyfive"</span>: <span class="text-green-700">"^1.0"</span>
+  },
+  <span class="text-green-700">"extra"</span>: {
+    <span class="text-green-700">"installer-paths"</span>: {
+      <span class="text-green-700">"wp-content/plugins/{$name}/"</span>: [<span class="text-green-700">"type:wordpress-plugin"</span>],
+      <span class="text-green-700">"wp-content/mu-plugins/{$name}/"</span>: [<span class="text-green-700">"type:wordpress-muplugin"</span>],
+      <span class="text-green-700">"wp-content/themes/{$name}/"</span>: [<span class="text-green-700">"type:wordpress-theme"</span>]
+    }
+  }
+}</code></pre>
+</div>
+</div>
+<div id="tab-bedrock" class="hidden">
+<div class="rounded-b-xl border border-t-0 border-gray-200/60 overflow-hidden">
+<div class="p-8 text-center text-sm text-gray-600 text-balance">
+<p class="mb-2"><a href="https://roots.io/bedrock/" class="font-medium text-brand-primary hover:underline">Bedrock</a> comes with both WordPress core as a Composer package and WP Packages support out of the box.</p>
+<p><a href="https://github.com/roots/bedrock/blob/master/composer.json" class="text-brand-primary hover:underline">See Bedrock's composer.json &rarr;</a></p>
+</div>
+</div>
+</div>
+</div>
+
+<h2 id="wordpress-core" class="text-2xl font-bold mb-4 scroll-mt-20">WordPress core Composer packages</h2>
+<p class="text-gray-600 mb-4">Roots also provides WordPress core as Composer packages:</p>
+<div class="rounded-xl border border-gray-200/60 overflow-hidden mb-4">
+<table class="w-full text-sm">
+<tbody>
+<tr class="border-b border-gray-200/40"><td class="px-4 py-3"><a href="/roots-wordpress" class="font-mono text-brand-primary hover:underline">roots/wordpress</a></td><td class="px-4 py-3 text-gray-600">Meta-package for installing WordPress core via Composer</td></tr>
+<tr class="border-b border-gray-200/40"><td class="px-4 py-3"><a href="/roots-wordpress" class="font-mono text-brand-primary hover:underline">roots/wordpress-full</a></td><td class="px-4 py-3 text-gray-600">Full WordPress build (core + default themes + plugins + betas)</td></tr>
+<tr><td class="px-4 py-3"><a href="/roots-wordpress" class="font-mono text-brand-primary hover:underline">roots/wordpress-no-content</a></td><td class="px-4 py-3 text-gray-600">Minimal WordPress build (core only)</td></tr>
+</tbody>
+</table>
+</div>
+<p class="text-sm text-gray-500 mb-12"><a href="/roots-wordpress" class="text-brand-primary hover:underline">Learn more about the WordPress core Composer packages &rarr;</a></p>
+
+<h2 id="migrate" class="text-2xl font-bold mb-4 scroll-mt-20">Migrating from WPackagist</h2>
+<p class="text-sm text-gray-500 mb-4"><a href="/wp-packages-vs-wpackagist" class="text-brand-primary hover:underline">See how WP Packages compares to WPackagist &rarr;</a></p>
+<p class="text-gray-600 mb-4">Switching from WPackagist takes one command. Use the <a href="https://github.com/roots/wp-packages/blob/main/scripts/migrate-from-wpackagist.sh" class="text-brand-primary hover:underline">migration script</a> to automatically update your <code class="text-sm font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">composer.json</code>:</p>
+<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-8" onclick="copyCmd(this,'curl -sO https://raw.githubusercontent.com/roots/wp-packages/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh')">
+<span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
+<code class="flex-1 text-sm font-mono text-gray-900 truncate">curl -sO https://raw.githubusercontent.com/roots/wp-packages/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh</code>
+<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer">
+<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg>
+</button>
+</div>
+<h3 class="text-lg font-bold mb-6">Manually migrate</h3>
+<div class="space-y-6 mb-8">
+<div class="flex items-start gap-4">
+<div class="flex w-7 h-7 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-xs font-bold">1</div>
+<div class="min-w-0">
+<p class="text-gray-600 mb-2 leading-7">Remove WPackagist packages:</p>
+<div class="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-200/60 bg-gray-100/30 cursor-pointer hover:border-gray-300 transition-colors" onclick="copyCmd(this,'composer remove wpackagist-plugin/woocommerce')">
+<span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
+<code class="flex-1 text-sm font-mono text-gray-900 truncate">composer remove wpackagist-plugin/woocommerce</code>
+<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
+</div>
+</div>
+</div>
+<div class="flex items-start gap-4">
+<div class="flex w-7 h-7 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-xs font-bold">2</div>
+<div class="min-w-0">
+<p class="text-gray-600 mb-2 leading-7">Remove the WPackagist repository and add WP Packages:</p>
+<div class="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-200/60 bg-gray-100/30 cursor-pointer hover:border-gray-300 transition-colors" onclick="copyCmd(this,'composer config --unset repositories.wpackagist &amp;&amp; composer config repositories.wp-packages composer https://repo.wp-packages.org')">
+<span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
+<code class="flex-1 text-sm font-mono text-gray-900 truncate">composer config --unset repositories.wpackagist &amp;&amp; composer config repositories.wp-packages composer https://repo.wp-packages.org</code>
+<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
+</div>
+</div>
+</div>
+<div class="flex items-start gap-4">
+<div class="flex w-7 h-7 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-xs font-bold">3</div>
+<div class="min-w-0">
+<p class="text-gray-600 mb-2 leading-7">Require packages with the new naming:</p>
+<div class="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-200/60 bg-gray-100/30 cursor-pointer hover:border-gray-300 transition-colors" onclick="copyCmd(this,'composer require wp-plugin/woocommerce')">
+<span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
+<code class="flex-1 text-sm font-mono text-gray-900 truncate">composer require wp-plugin/woocommerce</code>
+<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+<aside class="hidden md:block">
+<nav class="sticky top-20 text-sm">
+<p class="font-medium text-gray-900 mb-3">On this page</p>
+<ul id="toc-sidebar" class="space-y-2 border-l border-gray-200 pl-4">
+<li><a href="#intro" class="text-gray-500 hover:text-gray-900 transition-colors">Introduction</a></li>
+<li><a href="#naming" class="text-gray-500 hover:text-gray-900 transition-colors">Package naming</a></li>
+<li><a href="#composer-json" class="text-gray-500 hover:text-gray-900 transition-colors">Example composer.json</a></li>
+<li><a href="#wordpress-core" class="text-gray-500 hover:text-gray-900 transition-colors">WordPress core packages</a></li>
+<li><a href="#migrate" class="text-gray-500 hover:text-gray-900 transition-colors">Migrating from WPackagist</a></li>
+</ul>
+</nav>
+</aside>
+</div>
+</section>
+<script>
+(()=>{const ids=['intro','naming','composer-json','wordpress-core','migrate'];const toc=document.getElementById('toc-sidebar');if(!toc)return;const links={};toc.querySelectorAll('a[href^="#"]').forEach(a=>{links[a.getAttribute('href').slice(1)]=a});const activate=id=>{Object.values(links).forEach(a=>{a.classList.remove('text-gray-900','font-medium');a.classList.add('text-gray-500')});const a=links[id];if(a){a.classList.add('text-gray-900','font-medium');a.classList.remove('text-gray-500')}};const observer=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)activate(e.target.id)})},{rootMargin:'-80px 0px -70% 0px'});ids.forEach(id=>{const el=document.getElementById(id);if(el)observer.observe(el)})})();
+</script>
+{{end}}

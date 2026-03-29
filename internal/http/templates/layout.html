@@ -17,10 +17,11 @@
 {{if .CDNURL}}<link rel="preconnect" href="{{.CDNURL}}" crossorigin>{{end}}
 <script src="{{assetPath "/assets/scripts/htmx.min.js"}}"></script>
 <script>
-function copyCmd(el,txt){navigator.clipboard.writeText(txt);var svg=el.querySelector('button svg')||el.querySelector('svg:last-of-type')||el.querySelector('svg');if(!svg||svg.dataset.copied)return;svg.dataset.copied='1';var orig=svg.innerHTML;var oc=svg.style.color;svg.style.transition='opacity 150ms,color 200ms';svg.style.opacity='0';setTimeout(function(){svg.innerHTML='<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>';svg.style.color='#16a34a';svg.style.opacity='1'},150);setTimeout(function(){svg.style.opacity='0';setTimeout(function(){svg.innerHTML=orig;svg.style.color=oc;svg.style.opacity='1';delete svg.dataset.copied},150)},1500)}
+function copyCmd(el,txt){navigator.clipboard.writeText(txt);const svg=el.querySelector('button svg')||el.querySelector('svg:last-of-type')||el.querySelector('svg');if(!svg||svg.dataset.copied)return;svg.dataset.copied='1';const orig=svg.innerHTML;const oc=svg.style.color;svg.style.transition='opacity 150ms,color 200ms';svg.style.opacity='0';setTimeout(()=>{svg.innerHTML='<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>';svg.style.color='#16a34a';svg.style.opacity='1'},150);setTimeout(()=>{svg.style.opacity='0';setTimeout(()=>{svg.innerHTML=orig;svg.style.color=oc;svg.style.opacity='1';delete svg.dataset.copied},150)},1500)}
 document.addEventListener('keydown',e=>{if(e.key==='/'&&!e.ctrlKey&&!e.metaKey&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();const s=document.querySelector('input[name="search"]');if(s)s.focus()}});
 document.addEventListener('htmx:afterRequest',e=>{const xhr=e.detail.xhr;if(!xhr)return;const u=new URL(xhr.responseURL);if(u.pathname==='/packages-partial'){const p=u.searchParams;p.delete('');const q=p.toString();history.pushState(null,'',q?'/?'+q:'/')}});
 document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('rename-banner');const c=document.getElementById('rename-banner-close');if(!b||!c)return;const k='wp-packages-rename-banner-dismissed';try{if(localStorage.getItem(k)==='1'){b.remove();return}}catch{}c.addEventListener('click',()=>{try{localStorage.setItem(k,'1')}catch{}b.remove()})});
+document.addEventListener('DOMContentLoaded',()=>{const t=document.getElementById('nav-menu-toggle');const m=document.getElementById('nav-menu');if(!t||!m)return;function close(){m.classList.add('hidden');t.setAttribute('aria-expanded','false');t.querySelector('svg').innerHTML='<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>';}t.addEventListener('click',()=>{const open=m.classList.toggle('hidden');t.setAttribute('aria-expanded',!open);t.querySelector('svg').innerHTML=open?'<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>':'<path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>'});document.addEventListener('click',e=>{if(!m.classList.contains('hidden')&&!m.contains(e.target)&&!t.contains(e.target))close()})});
 </script>
 </head>
 <body class="min-h-screen flex flex-col bg-white text-gray-900 font-sans">
@@ -41,18 +42,31 @@ document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementByI
 roots.io</a>
 </div>
 <nav aria-label="Main" class="flex items-center gap-1">
-<a href="/#migrate" class="hidden sm:inline-flex rounded-md px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors">Migrate from WPackagist</a>
-<a href="https://discourse.roots.io/" class="hidden sm:inline-flex rounded-md px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors" rel="noopener">Community</a>
-<a href="https://github.com/roots/wp-packages" class="hidden sm:inline-flex rounded-md px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors" rel="noopener">GitHub</a>
+<a href="/" class="hidden nav:inline-flex rounded-md px-3 py-1.5 text-sm {{if eq .Path "/"}}text-gray-900 font-medium{{else}}text-gray-500 hover:text-gray-900{{end}} transition-colors">Packages</a>
+<a href="/docs" class="hidden nav:inline-flex rounded-md px-3 py-1.5 text-sm {{if eq .Path "/docs"}}text-gray-900 font-medium{{else}}text-gray-500 hover:text-gray-900{{end}} transition-colors">Docs</a>
+<a href="/docs#migrate" class="hidden nav:inline-flex rounded-md px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors">Migrate from WPackagist</a>
+<a href="https://discourse.roots.io/" class="hidden nav:inline-flex rounded-md px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors" rel="noopener">Community</a>
+<a href="https://github.com/roots/wp-packages" class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors" rel="noopener"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>GitHub</a>
 <a href="https://github.com/sponsors/roots" class="inline-flex items-center rounded-lg bg-brand-primary px-3.5 py-1.5 text-sm font-medium text-white hover:bg-brand-primary/85 transition-colors" rel="noopener">Sponsor</a>
+<button id="nav-menu-toggle" type="button" class="nav:hidden inline-flex items-center justify-center rounded-md p-1.5 text-gray-500 hover:text-gray-900 transition-colors" aria-label="Toggle menu" aria-expanded="false">
+<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+</button>
 </nav>
+</div>
+</div>
+<div id="nav-menu" class="hidden nav:hidden border-t border-gray-200/50">
+<div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-3 flex flex-col gap-1">
+<a href="/" class="rounded-md px-3 py-2 text-sm {{if eq .Path "/"}}text-gray-900 font-medium bg-gray-50{{else}}text-gray-500 hover:text-gray-900 hover:bg-gray-50{{end}} transition-colors">Packages</a>
+<a href="/docs" class="rounded-md px-3 py-2 text-sm {{if eq .Path "/docs"}}text-gray-900 font-medium bg-gray-50{{else}}text-gray-500 hover:text-gray-900 hover:bg-gray-50{{end}} transition-colors">Docs</a>
+<a href="/docs#migrate" class="rounded-md px-3 py-2 text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors">Migrate from WPackagist</a>
+<a href="https://discourse.roots.io/" class="rounded-md px-3 py-2 text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors" rel="noopener">Community</a>
 </div>
 </div>
 </header>
 <main class="flex-1">{{template "content" .}}</main>
 <section class="border-t border-gray-200/50 py-14">
 <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 text-center">
-<p class="text-sm text-gray-500 max-w-lg mx-auto mb-8 leading-relaxed">WP Packages is community-funded open source. Support our work by <a href="https://github.com/sponsors/roots" class="font-medium text-gray-900 hover:text-brand-primary transition-colors underline underline-offset-4 decoration-gray-300" rel="noopener">sponsoring us on GitHub</a>.</p>
+<p class="text-sm text-gray-500 max-w-lg mx-auto mb-8 leading-relaxed text-balance">WP Packages is community-funded open source. Support our work by <a href="https://github.com/sponsors/roots" class="font-medium text-brand-primary hover:underline" rel="noopener">sponsoring us on GitHub</a>.</p>
 <p class="text-xs font-medium uppercase tracking-widest text-gray-500 mb-6">Sponsors</p>
 <div class="flex flex-wrap items-center justify-center gap-6">
 <a href="https://www.carrot.com/" class="hover:opacity-80 transition-opacity" rel="sponsored"><img src="{{assetPath "/assets/images/carrot.svg"}}" alt="Carrot" class="h-20 w-auto rounded-lg"></a>
@@ -63,16 +77,20 @@ roots.io</a>
 </div>
 </section>
 <footer class="border-t border-gray-200/50">
-<div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-<p class="text-sm text-gray-500 flex items-center gap-1">Built by <a href="https://roots.io" class="inline-flex items-center gap-1 font-medium text-brand-primary hover:text-brand-primary/80 transition-colors" rel="noopener"><svg class="h-3 w-auto translate-y-px" viewBox="0 0 80 75" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M56.604 59.32c-5.97-5.962-9.26-13.89-9.26-22.318V23.958a.815.815 0 1 0-1.631 0c0 8.43-3.286 16.36-9.255 22.32L16.743 65.961a.813.813 0 0 0-.237.643.81.81 0 0 0 .34.6C23.665 72.05 31.672 74.61 40 74.61s16.338-2.56 23.157-7.406a.79.79 0 0 0 .334-.6.796.796 0 0 0-.227-.643l-6.66-6.64zm-35.38-48.398V.816A.813.813 0 0 0 20 .11C7.663 7.242-.001 20.484-.001 34.67c0 1.136.06 2.352.188 3.718.032.312.24.58.537.694a.979.979 0 0 0 .278.044.816.816 0 0 0 .574-.236L15.32 25.164a19.997 19.997 0 0 0 5.903-14.242zM59.997.11a.808.808 0 0 0-.816 0 .82.82 0 0 0-.408.706v36.186c0 5.378 2.103 10.437 5.911 14.242l6.655 6.65a.82.82 0 0 0 .579.241c.022 0 .046 0 .07-.005a.852.852 0 0 0 .601-.338C77.437 50.979 80 42.985 80 34.669 80 20.484 72.341 7.242 59.998.11zM28.377 38.203L8.662 57.894a.815.815 0 0 1-.579.241c-.021 0-.044 0-.065-.005a.827.827 0 0 1-.596-.338 39.91 39.91 0 0 1-2.962-4.84.824.824 0 0 1 .15-.957l18.793-18.76c5.967-5.965 9.253-13.887 9.253-22.313a.816.816 0 0 1 1.631 0v13.036c0 5.38-2.097 10.44-5.91 14.245z" fill-rule="nonzero"/></svg>roots.io</a></p>
-<nav aria-label="Footer" class="flex flex-wrap justify-center sm:justify-end items-center gap-x-6 gap-y-2">
+<div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
+<nav aria-label="Footer" class="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 mb-4">
+<a href="/" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">Packages</a>
+<a href="/docs" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">Docs</a>
 <a href="/untagged" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">Untagged Plugins</a>
 <a href="/wp-packages-vs-wpackagist" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">WP Packages vs WPackagist</a>
 <a href="/roots-wordpress" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">WordPress Core</a>
-<a href="https://discourse.roots.io/" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">Discourse</a>
-<a href="https://github.com/roots/wp-packages" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">GitHub</a>
-<a href="https://x.com/rootswp" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">@rootswp</a>
 </nav>
+<div class="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 mb-6">
+<a href="https://discourse.roots.io/" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12.103 0C18.666 0 24 5.485 24 11.997c0 6.51-5.33 11.99-11.9 11.99L0 24V11.79C0 5.28 5.532 0 12.103 0zm.116 4.563a7.395 7.395 0 0 0-6.337 3.57 7.247 7.247 0 0 0-.148 7.22L4.4 19.61l4.794-1.074a7.424 7.424 0 0 0 8.136-1.39 7.256 7.256 0 0 0 1.737-7.58 7.375 7.375 0 0 0-6.84-5.002h-.008z"/></svg>Discourse</a>
+<a href="https://github.com/roots/wp-packages" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>GitHub</a>
+<a href="https://x.com/rootswp" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>@rootswp</a>
+</div>
+<p class="text-sm text-gray-500 flex items-center justify-center gap-1">Built by <a href="https://roots.io" class="inline-flex items-center gap-1 font-medium text-brand-primary hover:text-brand-primary/80 transition-colors" rel="noopener"><svg class="h-3 w-auto translate-y-px" viewBox="0 0 80 75" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M56.604 59.32c-5.97-5.962-9.26-13.89-9.26-22.318V23.958a.815.815 0 1 0-1.631 0c0 8.43-3.286 16.36-9.255 22.32L16.743 65.961a.813.813 0 0 0-.237.643.81.81 0 0 0 .34.6C23.665 72.05 31.672 74.61 40 74.61s16.338-2.56 23.157-7.406a.79.79 0 0 0 .334-.6.796.796 0 0 0-.227-.643l-6.66-6.64zm-35.38-48.398V.816A.813.813 0 0 0 20 .11C7.663 7.242-.001 20.484-.001 34.67c0 1.136.06 2.352.188 3.718.032.312.24.58.537.694a.979.979 0 0 0 .278.044.816.816 0 0 0 .574-.236L15.32 25.164a19.997 19.997 0 0 0 5.903-14.242zM59.997.11a.808.808 0 0 0-.816 0 .82.82 0 0 0-.408.706v36.186c0 5.378 2.103 10.437 5.911 14.242l6.655 6.65a.82.82 0 0 0 .579.241c.022 0 .046 0 .07-.005a.852.852 0 0 0 .601-.338C77.437 50.979 80 42.985 80 34.669 80 20.484 72.341 7.242 59.998.11zM28.377 38.203L8.662 57.894a.815.815 0 0 1-.579.241c-.021 0-.044 0-.065-.005a.827.827 0 0 1-.596-.338 39.91 39.91 0 0 1-2.962-4.84.824.824 0 0 1 .15-.957l18.793-18.76c5.967-5.965 9.253-13.887 9.253-22.313a.816.816 0 0 1 1.631 0v13.036c0 5.38-2.097 10.44-5.91 14.245z" fill-rule="nonzero"/></svg>roots.io</a></p>
 </div>
 </footer>
 {{if isProduction}}<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "7c071b0b0f4744d6946688c90ecaab2f"}'></script>{{end}}

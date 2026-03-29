@@ -309,6 +309,7 @@ func generateSitemaps(ctx context.Context, db *sql.DB, appURL string) (index []b
 		XMLNS: "http://www.sitemaps.org/schemas/sitemap/0.9",
 		URLs: []sitemapURL{
 			{Loc: appURL + "/"},
+			{Loc: appURL + "/docs"},
 			{Loc: appURL + "/roots-wordpress"},
 			{Loc: appURL + "/wp-packages-vs-wpackagist"},
 			{Loc: appURL + "/untagged"},

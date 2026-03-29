@@ -178,6 +178,17 @@ func handleIndexPartial(a *app.App, tmpl *templateSet) http.HandlerFunc {
 	}
 }
 
+func handleDocs(a *app.App, tmpl *templateSet) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
+		render(w, r, tmpl.docs, "layout", map[string]any{
+			"AppURL":  a.Config.AppURL,
+			"CDNURL":  a.Config.R2.CDNPublicURL,
+			"OGImage": ogImageURL(a.Config, "social/default.png"),
+		})
+	}
+}
+
 func handleCompare(a *app.App, tmpl *templateSet) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")

@@ -39,7 +39,7 @@ function connect() {
   if (eventSource) {
     eventSource.close();
   }
-  var status = document.getElementById('status');
+  const status = document.getElementById('status');
   status.textContent = 'Connecting...';
   status.className = 'text-gray-400';
 
@@ -49,12 +49,12 @@ function connect() {
     status.className = 'text-green-600';
   };
   eventSource.onmessage = function(e) {
-    var output = document.getElementById('log-output');
-    var container = document.getElementById('log-container');
+    const output = document.getElementById('log-output');
+    const container = document.getElementById('log-container');
     output.textContent += e.data + '\n';
 
     // Trim if too many lines
-    var lines = output.textContent.split('\n');
+    const lines = output.textContent.split('\n');
     if (lines.length > maxLines) {
       output.textContent = lines.slice(lines.length - maxLines).join('\n');
     }
@@ -73,10 +73,10 @@ function connect() {
 
 function toggleScroll() {
   autoScroll = !autoScroll;
-  var btn = document.getElementById('scrollBtn');
+  const btn = document.getElementById('scrollBtn');
   btn.textContent = 'Auto-scroll: ' + (autoScroll ? 'ON' : 'OFF');
   if (autoScroll) {
-    var container = document.getElementById('log-container');
+    const container = document.getElementById('log-container');
     container.scrollTop = container.scrollHeight;
   }
 }

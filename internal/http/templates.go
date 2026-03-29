@@ -81,6 +81,7 @@ type templateSet struct {
 	indexPartial    *template.Template
 	detail          *template.Template
 	compare         *template.Template
+	docs            *template.Template
 	rootsWordpress  *template.Template
 	untagged        *template.Template
 	untaggedPartial *template.Template
@@ -98,6 +99,7 @@ func loadTemplates(env string) *templateSet {
 		indexPartial:    parse("templates/package_results.html"),
 		detail:          parse("templates/layout.html", "templates/detail.html"),
 		compare:         parse("templates/layout.html", "templates/compare.html"),
+		docs:            parse("templates/layout.html", "templates/docs.html"),
 		rootsWordpress:  parse("templates/layout.html", "templates/roots_wordpress.html"),
 		untagged:        parse("templates/layout.html", "templates/untagged.html", "templates/untagged_results.html"),
 		untaggedPartial: parse("templates/untagged_results.html"),
@@ -114,6 +116,9 @@ func parse(files ...string) *template.Template {
 }
 
 func render(w http.ResponseWriter, r *http.Request, tmpl *template.Template, name string, data any) {
+	if m, ok := data.(map[string]any); ok {
+		m["Path"] = r.URL.Path
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, name, data); err != nil {
 		captureError(r, err)

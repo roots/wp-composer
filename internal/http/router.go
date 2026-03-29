@@ -89,6 +89,7 @@ func NewRouter(a *app.App) http.Handler {
 		http.Redirect(w, r, "/wp-packages-vs-wpackagist", http.StatusMovedPermanently)
 	})
 	routeFunc("GET /wp-packages-vs-wpackagist", handleCompare(a, tmpl))
+	routeFunc("GET /docs", handleDocs(a, tmpl))
 	routeFunc("GET /roots-wordpress", handleRootsWordpress(a, tmpl))
 	routeFunc("GET /untagged", handleUntagged(a, tmpl))
 	routeFunc("GET /untagged-partial", handleUntaggedPartial(a, tmpl))
