@@ -138,6 +138,7 @@ All commands accept:
 | `R2_BUCKET` | R2 bucket name |
 | `R2_ENDPOINT` | R2 S3-compatible endpoint URL |
 | `LITESTREAM_BUCKET` | R2 bucket for Litestream DB backup |
+| `DISCORD_WEBHOOK_URL` | Discord webhook for pipeline failure notifications (optional) |
 
 ## Admin Bootstrap
 

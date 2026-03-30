@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
+  echo "DISCORD_WEBHOOK_URL not set, skipping notification"
+  exit 0
+fi
+
+DB="{{ db_path }}"
+LOG="{{ app_root }}/shared/storage/logs/pipeline.log"
+
+BUILD_ID=$(sqlite3 "$DB" "SELECT id FROM builds WHERE status='failed' ORDER BY started_at DESC LIMIT 1;" 2>/dev/null || echo "unknown")
+LOG_TAIL=$(tail -n 10 "$LOG" 2>/dev/null || echo "(no log output)")
+
+PAYLOAD=$(jq -n \
+  --arg title "Pipeline failed: $BUILD_ID" \
+  --arg logs "$LOG_TAIL" \
+  '{embeds: [{title: $title, description: ("```\n" + $logs + "\n```"), color: 16711680}]}')
+
+curl -sf --retry 2 --retry-delay 5 --max-time 10 -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK_URL" || echo "Discord notification failed (unit: ${NOTIFY_UNIT:-unknown}), continuing"

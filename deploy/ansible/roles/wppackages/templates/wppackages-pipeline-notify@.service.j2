@@ -1,0 +1,10 @@
+[Unit]
+Description=Discord notification for %i failure
+
+[Service]
+Type=oneshot
+User=deploy
+Group=www-data
+EnvironmentFile={{ app_root }}/shared/.env
+Environment=NOTIFY_UNIT=%i
+ExecStart={{ app_root }}/shared/scripts/notify-pipeline-failure.sh
