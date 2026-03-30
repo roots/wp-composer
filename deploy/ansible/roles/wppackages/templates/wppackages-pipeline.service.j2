@@ -10,3 +10,4 @@ ExecStart={{ app_root }}/current/{{ go_binary_name }} pipeline --discover-source
 StandardOutput=append:{{ app_root }}/shared/storage/logs/pipeline.log
 StandardError=append:{{ app_root }}/shared/storage/logs/pipeline.log
 EnvironmentFile={{ app_root }}/shared/.env
+OnFailure=wppackages-pipeline-notify@%n.service
