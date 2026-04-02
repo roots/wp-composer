@@ -123,7 +123,7 @@ Configure via systemd timers or cron:
 |---------|----------|-------|
 | `wppackages pipeline` | Every 5 minutes | Main data refresh cycle |
 | `wppackages aggregate-installs` | Hourly | Telemetry counter rollups |
-| `wppackages check-status` | Every 6 hours | Detect closed/reopened packages on wp.org |
+| `wppackages check-status` | Hourly | Detect closed/reopened packages on wp.org |
 | `wppackages cleanup-sessions` | Daily | Expired session cleanup |
 | `wppackages generate-og` | Daily | Regenerate OG images where install counts changed |
 
