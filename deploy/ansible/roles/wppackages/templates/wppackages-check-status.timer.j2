@@ -1,9 +1,9 @@
 [Unit]
-Description=Run WP Packages status check daily
+Description=Run WP Packages status check every 6 hours
 
 [Timer]
-OnCalendar=*-*-* 06:00:00
-RandomizedDelaySec=3600
+OnCalendar=*-*-* 00/6:00:00
+RandomizedDelaySec=900
 Persistent=true
 
 [Install]
