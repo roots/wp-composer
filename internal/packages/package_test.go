@@ -300,6 +300,80 @@ func TestGetPackagesNeedingUpdate(t *testing.T) {
 	}
 }
 
+func TestGetAllPackages(t *testing.T) {
+	database := setupTestDB(t)
+	ctx := context.Background()
+
+	_ = UpsertPackage(ctx, database, &Package{
+		Type: "plugin", Name: "akismet", VersionsJSON: "{}", IsActive: true,
+	})
+	_ = UpsertPackage(ctx, database, &Package{
+		Type: "theme", Name: "astra", VersionsJSON: "{}", IsActive: true,
+	})
+	_ = UpsertPackage(ctx, database, &Package{
+		Type: "plugin", Name: "closed-plugin", VersionsJSON: "{}", IsActive: false,
+	})
+
+	t.Run("all types", func(t *testing.T) {
+		pkgs, err := GetAllPackages(ctx, database, "all")
+		if err != nil {
+			t.Fatalf("query: %v", err)
+		}
+		if len(pkgs) != 3 {
+			t.Errorf("expected 3 packages, got %d", len(pkgs))
+		}
+	})
+
+	t.Run("filter by type", func(t *testing.T) {
+		pkgs, err := GetAllPackages(ctx, database, "plugin")
+		if err != nil {
+			t.Fatalf("query: %v", err)
+		}
+		if len(pkgs) != 2 {
+			t.Errorf("expected 2 plugins, got %d", len(pkgs))
+		}
+	})
+
+	t.Run("includes inactive", func(t *testing.T) {
+		pkgs, err := GetAllPackages(ctx, database, "plugin")
+		if err != nil {
+			t.Fatalf("query: %v", err)
+		}
+		var found bool
+		for _, p := range pkgs {
+			if p.Name == "closed-plugin" && !p.IsActive {
+				found = true
+			}
+		}
+		if !found {
+			t.Error("expected inactive plugin to be included")
+		}
+	})
+}
+
+func TestReactivatePackage(t *testing.T) {
+	database := setupTestDB(t)
+	ctx := context.Background()
+
+	_ = UpsertPackage(ctx, database, &Package{
+		Type: "plugin", Name: "closed-plugin", VersionsJSON: "{}", IsActive: false,
+	})
+
+	pkgs, _ := GetAllPackages(ctx, database, "")
+	if pkgs[0].IsActive {
+		t.Fatal("expected package to start inactive")
+	}
+
+	if err := ReactivatePackage(ctx, database, pkgs[0].ID); err != nil {
+		t.Fatalf("reactivate: %v", err)
+	}
+
+	pkgs, _ = GetAllPackages(ctx, database, "")
+	if !pkgs[0].IsActive {
+		t.Error("expected package to be active after reactivation")
+	}
+}
+
 func TestBatchUpsertShellPackages(t *testing.T) {
 	database := setupTestDB(t)
 	ctx := context.Background()

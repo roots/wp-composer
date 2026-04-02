@@ -1,0 +1,46 @@
+{{template "admin_layout" .}}
+{{define "title"}}Status Checks{{end}}
+{{define "content"}}
+<div class="mb-6">
+<h1 class="text-xl font-bold">Status Checks</h1>
+<p class="text-sm text-gray-500 mt-1">Daily re-check of all packages against WordPress.org to detect closures and re-openings.</p>
+</div>
+{{if not .Checks}}
+<p class="text-gray-500">No status checks have run yet.</p>
+{{else}}
+<div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+<table class="w-full text-sm min-w-[600px]">
+<thead class="bg-gray-50 text-left">
+<tr>
+<th class="px-4 py-2 font-medium">Started</th>
+<th class="px-4 py-2 font-medium text-right">Checked</th>
+<th class="px-4 py-2 font-medium text-right">Deactivated</th>
+<th class="px-4 py-2 font-medium text-right">Reactivated</th>
+<th class="px-4 py-2 font-medium text-right">Failed</th>
+<th class="px-4 py-2 font-medium">Status</th>
+<th class="px-4 py-2 font-medium">Duration</th>
+</tr>
+</thead>
+<tbody>
+{{range .Checks}}
+<tr class="border-t border-gray-100 hover:bg-gray-50">
+<td class="px-4 py-2 text-xs text-gray-500" title="{{.StartedAt}}">{{formatCST .StartedAt}}</td>
+<td class="px-4 py-2 text-right">{{.Checked}}</td>
+<td class="px-4 py-2 text-right">{{if .Deactivated}}<span class="text-red-600">{{.Deactivated}}</span>{{else}}0{{end}}</td>
+<td class="px-4 py-2 text-right">{{if .Reactivated}}<span class="text-green-600">{{.Reactivated}}</span>{{else}}0{{end}}</td>
+<td class="px-4 py-2 text-right">{{if .Failed}}<span class="text-red-600">{{.Failed}}</span>{{else}}0{{end}}</td>
+<td class="px-4 py-2">
+{{if eq .Status "running"}}<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full animate-pulse">Running</span>
+{{else if eq .Status "completed"}}<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Completed</span>
+{{else if eq .Status "completed_with_errors"}}<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Completed (errors)</span>
+{{else if eq .Status "failed"}}<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full" title="{{.ErrorMessage}}">Failed</span>
+{{else}}<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{{.Status}}</span>{{end}}
+</td>
+<td class="px-4 py-2 text-xs font-mono">{{if .DurationSeconds}}{{formatDuration .DurationSeconds}}{{end}}</td>
+</tr>
+{{end}}
+</tbody>
+</table>
+</div>
+{{end}}
+{{end}}

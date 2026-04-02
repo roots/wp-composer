@@ -351,6 +351,121 @@ func DeactivatePackage(ctx context.Context, db *sql.DB, id int64) error {
 	return nil
 }
 
+// ReactivatePackage sets is_active = 1 for a package.
+func ReactivatePackage(ctx context.Context, db *sql.DB, id int64) error {
+	_, err := db.ExecContext(ctx,
+		`UPDATE packages SET is_active = 1, updated_at = ? WHERE id = ?`,
+		time.Now().UTC().Format(time.RFC3339), id,
+	)
+	if err != nil {
+		return fmt.Errorf("reactivating package %d: %w", id, err)
+	}
+	return nil
+}
+
+// GetAllPackages returns all packages, optionally filtered by type.
+func GetAllPackages(ctx context.Context, db *sql.DB, pkgType string) ([]*Package, error) {
+	query := `SELECT id, type, name, is_active FROM packages WHERE 1=1`
+	var args []any
+
+	if pkgType != "" && pkgType != "all" {
+		query += ` AND type = ?`
+		args = append(args, pkgType)
+	}
+
+	rows, err := db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("querying packages: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var pkgs []*Package
+	for rows.Next() {
+		var p Package
+		if err := rows.Scan(&p.ID, &p.Type, &p.Name, &p.IsActive); err != nil {
+			return nil, fmt.Errorf("scanning package: %w", err)
+		}
+		pkgs = append(pkgs, &p)
+	}
+	return pkgs, rows.Err()
+}
+
+// StartStatusCheck inserts a new status_checks row and returns its ID.
+func StartStatusCheck(ctx context.Context, db *sql.DB, started time.Time) (int64, error) {
+	res, err := db.ExecContext(ctx,
+		`INSERT INTO status_checks (started_at, status) VALUES (?, 'running')`,
+		started.Format(time.RFC3339))
+	if err != nil {
+		return 0, fmt.Errorf("inserting status check: %w", err)
+	}
+	return res.LastInsertId()
+}
+
+// FinishStatusCheck updates a status_checks row with the final results.
+func FinishStatusCheck(ctx context.Context, db *sql.DB, id int64, started time.Time,
+	checked, deactivated, reactivated, failed int64, runErr error) error {
+	now := time.Now().UTC()
+	status := "completed"
+	var errMsg *string
+	if runErr != nil {
+		status = "failed"
+		s := runErr.Error()
+		errMsg = &s
+	} else if failed > 0 {
+		status = "completed_with_errors"
+	}
+	_, err := db.ExecContext(ctx, `
+		UPDATE status_checks SET
+			finished_at = ?, status = ?, checked = ?, deactivated = ?,
+			reactivated = ?, failed = ?, duration_seconds = ?, error_message = ?
+		WHERE id = ?`,
+		now.Format(time.RFC3339), status, checked, deactivated,
+		reactivated, failed, int(now.Sub(started).Seconds()), errMsg, id)
+	if err != nil {
+		return fmt.Errorf("finishing status check %d: %w", id, err)
+	}
+	return nil
+}
+
+// StatusCheck represents a row from the status_checks table.
+type StatusCheck struct {
+	ID              int64
+	StartedAt       string
+	FinishedAt      string
+	Status          string
+	Checked         int64
+	Deactivated     int64
+	Reactivated     int64
+	Failed          int64
+	DurationSeconds *int
+	ErrorMessage    string
+}
+
+// GetStatusChecks returns the most recent status check runs.
+func GetStatusChecks(ctx context.Context, db *sql.DB, limit int) ([]StatusCheck, error) {
+	rows, err := db.QueryContext(ctx, `
+		SELECT id, started_at, COALESCE(finished_at, ''), status,
+			checked, deactivated, reactivated, failed,
+			duration_seconds, COALESCE(error_message, '')
+		FROM status_checks ORDER BY started_at DESC LIMIT ?`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("querying status checks: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var checks []StatusCheck
+	for rows.Next() {
+		var c StatusCheck
+		if err := rows.Scan(&c.ID, &c.StartedAt, &c.FinishedAt, &c.Status,
+			&c.Checked, &c.Deactivated, &c.Reactivated, &c.Failed,
+			&c.DurationSeconds, &c.ErrorMessage); err != nil {
+			return nil, fmt.Errorf("scanning status check: %w", err)
+		}
+		checks = append(checks, c)
+	}
+	return checks, rows.Err()
+}
+
 // RefreshSiteStats recomputes the package_stats row from the packages table.
 func RefreshSiteStats(ctx context.Context, db *sql.DB) error {
 	_, err := db.ExecContext(ctx, `

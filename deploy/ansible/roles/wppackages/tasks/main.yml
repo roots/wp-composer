@@ -101,6 +101,24 @@
     mode: "0644"
   notify: Reload systemd
 
+- name: Deploy check-status service
+  template:
+    src: wppackages-check-status.service.j2
+    dest: /etc/systemd/system/wppackages-check-status.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Deploy check-status timer unit
+  template:
+    src: wppackages-check-status.timer.j2
+    dest: /etc/systemd/system/wppackages-check-status.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
 - name: Deploy generate-og timer
   template:
     src: wppackages-generate-og.service.j2
@@ -137,4 +155,5 @@
     - wppackages-pipeline.timer
     - wppackages-aggregate.timer
     - wppackages-cleanup.timer
+    - wppackages-check-status.timer
     - wppackages-generate-og.timer

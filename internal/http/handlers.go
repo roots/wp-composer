@@ -24,6 +24,7 @@ import (
 	"github.com/roots/wp-packages/internal/config"
 	"github.com/roots/wp-packages/internal/deploy"
 	"github.com/roots/wp-packages/internal/og"
+	"github.com/roots/wp-packages/internal/packages"
 	"github.com/roots/wp-packages/internal/version"
 )
 
@@ -639,9 +640,23 @@ func markStaleBuildsCancelled(ctx context.Context, db *sql.DB, logger *slog.Logg
 	}
 }
 
+func handleAdminStatusChecks(a *app.App, tmpl *templateSet) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		checks, err := packages.GetStatusChecks(r.Context(), a.DB, 50)
+		if err != nil {
+			a.Logger.Error("querying status checks", "error", err)
+			captureError(r, err)
+		}
+		render(w, r, tmpl.adminStatusChecks, "admin_layout", map[string]any{
+			"Checks": checks,
+		})
+	}
+}
+
 var logFiles = map[string]string{
-	"wppackages": filepath.Join("storage", "logs", "wppackages.log"),
-	"pipeline":   filepath.Join("storage", "logs", "pipeline.log"),
+	"wppackages":   filepath.Join("storage", "logs", "wppackages.log"),
+	"pipeline":     filepath.Join("storage", "logs", "pipeline.log"),
+	"check-status": filepath.Join("storage", "logs", "check-status.log"),
 }
 
 func handleAdminLogs(tmpl *templateSet) http.HandlerFunc {

@@ -1,0 +1,13 @@
+[Unit]
+Description=WP Packages Check Status (detect closures and re-openings)
+OnFailure=wppackages-pipeline-notify@%n.service
+
+[Service]
+Type=oneshot
+User=deploy
+Group=www-data
+WorkingDirectory={{ app_root }}/current
+ExecStart={{ app_root }}/current/{{ go_binary_name }} check-status --db {{ db_path }}
+StandardOutput=append:{{ app_root }}/shared/storage/logs/check-status.log
+StandardError=append:{{ app_root }}/shared/storage/logs/check-status.log
+EnvironmentFile={{ app_root }}/shared/.env

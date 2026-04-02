@@ -80,37 +80,39 @@ var funcMap = template.FuncMap{
 }
 
 type templateSet struct {
-	index           *template.Template
-	indexPartial    *template.Template
-	detail          *template.Template
-	compare         *template.Template
-	docs            *template.Template
-	wordpressCore   *template.Template
-	untagged        *template.Template
-	untaggedPartial *template.Template
-	notFound        *template.Template
-	adminDashboard  *template.Template
-	adminPackages   *template.Template
-	adminBuilds     *template.Template
-	adminLogs       *template.Template
+	index             *template.Template
+	indexPartial      *template.Template
+	detail            *template.Template
+	compare           *template.Template
+	docs              *template.Template
+	wordpressCore     *template.Template
+	untagged          *template.Template
+	untaggedPartial   *template.Template
+	notFound          *template.Template
+	adminDashboard    *template.Template
+	adminPackages     *template.Template
+	adminBuilds       *template.Template
+	adminStatusChecks *template.Template
+	adminLogs         *template.Template
 }
 
 func loadTemplates(env string) *templateSet {
 	funcMap["isProduction"] = func() bool { return env == "production" }
 	return &templateSet{
-		index:           parse("templates/layout.html", "templates/index.html", "templates/package_results.html"),
-		indexPartial:    parse("templates/package_results.html"),
-		detail:          parse("templates/layout.html", "templates/detail.html"),
-		compare:         parse("templates/layout.html", "templates/compare.html"),
-		docs:            parse("templates/layout.html", "templates/docs.html"),
-		wordpressCore:   parse("templates/layout.html", "templates/wordpress_core.html"),
-		untagged:        parse("templates/layout.html", "templates/untagged.html", "templates/untagged_results.html"),
-		untaggedPartial: parse("templates/untagged_results.html"),
-		notFound:        parse("templates/layout.html", "templates/404.html"),
-		adminDashboard:  parse("templates/admin_layout.html", "templates/admin_dashboard.html"),
-		adminPackages:   parse("templates/admin_layout.html", "templates/admin_packages.html"),
-		adminBuilds:     parse("templates/admin_layout.html", "templates/admin_builds.html"),
-		adminLogs:       parse("templates/admin_layout.html", "templates/admin_logs.html"),
+		index:             parse("templates/layout.html", "templates/index.html", "templates/package_results.html"),
+		indexPartial:      parse("templates/package_results.html"),
+		detail:            parse("templates/layout.html", "templates/detail.html"),
+		compare:           parse("templates/layout.html", "templates/compare.html"),
+		docs:              parse("templates/layout.html", "templates/docs.html"),
+		wordpressCore:     parse("templates/layout.html", "templates/wordpress_core.html"),
+		untagged:          parse("templates/layout.html", "templates/untagged.html", "templates/untagged_results.html"),
+		untaggedPartial:   parse("templates/untagged_results.html"),
+		notFound:          parse("templates/layout.html", "templates/404.html"),
+		adminDashboard:    parse("templates/admin_layout.html", "templates/admin_dashboard.html"),
+		adminPackages:     parse("templates/admin_layout.html", "templates/admin_packages.html"),
+		adminBuilds:       parse("templates/admin_layout.html", "templates/admin_builds.html"),
+		adminStatusChecks: parse("templates/admin_layout.html", "templates/admin_status_checks.html"),
+		adminLogs:         parse("templates/admin_layout.html", "templates/admin_logs.html"),
 	}
 }
 

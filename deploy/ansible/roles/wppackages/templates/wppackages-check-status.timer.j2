@@ -1,0 +1,10 @@
+[Unit]
+Description=Run WP Packages status check daily
+
+[Timer]
+OnCalendar=*-*-* 06:00:00
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -127,6 +127,7 @@ func NewRouter(a *app.App) http.Handler {
 	protectedMux.HandleFunc("GET /packages", handleAdminPackages(a, tmpl))
 	protectedMux.HandleFunc("GET /builds", handleAdminBuilds(a, tmpl))
 	protectedMux.HandleFunc("POST /builds/trigger", handleTriggerBuild(a))
+	protectedMux.HandleFunc("GET /status-checks", handleAdminStatusChecks(a, tmpl))
 	protectedMux.HandleFunc("GET /logs", handleAdminLogs(tmpl))
 	protectedMux.HandleFunc("GET /logs/stream", handleAdminLogStream(a))
 	adminMux.Handle("/", Chain(protectedMux, SessionAuth(a.DB), RequireAdmin))
