@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	sqldb "github.com/roots/wp-packages/internal/db"
 	"github.com/roots/wp-packages/internal/version"
 )
 
@@ -82,7 +83,7 @@ func timeStr(t *time.Time) *string {
 func UpsertPackage(ctx context.Context, db *sql.DB, pkg *Package) error {
 	now := time.Now().UTC().Format(time.RFC3339)
 
-	_, err := db.ExecContext(ctx, `
+	_, err := sqldb.ExecRetry(ctx, db, `
 		INSERT INTO packages (
 			type, name, display_name, description, author, homepage, slug_url,
 			versions_json, downloads, active_installs,
@@ -134,7 +135,7 @@ func UpsertPackage(ctx context.Context, db *sql.DB, pkg *Package) error {
 func UpsertShellPackage(ctx context.Context, db *sql.DB, pkgType, name string, lastCommitted *time.Time) error {
 	now := time.Now().UTC().Format(time.RFC3339)
 
-	_, err := db.ExecContext(ctx, `
+	_, err := sqldb.ExecRetry(ctx, db, `
 		INSERT INTO packages (type, name, last_committed, is_active, versions_json, created_at, updated_at)
 		VALUES (?, ?, ?, 1, '{}', ?, ?)
 		ON CONFLICT(type, name) DO UPDATE SET
@@ -164,7 +165,7 @@ func BatchUpsertShellPackages(ctx context.Context, db *sql.DB, entries []ShellEn
 	if len(entries) == 0 {
 		return nil
 	}
-	tx, err := db.BeginTx(ctx, nil)
+	tx, err := sqldb.BeginTxRetry(ctx, db, nil)
 	if err != nil {
 		return fmt.Errorf("beginning transaction: %w", err)
 	}
@@ -199,7 +200,7 @@ func BatchUpsertPackages(ctx context.Context, db *sql.DB, pkgs []*Package) error
 	if len(pkgs) == 0 {
 		return nil
 	}
-	tx, err := db.BeginTx(ctx, nil)
+	tx, err := sqldb.BeginTxRetry(ctx, db, nil)
 	if err != nil {
 		return fmt.Errorf("beginning transaction: %w", err)
 	}
@@ -341,7 +342,7 @@ func GetPackagesNeedingUpdate(ctx context.Context, db *sql.DB, opts UpdateQueryO
 
 // DeactivatePackage sets is_active = 0 for a package.
 func DeactivatePackage(ctx context.Context, db *sql.DB, id int64) error {
-	_, err := db.ExecContext(ctx,
+	_, err := sqldb.ExecRetry(ctx, db,
 		`UPDATE packages SET is_active = 0, updated_at = ? WHERE id = ?`,
 		time.Now().UTC().Format(time.RFC3339), id,
 	)
@@ -353,7 +354,7 @@ func DeactivatePackage(ctx context.Context, db *sql.DB, id int64) error {
 
 // ReactivatePackage sets is_active = 1 for a package.
 func ReactivatePackage(ctx context.Context, db *sql.DB, id int64) error {
-	_, err := db.ExecContext(ctx,
+	_, err := sqldb.ExecRetry(ctx, db,
 		`UPDATE packages SET is_active = 1, updated_at = ? WHERE id = ?`,
 		time.Now().UTC().Format(time.RFC3339), id,
 	)
@@ -392,7 +393,7 @@ func GetAllPackages(ctx context.Context, db *sql.DB, pkgType string) ([]*Package
 
 // StartStatusCheck inserts a new status_checks row and returns its ID.
 func StartStatusCheck(ctx context.Context, db *sql.DB, started time.Time) (int64, error) {
-	res, err := db.ExecContext(ctx,
+	res, err := sqldb.ExecRetry(ctx, db,
 		`INSERT INTO status_checks (started_at, status) VALUES (?, 'running')`,
 		started.Format(time.RFC3339))
 	if err != nil {
@@ -414,7 +415,7 @@ func FinishStatusCheck(ctx context.Context, db *sql.DB, id int64, started time.T
 	} else if failed > 0 {
 		status = "completed_with_errors"
 	}
-	_, err := db.ExecContext(ctx, `
+	_, err := sqldb.ExecRetry(ctx, db, `
 		UPDATE status_checks SET
 			finished_at = ?, status = ?, checked = ?, deactivated = ?,
 			reactivated = ?, failed = ?, duration_seconds = ?, error_message = ?
@@ -468,7 +469,7 @@ func GetStatusChecks(ctx context.Context, db *sql.DB, limit int) ([]StatusCheck,
 
 // RefreshSiteStats recomputes the package_stats row from the packages table.
 func RefreshSiteStats(ctx context.Context, db *sql.DB) error {
-	_, err := db.ExecContext(ctx, `
+	_, err := sqldb.ExecRetry(ctx, db, `
 		INSERT OR REPLACE INTO package_stats (id, active_plugins, active_themes, plugin_installs, theme_installs, installs_30d, updated_at)
 		SELECT 1,
 			COALESCE(SUM(CASE WHEN type = 'plugin' THEN 1 ELSE 0 END), 0),
@@ -495,7 +496,7 @@ func MarkPackagesChanged(ctx context.Context, db *sql.DB, pkgType string, slugRe
 
 	now := time.Now().UTC().Format(time.RFC3339)
 
-	tx, err := db.BeginTx(ctx, nil)
+	tx, err := sqldb.BeginTxRetry(ctx, db, nil)
 	if err != nil {
 		return 0, fmt.Errorf("beginning transaction: %w", err)
 	}
@@ -533,7 +534,7 @@ func BackfillTrunkRevisions(ctx context.Context, db *sql.DB, slugRevisions map[s
 		return 0, nil
 	}
 
-	tx, err := db.BeginTx(ctx, nil)
+	tx, err := sqldb.BeginTxRetry(ctx, db, nil)
 	if err != nil {
 		return 0, fmt.Errorf("beginning transaction: %w", err)
 	}

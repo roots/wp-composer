@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/roots/wp-packages/internal/db"
 )
 
 // SyncRun holds both the logical sync run ID (for package tracking) and the
@@ -16,8 +18,8 @@ type SyncRun struct {
 }
 
 // AllocateSyncRunID atomically allocates a new sync run ID and creates a sync_runs record.
-func AllocateSyncRunID(ctx context.Context, db *sql.DB) (*SyncRun, error) {
-	tx, err := db.BeginTx(ctx, nil)
+func AllocateSyncRunID(ctx context.Context, database *sql.DB) (*SyncRun, error) {
+	tx, err := db.BeginTxRetry(ctx, database, nil)
 	if err != nil {
 		return nil, fmt.Errorf("beginning transaction: %w", err)
 	}
@@ -53,11 +55,11 @@ func AllocateSyncRunID(ctx context.Context, db *sql.DB) (*SyncRun, error) {
 }
 
 // FinishSyncRun marks a sync run as completed with stats.
-func FinishSyncRun(ctx context.Context, db *sql.DB, rowID int64, status string, stats map[string]any) error {
+func FinishSyncRun(ctx context.Context, database *sql.DB, rowID int64, status string, stats map[string]any) error {
 	now := time.Now().UTC().Format(time.RFC3339)
 	metaJSON, _ := json.Marshal(stats)
 
-	_, err := db.ExecContext(ctx,
+	_, err := db.ExecRetry(ctx, database,
 		`UPDATE sync_runs SET finished_at = ?, status = ?, meta_json = ? WHERE id = ?`,
 		now, status, string(metaJSON), rowID,
 	)

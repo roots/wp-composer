@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	sqldb "github.com/roots/wp-packages/internal/db"
 )
 
 // GetMeta retrieves a value from site_meta by key. Returns "" if not found.
@@ -21,7 +23,7 @@ func GetMeta(ctx context.Context, db *sql.DB, key string) (string, error) {
 
 // SetMeta inserts or updates a value in site_meta.
 func SetMeta(ctx context.Context, db *sql.DB, key, value string) error {
-	_, err := db.ExecContext(ctx, `
+	_, err := sqldb.ExecRetry(ctx, db, `
 		INSERT INTO site_meta (key, value) VALUES (?, ?)
 		ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
 		key, value)
