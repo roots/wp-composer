@@ -6,8 +6,6 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
-	"os"
-	"path/filepath"
 	"regexp"
 	"runtime/debug"
 	"strings"
@@ -112,16 +110,9 @@ func NewRouter(a *app.App) http.Handler {
 	route("GET /api/stats", apiLimiter.RateLimit(http.HandlerFunc(handleAPIStats(a))))
 	route("GET /api/stats/packages/{type}/{name}", apiLimiter.RateLimit(http.HandlerFunc(handleAPIMonthlyInstalls(a))))
 
-	// Serve static repository files from current build (local/dev mode)
-	repoRoot := filepath.Join("storage", "repository", "current")
-	if _, err := os.Stat(repoRoot); err == nil {
-		fileServer := http.FileServer(http.Dir(repoRoot))
-		routeFunc("GET /packages.json", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			fileServer.ServeHTTP(w, r)
-		})
-		route("/p2/", fileServer)
-	}
+	// Serve Composer repository metadata from DB
+	routeFunc("GET /packages.json", handlePackagesJSON(a))
+	routeFunc("GET /p2/{vendor}/{file}", handleP2Package(a))
 
 	// Admin subrouter — all admin handlers are behind routeMarker via StripPrefix
 	adminMux := http.NewServeMux()
