@@ -11,7 +11,13 @@ import (
 
 // handlePackagesJSON serves the root Composer repository descriptor.
 func handlePackagesJSON(a *app.App) http.HandlerFunc {
-	data := composer.PackagesJSON(a.Config.AppURL)
+	data, err := composer.PackagesJSON(a.Config.AppURL)
+	if err != nil {
+		a.Logger.Error("building packages.json", "error", err)
+		return func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+		}
+	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

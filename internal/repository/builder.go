@@ -308,7 +308,10 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 	}
 
 	// Build packages.json
-	rootData := composer.PackagesJSON(opts.AppURL)
+	rootData, err := composer.PackagesJSON(opts.AppURL)
+	if err != nil {
+		return nil, fmt.Errorf("building packages.json: %w", err)
+	}
 	rootHash := fmt.Sprintf("%x", sha256.Sum256(rootData))
 	if err := os.WriteFile(filepath.Join(buildDir, "packages.json"), rootData, 0644); err != nil {
 		return nil, fmt.Errorf("writing packages.json: %w", err)
