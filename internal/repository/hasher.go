@@ -8,6 +8,5 @@ import (
 // with builder.go. These will be removed when builder.go is deleted in Phase 3.
 
 var (
-	DeterministicJSON = composer.DeterministicJSON
-	HashJSON          = composer.HashJSON
+	HashJSON = composer.HashJSON
 )
