@@ -3,6 +3,7 @@ package repository
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/roots/wp-packages/internal/composer"
 	"github.com/roots/wp-packages/internal/version"
 )
 
@@ -306,29 +308,8 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 	}
 
 	// Build packages.json
-	notifyBatch := "/downloads"
-	if opts.AppURL != "" {
-		notifyBatch = opts.AppURL + "/downloads"
-	}
-
-	metadataChangesURL := "/metadata/changes.json"
-	if opts.AppURL != "" {
-		metadataChangesURL = opts.AppURL + "/metadata/changes.json"
-	}
-
-	packagesJSON := map[string]any{
-		"metadata-url":               "/p2/%package%.json",
-		"metadata-changes-url":       metadataChangesURL,
-		"notify-batch":               notifyBatch,
-		"available-package-patterns": []string{"wp-plugin/*", "wp-theme/*"},
-		"warning":                    "Support for Composer 1 is no longer available. Upgrade to Composer 2. See https://blog.packagist.com/shutting-down-packagist-org-support-for-composer-1-x/",
-		"warning-versions":           "<1.999",
-	}
-
-	rootHash, rootData, err := HashJSON(packagesJSON)
-	if err != nil {
-		return nil, fmt.Errorf("hashing packages.json: %w", err)
-	}
+	rootData := composer.PackagesJSON(opts.AppURL)
+	rootHash := fmt.Sprintf("%x", sha256.Sum256(rootData))
 	if err := os.WriteFile(filepath.Join(buildDir, "packages.json"), rootData, 0644); err != nil {
 		return nil, fmt.Errorf("writing packages.json: %w", err)
 	}
@@ -350,7 +331,7 @@ func Build(ctx context.Context, db *sql.DB, opts BuildOpts) (*BuildResult, error
 		manifest["db_snapshot_id"] = *snapshotID
 	}
 
-	manifestData, _ := DeterministicJSON(manifest)
+	manifestData, _ := json.Marshal(manifest)
 	if err := os.WriteFile(filepath.Join(buildDir, "manifest.json"), manifestData, 0644); err != nil {
 		return nil, fmt.Errorf("writing manifest.json: %w", err)
 	}

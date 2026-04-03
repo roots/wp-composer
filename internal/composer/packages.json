@@ -1,0 +1,8 @@
+{
+  "metadata-url": "/p2/%package%.json",
+  "metadata-changes-url": "/metadata/changes.json",
+  "notify-batch": "/downloads",
+  "available-package-patterns": ["wp-plugin/*", "wp-theme/*"],
+  "warning": "Support for Composer 1 is no longer available. Upgrade to Composer 2. See https://blog.packagist.com/shutting-down-packagist-org-support-for-composer-1-x/",
+  "warning-versions": "<1.999"
+}
