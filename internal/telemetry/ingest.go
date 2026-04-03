@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/roots/wp-packages/internal/composer"
 )
 
 // RecordInstall inserts an install event with bucket-based deduplication.
@@ -72,13 +74,8 @@ func LookupPackageID(ctx context.Context, db *sql.DB, composerName string) (int6
 	vendor := parts[0]
 	slug := parts[1]
 
-	var pkgType string
-	switch vendor {
-	case "wp-plugin":
-		pkgType = "plugin"
-	case "wp-theme":
-		pkgType = "theme"
-	default:
+	pkgType := composer.PackageType(vendor)
+	if pkgType == "" {
 		return 0, nil
 	}
 

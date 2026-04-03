@@ -16,8 +16,11 @@ type PackageMeta struct {
 	TrunkRevision *int64
 }
 
+// VersionEntry is a single Composer version entry (e.g. one version of a package).
+type VersionEntry = map[string]any
+
 // ComposerVersion builds a single Composer version entry for a package.
-func ComposerVersion(pkgType, slug, ver, downloadURL string, meta PackageMeta) map[string]any {
+func ComposerVersion(pkgType, slug, ver, downloadURL string, meta PackageMeta) VersionEntry {
 	composerName := ComposerName(pkgType, slug)
 	composerType := "wordpress-plugin"
 	if pkgType == "theme" {
@@ -105,6 +108,19 @@ func DownloadURL(pkgType, slug, version string) string {
 		return fmt.Sprintf("https://downloads.wordpress.org/theme/%s.%s.zip", slug, version)
 	}
 	return fmt.Sprintf("https://downloads.wordpress.org/plugin/%s.%s.zip", slug, version)
+}
+
+// PackageType maps a Composer vendor prefix to a DB package type.
+// "wp-plugin" → "plugin", "wp-theme" → "theme". Returns "" for unknown vendors.
+func PackageType(vendor string) string {
+	switch vendor {
+	case "wp-plugin":
+		return "plugin"
+	case "wp-theme":
+		return "theme"
+	default:
+		return ""
+	}
 }
 
 // VendorFromComposerName extracts the path portion for filesystem layout.
