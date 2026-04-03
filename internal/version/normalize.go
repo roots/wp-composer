@@ -9,9 +9,9 @@ import (
 
 // validVersion matches WordPress version strings: digits separated by dots (1-4 parts),
 // optionally followed by a Composer-compatible pre-release suffix.
-// alpha/beta/a/b/rc/p/patch allow an optional (dotted or bare) numeric qualifier: -beta1, -RC.2
+// alpha/beta/a/b/rc/p/pl/patch allow an optional (dotted or bare) numeric qualifier: -beta1, -RC.2
 // dev/stable only allow bare or dot-separated numeric qualifier: -dev, -dev.1 (not -dev1)
-var validVersion = regexp.MustCompile(`(?i)^\d+(\.\d+){0,3}(-((alpha|beta|a|b|rc|p|patch)(\.?\d+)?|(dev|stable)(\.\d+)?))?$`)
+var validVersion = regexp.MustCompile(`(?i)^\d+(\.\d+){0,3}(-((alpha|beta|a|b|rc|p|pl|patch)(\.?\d+)?|(dev|stable)(\.\d+)?))?$`)
 
 // Normalize converts a WordPress version string to a Composer-compatible form.
 // Returns empty string for invalid versions.
