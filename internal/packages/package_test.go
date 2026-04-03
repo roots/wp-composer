@@ -189,6 +189,63 @@ func TestDeactivatePackage(t *testing.T) {
 	}
 }
 
+// TestStatusChangeUpdatesContentChangedAt simulates the check-status flow:
+// an active package is deactivated (closure), then reactivated (re-opening).
+// Both transitions must set content_changed_at so the changes feed and
+// DB-driven sync pick them up.
+func TestStatusChangeUpdatesContentChangedAt(t *testing.T) {
+	database := setupTestDB(t)
+	ctx := context.Background()
+
+	pkg := &Package{
+		Type: "plugin", Name: "status-test", VersionsJSON: "{}", IsActive: true,
+	}
+	_ = UpsertPackage(ctx, database, pkg)
+
+	var id int64
+	_ = database.QueryRow("SELECT id FROM packages WHERE name='status-test'").Scan(&id)
+
+	// Verify content_changed_at starts unset
+	var initial *string
+	_ = database.QueryRow("SELECT content_changed_at FROM packages WHERE id=?", id).Scan(&initial)
+	if initial != nil {
+		t.Fatal("content_changed_at should be nil before any status change")
+	}
+
+	// Deactivate (simulates check-status detecting a closure via wp.org 404)
+	if err := DeactivatePackage(ctx, database, id); err != nil {
+		t.Fatalf("deactivate: %v", err)
+	}
+
+	var afterDeactivate string
+	var isActive int
+	_ = database.QueryRow("SELECT is_active, content_changed_at FROM packages WHERE id=?", id).Scan(&isActive, &afterDeactivate)
+	if isActive != 0 {
+		t.Error("expected inactive after deactivation")
+	}
+	if afterDeactivate == "" {
+		t.Fatal("content_changed_at should be set after deactivation")
+	}
+
+	// Reactivate (simulates check-status detecting a re-opening)
+	if err := ReactivatePackage(ctx, database, id); err != nil {
+		t.Fatalf("reactivate: %v", err)
+	}
+
+	var afterReactivate string
+	_ = database.QueryRow("SELECT is_active, content_changed_at FROM packages WHERE id=?", id).Scan(&isActive, &afterReactivate)
+	if isActive != 1 {
+		t.Error("expected active after reactivation")
+	}
+	if afterReactivate == "" {
+		t.Fatal("content_changed_at should be set after reactivation")
+	}
+	if afterReactivate < afterDeactivate {
+		t.Errorf("reactivation timestamp (%s) should be >= deactivation timestamp (%s)",
+			afterReactivate, afterDeactivate)
+	}
+}
+
 func TestRefreshSiteStats(t *testing.T) {
 	database := setupTestDB(t)
 	ctx := context.Background()
