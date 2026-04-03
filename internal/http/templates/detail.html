@@ -67,15 +67,15 @@
 </div>
 <div class="grid gap-10 lg:grid-cols-[1fr_280px]">
 <div class="min-w-0">
-<div class="flex border-b border-gray-200">
-<button class="px-4 pb-3 text-sm font-medium border-b-2 border-brand-primary text-brand-primary" id="tab-desc" onclick="document.getElementById('panel-desc').classList.remove('hidden');document.getElementById('panel-ver').classList.add('hidden');this.classList.add('border-brand-primary','text-brand-primary');this.classList.remove('border-transparent','text-gray-500');const o=document.getElementById('tab-ver');o.classList.remove('border-brand-primary','text-brand-primary');o.classList.add('border-transparent','text-gray-500')">Description</button>
-<button class="px-4 pb-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" id="tab-ver" onclick="document.getElementById('panel-ver').classList.remove('hidden');document.getElementById('panel-desc').classList.add('hidden');this.classList.add('border-brand-primary','text-brand-primary');this.classList.remove('border-transparent','text-gray-500');const o=document.getElementById('tab-desc');o.classList.remove('border-brand-primary','text-brand-primary');o.classList.add('border-transparent','text-gray-500')">Versions ({{len .Versions}})</button>
+<div class="flex border-b border-gray-200" role="tablist">
+<button class="px-4 pb-3 text-sm font-medium cursor-pointer border-b-2 border-brand-primary text-brand-primary" id="tab-desc" role="tab" aria-selected="true" aria-controls="panel-desc" onclick="document.getElementById('panel-desc').classList.remove('hidden');document.getElementById('panel-ver').classList.add('hidden');this.classList.add('border-brand-primary','text-brand-primary');this.classList.remove('border-transparent','text-gray-500');this.setAttribute('aria-selected','true');const o=document.getElementById('tab-ver');o.classList.remove('border-brand-primary','text-brand-primary');o.classList.add('border-transparent','text-gray-500');o.setAttribute('aria-selected','false')">Description</button>
+<button class="px-4 pb-3 text-sm font-medium cursor-pointer border-b-2 border-transparent text-gray-500 hover:text-gray-700" id="tab-ver" role="tab" aria-selected="false" aria-controls="panel-ver" onclick="document.getElementById('panel-ver').classList.remove('hidden');document.getElementById('panel-desc').classList.add('hidden');this.classList.add('border-brand-primary','text-brand-primary');this.classList.remove('border-transparent','text-gray-500');this.setAttribute('aria-selected','true');const o=document.getElementById('tab-desc');o.classList.remove('border-brand-primary','text-brand-primary');o.classList.add('border-transparent','text-gray-500');o.setAttribute('aria-selected','false')">Versions ({{len .Versions}})</button>
 </div>
-<div id="panel-desc" class="mt-8">
+<div id="panel-desc" role="tabpanel" aria-labelledby="tab-desc" class="mt-8">
 {{if .Package.Description}}<p class="text-sm text-gray-500 leading-relaxed">{{.Package.Description}}</p>
 {{else}}<div class="text-center py-16"><p class="text-gray-500">No description available.</p></div>{{end}}
 </div>
-<div id="panel-ver" class="hidden mt-8">
+<div id="panel-ver" role="tabpanel" aria-labelledby="tab-ver" class="hidden mt-8">
 {{if .Versions}}
 <ol class="rounded-xl border border-gray-200/60 overflow-hidden divide-y divide-gray-200/40 list-none m-0 p-0">
 {{range $i, $v := .Versions}}

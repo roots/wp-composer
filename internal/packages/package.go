@@ -427,6 +427,43 @@ func FinishStatusCheck(ctx context.Context, db *sql.DB, id int64, started time.T
 	return nil
 }
 
+// RecordStatusCheckChange inserts a per-package deactivation or reactivation event.
+func RecordStatusCheckChange(ctx context.Context, db *sql.DB, statusCheckID int64, pkgType, pkgName, action string) {
+	_, _ = db.ExecContext(ctx,
+		`INSERT INTO status_check_changes (status_check_id, package_type, package_name, action, created_at)
+		 VALUES (?, ?, ?, ?, ?)`,
+		statusCheckID, pkgType, pkgName, action, time.Now().UTC().Format(time.RFC3339))
+}
+
+// StatusCheckChange represents a per-package event from a status check run.
+type StatusCheckChange struct {
+	PackageType string
+	PackageName string
+	Action      string
+}
+
+// GetStatusCheckChanges returns the per-package changes for a given status check.
+func GetStatusCheckChanges(ctx context.Context, db *sql.DB, statusCheckID int64) ([]StatusCheckChange, error) {
+	rows, err := db.QueryContext(ctx,
+		`SELECT package_type, package_name, action
+		 FROM status_check_changes WHERE status_check_id = ?
+		 ORDER BY id`, statusCheckID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var changes []StatusCheckChange
+	for rows.Next() {
+		var c StatusCheckChange
+		if err := rows.Scan(&c.PackageType, &c.PackageName, &c.Action); err != nil {
+			return nil, err
+		}
+		changes = append(changes, c)
+	}
+	return changes, rows.Err()
+}
+
 // StatusCheck represents a row from the status_checks table.
 type StatusCheck struct {
 	ID              int64

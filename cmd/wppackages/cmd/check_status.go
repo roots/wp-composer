@@ -30,6 +30,13 @@ func runCheckStatus(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	started := time.Now().UTC()
 
+	// Cleanup: delete status_check_changes older than 24 hours.
+	cutoff := time.Now().Add(-24 * time.Hour).UTC().Format(time.RFC3339)
+	if _, err := application.DB.ExecContext(ctx,
+		`DELETE FROM status_check_changes WHERE created_at < ?`, cutoff); err != nil {
+		application.Logger.Warn("failed to cleanup old status check changes", "error", err)
+	}
+
 	// Record the run as started.
 	runID, err := packages.StartStatusCheck(ctx, application.DB, started)
 	if err != nil {
@@ -81,6 +88,7 @@ func runCheckStatus(cmd *cobra.Command, args []string) error {
 						} else {
 							deactivated.Add(1)
 							application.Logger.Info("deactivated closed package", "type", p.Type, "name", p.Name)
+							packages.RecordStatusCheckChange(gCtx, application.DB, runID, p.Type, p.Name, "deactivated")
 						}
 					}
 				} else {
@@ -94,6 +102,7 @@ func runCheckStatus(cmd *cobra.Command, args []string) error {
 				} else {
 					reactivated.Add(1)
 					application.Logger.Info("reactivated reopened package", "type", p.Type, "name", p.Name)
+					packages.RecordStatusCheckChange(gCtx, application.DB, runID, p.Type, p.Name, "reactivated")
 				}
 			}
 

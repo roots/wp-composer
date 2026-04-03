@@ -42,10 +42,11 @@ document.addEventListener('DOMContentLoaded',()=>{const t=document.getElementByI
 roots.io</a>
 </div>
 <nav aria-label="Main" class="flex items-center gap-1">
-<a href="/" class="hidden nav:inline-flex rounded-md px-3 py-1.5 text-sm {{if eq .Path "/"}}text-gray-900 font-medium{{else}}text-gray-500 hover:text-gray-900{{end}} transition-colors">Packages</a>
-<a href="/docs" class="hidden nav:inline-flex rounded-md px-3 py-1.5 text-sm {{if eq .Path "/docs"}}text-gray-900 font-medium{{else}}text-gray-500 hover:text-gray-900{{end}} transition-colors">Docs</a>
-<a href="/docs#migrate" class="hidden nav:inline-flex rounded-md px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors">Migrate from WPackagist</a>
-<a href="https://discourse.roots.io/" class="hidden nav:inline-flex rounded-md px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors" rel="noopener">Community</a>
+<a href="/" class="hidden nav:inline-flex rounded-md px-2 py-1.5 text-sm {{if eq .Path "/"}}text-gray-900 font-medium{{else}}text-gray-500 hover:text-gray-900{{end}} transition-colors">Packages</a>
+<a href="/docs" class="hidden nav:inline-flex rounded-md px-2 py-1.5 text-sm {{if eq .Path "/docs"}}text-gray-900 font-medium{{else}}text-gray-500 hover:text-gray-900{{end}} transition-colors">Docs</a>
+<a href="/docs#migrate" class="hidden nav:inline-flex rounded-md px-2 py-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors">Migrate from WPackagist</a>
+<a href="/status" class="hidden nav:inline-flex rounded-md px-2 py-1.5 text-sm {{if eq .Path "/status"}}text-gray-900 font-medium{{else}}text-gray-500 hover:text-gray-900{{end}} transition-colors">Status</a>
+<a href="https://discourse.roots.io/" class="hidden nav:inline-flex rounded-md px-2 py-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors" rel="noopener">Community</a>
 <a href="https://github.com/roots/wp-packages" class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors" rel="noopener"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>GitHub</a>
 <a href="https://github.com/sponsors/roots" class="inline-flex items-center rounded-lg bg-brand-primary px-3.5 py-1.5 text-sm font-medium text-white hover:bg-brand-primary/85 transition-colors" rel="noopener">Sponsor</a>
 <button id="nav-menu-toggle" type="button" class="nav:hidden inline-flex items-center justify-center rounded-md p-1.5 text-gray-500 hover:text-gray-900 transition-colors" aria-label="Toggle menu" aria-expanded="false">
@@ -59,6 +60,7 @@ roots.io</a>
 <a href="/" class="rounded-md px-3 py-2 text-sm {{if eq .Path "/"}}text-gray-900 font-medium bg-gray-50{{else}}text-gray-500 hover:text-gray-900 hover:bg-gray-50{{end}} transition-colors">Packages</a>
 <a href="/docs" class="rounded-md px-3 py-2 text-sm {{if eq .Path "/docs"}}text-gray-900 font-medium bg-gray-50{{else}}text-gray-500 hover:text-gray-900 hover:bg-gray-50{{end}} transition-colors">Docs</a>
 <a href="/docs#migrate" class="rounded-md px-3 py-2 text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors">Migrate from WPackagist</a>
+<a href="/status" class="rounded-md px-3 py-2 text-sm {{if eq .Path "/status"}}text-gray-900 font-medium bg-gray-50{{else}}text-gray-500 hover:text-gray-900 hover:bg-gray-50{{end}} transition-colors">Status</a>
 <a href="https://discourse.roots.io/" class="rounded-md px-3 py-2 text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors" rel="noopener">Community</a>
 </div>
 </div>
@@ -84,6 +86,7 @@ roots.io</a>
 <a href="/untagged" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">Untagged Plugins</a>
 <a href="/wp-packages-vs-wpackagist" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">WP Packages vs WPackagist</a>
 <a href="/wordpress-core" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">WordPress Core</a>
+<a href="/status" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">Status</a>
 </nav>
 <div class="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 mb-6">
 <a href="https://discourse.roots.io/" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12.103 0C18.666 0 24 5.485 24 11.997c0 6.51-5.33 11.99-11.9 11.99L0 24V11.79C0 5.28 5.532 0 12.103 0zm.116 4.563a7.395 7.395 0 0 0-6.337 3.57 7.247 7.247 0 0 0-.148 7.22L4.4 19.61l4.794-1.074a7.424 7.424 0 0 0 8.136-1.39 7.256 7.256 0 0 0 1.737-7.58 7.375 7.375 0 0 0-6.84-5.002h-.008z"/></svg>Discourse</a>

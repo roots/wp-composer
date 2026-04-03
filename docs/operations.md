@@ -105,7 +105,7 @@ wppackages check-status --type=plugin
 wppackages check-status --concurrency=20
 ```
 
-Re-checks all packages against the WordPress.org API to detect closures and re-openings. Deactivates packages that return `closed` and reactivates inactive packages that return valid data. Results are recorded in the `status_checks` table and visible in the admin at `/admin/status-checks`.
+Re-checks all packages against the WordPress.org API to detect closures and re-openings. Deactivates packages that return `closed` and reactivates inactive packages that return valid data. Results are recorded in the `status_checks` and `status_check_changes` tables and visible on the public `/status` page.
 
 ### Cleanup Sessions
 

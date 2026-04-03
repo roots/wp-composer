@@ -84,6 +84,12 @@ func NewRouter(a *app.App) http.Handler {
 
 	routeFunc("GET /{$}", handleIndex(a, tmpl))
 	routeFunc("GET /packages-partial", handleIndexPartial(a, tmpl))
+	routeFunc("GET /packages/{$}", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/", http.StatusMovedPermanently)
+	})
+	routeFunc("GET /packages/{type}/{$}", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/", http.StatusMovedPermanently)
+	})
 	routeFunc("GET /packages/{type}/{name}", handleDetail(a, tmpl))
 	routeFunc("GET /wp-composer-vs-wpackagist", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/wp-packages-vs-wpackagist", http.StatusMovedPermanently)
@@ -94,6 +100,7 @@ func NewRouter(a *app.App) http.Handler {
 		http.Redirect(w, r, "/wordpress-core", http.StatusMovedPermanently)
 	})
 	routeFunc("GET /wordpress-core", handleWordpressCore(a, tmpl))
+	routeFunc("GET /status", handleStatus(a, tmpl))
 	routeFunc("GET /untagged", handleUntagged(a, tmpl))
 	routeFunc("GET /untagged-partial", handleUntaggedPartial(a, tmpl))
 	routeFunc("GET /untagged-authors", handleUntaggedAuthors(a))
@@ -123,11 +130,7 @@ func NewRouter(a *app.App) http.Handler {
 	adminMux.HandleFunc("POST /logout", handleLogout(a))
 
 	protectedMux := http.NewServeMux()
-	protectedMux.HandleFunc("GET /{$}", handleAdminDashboard(a, tmpl))
-	protectedMux.HandleFunc("GET /packages", handleAdminPackages(a, tmpl))
-	protectedMux.HandleFunc("GET /builds", handleAdminBuilds(a, tmpl))
-	protectedMux.HandleFunc("POST /builds/trigger", handleTriggerBuild(a))
-	protectedMux.HandleFunc("GET /status-checks", handleAdminStatusChecks(a, tmpl))
+	protectedMux.HandleFunc("GET /{$}", handleAdminLogs(tmpl))
 	protectedMux.HandleFunc("GET /logs", handleAdminLogs(tmpl))
 	protectedMux.HandleFunc("GET /logs/stream", handleAdminLogStream(a))
 	adminMux.Handle("/", Chain(protectedMux, SessionAuth(a.DB), RequireAdmin))

@@ -87,11 +87,7 @@ storage/repository/
 
 ### Admin
 
-- `GET /admin` — dashboard
-- `GET /admin/packages` — package management
-- `GET /admin/builds` — build history/status
-- Admin-triggered sync/build/deploy actions
-- Access: in-app auth/authorization required
+- `GET /admin/logs` — server logs viewer (auth required)
 
 ## Static Repository Deployment
 

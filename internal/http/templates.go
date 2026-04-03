@@ -62,7 +62,6 @@ var funcMap = template.FuncMap{
 	"add":               func(a, b int) int { return a + b },
 	"paginate":          paginateURL,
 	"paginatePartial":   paginatePartialURL,
-	"adminPaginate":     adminPaginateURL,
 	"jsonLD":            jsonLD,
 	"formatCST":         formatCST,
 	"timeAgo":           timeAgo,
@@ -77,42 +76,49 @@ var funcMap = template.FuncMap{
 		}
 		return fmt.Sprintf("%.1f", float64(n)*100/float64(total))
 	},
+	"wporgURL": func(composerName string) string {
+		// "wp-plugin/slug" → "https://wordpress.org/plugins/slug/"
+		// "wp-theme/slug"  → "https://wordpress.org/themes/slug/"
+		parts := strings.SplitN(composerName, "/", 2)
+		if len(parts) != 2 {
+			return "https://wordpress.org/"
+		}
+		section := "plugins"
+		if parts[0] == "wp-theme" {
+			section = "themes"
+		}
+		return "https://wordpress.org/" + section + "/" + parts[1] + "/"
+	},
 }
 
 type templateSet struct {
-	index             *template.Template
-	indexPartial      *template.Template
-	detail            *template.Template
-	compare           *template.Template
-	docs              *template.Template
-	wordpressCore     *template.Template
-	untagged          *template.Template
-	untaggedPartial   *template.Template
-	notFound          *template.Template
-	adminDashboard    *template.Template
-	adminPackages     *template.Template
-	adminBuilds       *template.Template
-	adminStatusChecks *template.Template
-	adminLogs         *template.Template
+	index           *template.Template
+	indexPartial    *template.Template
+	detail          *template.Template
+	compare         *template.Template
+	docs            *template.Template
+	wordpressCore   *template.Template
+	untagged        *template.Template
+	untaggedPartial *template.Template
+	notFound        *template.Template
+	adminLogs       *template.Template
+	status          *template.Template
 }
 
 func loadTemplates(env string) *templateSet {
 	funcMap["isProduction"] = func() bool { return env == "production" }
 	return &templateSet{
-		index:             parse("templates/layout.html", "templates/index.html", "templates/package_results.html"),
-		indexPartial:      parse("templates/package_results.html"),
-		detail:            parse("templates/layout.html", "templates/detail.html"),
-		compare:           parse("templates/layout.html", "templates/compare.html"),
-		docs:              parse("templates/layout.html", "templates/docs.html"),
-		wordpressCore:     parse("templates/layout.html", "templates/wordpress_core.html"),
-		untagged:          parse("templates/layout.html", "templates/untagged.html", "templates/untagged_results.html"),
-		untaggedPartial:   parse("templates/untagged_results.html"),
-		notFound:          parse("templates/layout.html", "templates/404.html"),
-		adminDashboard:    parse("templates/admin_layout.html", "templates/admin_dashboard.html"),
-		adminPackages:     parse("templates/admin_layout.html", "templates/admin_packages.html"),
-		adminBuilds:       parse("templates/admin_layout.html", "templates/admin_builds.html"),
-		adminStatusChecks: parse("templates/admin_layout.html", "templates/admin_status_checks.html"),
-		adminLogs:         parse("templates/admin_layout.html", "templates/admin_logs.html"),
+		index:           parse("templates/layout.html", "templates/index.html", "templates/package_results.html"),
+		indexPartial:    parse("templates/package_results.html"),
+		detail:          parse("templates/layout.html", "templates/detail.html"),
+		compare:         parse("templates/layout.html", "templates/compare.html"),
+		docs:            parse("templates/layout.html", "templates/docs.html"),
+		wordpressCore:   parse("templates/layout.html", "templates/wordpress_core.html"),
+		untagged:        parse("templates/layout.html", "templates/untagged.html", "templates/untagged_results.html"),
+		untaggedPartial: parse("templates/untagged_results.html"),
+		notFound:        parse("templates/layout.html", "templates/404.html"),
+		adminLogs:       parse("templates/admin_layout.html", "templates/admin_logs.html"),
+		status:          parse("templates/layout.html", "templates/status.html"),
 	}
 }
 
@@ -162,12 +168,6 @@ type publicFilters struct {
 	Sort   string
 }
 
-type adminFilters struct {
-	Search string
-	Type   string
-	Active string
-}
-
 func paginateURL(f publicFilters, page int) string {
 	v := url.Values{}
 	if f.Search != "" {
@@ -208,27 +208,6 @@ func paginatePartialURL(f publicFilters, page int) string {
 		return "/packages-partial"
 	}
 	return "/packages-partial?" + q
-}
-
-func adminPaginateURL(f adminFilters, page int) string {
-	v := url.Values{}
-	if f.Search != "" {
-		v.Set("search", f.Search)
-	}
-	if f.Type != "" {
-		v.Set("type", f.Type)
-	}
-	if f.Active != "" {
-		v.Set("active", f.Active)
-	}
-	if page > 1 {
-		v.Set("page", fmt.Sprintf("%d", page))
-	}
-	q := v.Encode()
-	if q == "" {
-		return "/admin/packages"
-	}
-	return "/admin/packages?" + q
 }
 
 func untaggedPaginateURL(filter, search, author, sort string, page int) string {
@@ -310,9 +289,12 @@ var cst = func() *time.Location {
 	return loc
 }()
 
-// formatCST converts an RFC3339 string to "Jan 2, 3:04 PM" in America/Chicago.
+// formatCST converts an RFC3339 or "2006-01-02 15:04:05" string to "Jan 2, 3:04 PM" in America/Chicago.
 func formatCST(raw string) string {
 	t, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		t, err = time.Parse("2006-01-02 15:04:05", raw)
+	}
 	if err != nil {
 		return raw
 	}

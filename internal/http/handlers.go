@@ -6,17 +6,13 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -439,220 +435,6 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 	}
 }
 
-func handleAdminDashboard(a *app.App, tmpl *templateSet) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		stats := queryDashboardStats(r.Context(), a.DB)
-
-		// Get current build — set it on the Stats struct
-		currentBuild, _ := deploy.CurrentBuildID("storage/repository")
-		s := stats["Stats"].(struct {
-			TotalPackages  int64
-			ActivePlugins  int64
-			ActiveThemes   int64
-			TotalInstalls  int64
-			PluginInstalls int64
-			ThemeInstalls  int64
-			Installs30d    int64
-			CurrentBuild   string
-			StatsUpdatedAt string
-		})
-		s.CurrentBuild = currentBuild
-		stats["Stats"] = s
-
-		render(w, r, tmpl.adminDashboard, "admin_layout", stats)
-	}
-}
-
-func handleAdminPackages(a *app.App, tmpl *templateSet) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		filters := adminFilters{
-			Search: r.URL.Query().Get("search"),
-			Type:   r.URL.Query().Get("type"),
-			Active: r.URL.Query().Get("active"),
-		}
-		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-		if page < 1 {
-			page = 1
-		}
-
-		packages, total, err := queryAdminPackages(r.Context(), a.DB, filters, page, 50)
-		if err != nil {
-			a.Logger.Error("querying admin packages", "error", err)
-			captureError(r, err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-
-		totalPages := (total + 50 - 1) / 50
-
-		render(w, r, tmpl.adminPackages, "admin_layout", map[string]any{
-			"Packages":   packages,
-			"Filters":    filters,
-			"Page":       page,
-			"Total":      total,
-			"TotalPages": totalPages,
-		})
-	}
-}
-
-func handleAdminBuilds(a *app.App, tmpl *templateSet) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		builds, err := queryBuilds(r.Context(), a.DB)
-		if err != nil {
-			a.Logger.Error("querying builds", "error", err)
-			captureError(r, err)
-		}
-
-		currentID, _ := deploy.CurrentBuildID("storage/repository")
-		for i := range builds {
-			if builds[i].ID == currentID {
-				builds[i].IsCurrent = true
-			}
-		}
-
-		data := map[string]any{
-			"Builds":    builds,
-			"Triggered": r.URL.Query().Get("triggered") == "1",
-			"Error":     r.URL.Query().Get("error"),
-		}
-		if len(builds) > 0 {
-			data["LastBuildStartedAt"] = builds[0].StartedAt
-		}
-
-		render(w, r, tmpl.adminBuilds, "admin_layout", data)
-	}
-}
-
-func handleTriggerBuild(a *app.App) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		self, err := os.Executable()
-		if err != nil {
-			a.Logger.Error("failed to find executable", "error", err)
-			http.Redirect(w, r, "/admin/builds?error=internal+error", http.StatusSeeOther)
-			return
-		}
-
-		// Clean up stale "running" rows (dead PID) before checking.
-		markStaleBuildsCancelled(r.Context(), a.DB, a.Logger)
-
-		// Atomically claim a build slot before starting the child. The row
-		// is inserted with the server's own PID so that stale cleanup
-		// (which checks PID liveness) cannot cancel it while we start the
-		// child. The child will UPDATE the PID to its own once it begins.
-		buildID := time.Now().UTC().Format("20060102-150405")
-		res, err := a.DB.ExecContext(r.Context(), `
-			INSERT INTO builds (id, started_at, status, pid,
-				packages_total, packages_changed, packages_skipped,
-				artifact_count, root_hash, manifest_json)
-			SELECT ?, ?, 'running', ?, 0, 0, 0, 0, '', '{}'
-			WHERE NOT EXISTS (
-				SELECT 1 FROM builds WHERE status = 'running'
-			)`,
-			buildID,
-			time.Now().UTC().Format(time.RFC3339),
-			os.Getpid(),
-		)
-		if err != nil {
-			a.Logger.Error("failed to claim build slot", "error", err)
-			http.Redirect(w, r, "/admin/builds?error=internal+error", http.StatusSeeOther)
-			return
-		}
-		n, _ := res.RowsAffected()
-		if n == 0 {
-			http.Redirect(w, r, "/admin/builds?error=build+already+running", http.StatusSeeOther)
-			return
-		}
-
-		// Slot claimed — start the child. On failure, mark the row
-		// failed so the slot is freed.
-		cmd := exec.Command(self, "pipeline", "--build-id", buildID)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Start(); err != nil {
-			a.Logger.Error("failed to start pipeline", "error", err)
-			_, _ = a.DB.ExecContext(r.Context(), `
-				UPDATE builds SET status = 'failed', finished_at = ?,
-					error_message = ? WHERE id = ?`,
-				time.Now().UTC().Format(time.RFC3339),
-				"failed to start: "+err.Error(), buildID)
-			http.Redirect(w, r, "/admin/builds?error=internal+error", http.StatusSeeOther)
-			return
-		}
-
-		// Update the row with the child's actual PID so stale cleanup
-		// tracks the right process going forward.
-		if _, err := a.DB.ExecContext(r.Context(),
-			`UPDATE builds SET pid = ? WHERE id = ?`,
-			cmd.Process.Pid, buildID); err != nil {
-			a.Logger.Warn("failed to update build PID", "build_id", buildID, "error", err)
-		}
-
-		// Reap the child in the background. If the child exits with an
-		// error and the row is still in "running" state (i.e. the child
-		// never got far enough to record its own outcome), mark it failed
-		// here so the slot is freed.
-		go func() {
-			if err := cmd.Wait(); err != nil {
-				a.Logger.Error("triggered pipeline failed", "error", err)
-				now := time.Now().UTC().Format(time.RFC3339)
-				_, _ = a.DB.ExecContext(context.Background(), `
-					UPDATE builds SET status = 'failed', finished_at = ?,
-						error_message = ? WHERE id = ? AND status = 'running'`,
-					now, err.Error(), buildID)
-			} else {
-				a.Logger.Info("triggered pipeline completed")
-			}
-		}()
-
-		http.Redirect(w, r, "/admin/builds?triggered=1", http.StatusSeeOther)
-	}
-}
-
-// markStaleBuildsCancelled finds builds with status "running" whose PID is no
-// longer alive and marks them as "cancelled".
-func markStaleBuildsCancelled(ctx context.Context, db *sql.DB, logger *slog.Logger) {
-	rows, err := db.QueryContext(ctx,
-		`SELECT id, pid FROM builds WHERE status = 'running' AND pid IS NOT NULL`)
-	if err != nil {
-		return
-	}
-
-	var staleIDs []string
-	for rows.Next() {
-		var id string
-		var pid int
-		if err := rows.Scan(&id, &pid); err != nil {
-			continue
-		}
-		if err := syscall.Kill(pid, 0); err != nil {
-			if errors.Is(err, syscall.ESRCH) {
-				staleIDs = append(staleIDs, id)
-			} else {
-				logger.Warn("stale build check: unexpected kill(0) error", "build_id", id, "pid", pid, "error", err)
-			}
-		}
-	}
-	_ = rows.Close()
-
-	now := time.Now().UTC().Format(time.RFC3339)
-	for _, id := range staleIDs {
-		_, _ = db.ExecContext(ctx, `UPDATE builds SET status = 'cancelled', finished_at = ? WHERE id = ?`, now, id)
-	}
-}
-
-func handleAdminStatusChecks(a *app.App, tmpl *templateSet) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		checks, err := packages.GetStatusChecks(r.Context(), a.DB, 50)
-		if err != nil {
-			a.Logger.Error("querying status checks", "error", err)
-			captureError(r, err)
-		}
-		render(w, r, tmpl.adminStatusChecks, "admin_layout", map[string]any{
-			"Checks": checks,
-		})
-	}
-}
-
 var logFiles = map[string]string{
 	"wppackages":   filepath.Join("storage", "logs", "wppackages.log"),
 	"pipeline":     filepath.Join("storage", "logs", "pipeline.log"),
@@ -1034,50 +816,6 @@ func queryDashboardStats(ctx context.Context, db *sql.DB) map[string]any {
 	return stats
 }
 
-func queryAdminPackages(ctx context.Context, db *sql.DB, f adminFilters, page, limit int) ([]packageRow, int, error) {
-	where := "1=1"
-	args := []any{}
-
-	if q := ftsQuery(f.Search); q != "" {
-		where += " AND (id IN (SELECT rowid FROM packages_fts WHERE packages_fts MATCH ?) OR REPLACE(name, '-', '') LIKE ?)"
-		args = append(args, q, "%"+collapseSlug(f.Search)+"%")
-	}
-	if f.Type != "" {
-		where += " AND type = ?"
-		args = append(args, f.Type)
-	}
-	switch f.Active {
-	case "1":
-		where += " AND is_active = 1"
-	case "0":
-		where += " AND is_active = 0"
-	}
-
-	var total int
-	_ = db.QueryRowContext(ctx, "SELECT COUNT(*) FROM packages WHERE "+where, args...).Scan(&total)
-
-	offset := (page - 1) * limit
-	q := fmt.Sprintf(`SELECT type, name, COALESCE(display_name,''), COALESCE(current_version,''),
-		downloads, active_installs, wp_packages_installs_total, is_active, COALESCE(last_synced_at,'')
-		FROM packages WHERE %s ORDER BY downloads DESC LIMIT ? OFFSET ?`, where)
-
-	rows, err := db.QueryContext(ctx, q, append(args, limit, offset)...)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer func() { _ = rows.Close() }()
-
-	var pkgs []packageRow
-	for rows.Next() {
-		var p packageRow
-		var isActive int
-		_ = rows.Scan(&p.Type, &p.Name, &p.DisplayName, &p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpPackagesInstallsTotal, &isActive, &p.LastSyncedAt)
-		p.IsActive = isActive == 1
-		pkgs = append(pkgs, p)
-	}
-	return pkgs, total, rows.Err()
-}
-
 func queryUntaggedPackages(ctx context.Context, db *sql.DB, filter, search, author, sort string, page, limit int) ([]packageRow, int, error) {
 	where := `is_active = 1 AND type = 'plugin' AND wporg_version IS NOT NULL AND wporg_version != '' AND NOT EXISTS (SELECT 1 FROM json_each(versions_json) WHERE key = wporg_version)`
 
@@ -1174,4 +912,112 @@ func queryBuilds(ctx context.Context, db *sql.DB) ([]buildRow, error) {
 		builds = append(builds, b)
 	}
 	return builds, rows.Err()
+}
+
+type buildChange struct {
+	PackageName string
+	Action      string
+}
+
+type statusPageBuild struct {
+	buildRow
+	Changes []buildChange
+}
+
+type statusPageCheck struct {
+	packages.StatusCheck
+	Changes []packages.StatusCheckChange
+}
+
+func handleStatus(a *app.App, tmpl *templateSet) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		cutoff := time.Now().Add(-24 * time.Hour).UnixMilli()
+
+		dashStats := queryDashboardStats(ctx, a.DB)
+		currentID, _ := deploy.CurrentBuildID("storage/repository")
+		s := dashStats["Stats"].(struct {
+			TotalPackages  int64
+			ActivePlugins  int64
+			ActiveThemes   int64
+			TotalInstalls  int64
+			PluginInstalls int64
+			ThemeInstalls  int64
+			Installs30d    int64
+			CurrentBuild   string
+			StatsUpdatedAt string
+		})
+		s.CurrentBuild = currentID
+		dashStats["Stats"] = s
+
+		builds, err := queryBuilds(ctx, a.DB)
+		if err != nil {
+			a.Logger.Error("querying builds for status", "error", err)
+			captureError(r, err)
+		}
+
+		var statusBuilds []statusPageBuild
+		for i := range builds {
+			if builds[i].ID == currentID {
+				builds[i].IsCurrent = true
+			}
+			sb := statusPageBuild{buildRow: builds[i]}
+			if builds[i].PackagesChanged > 0 {
+				changeRows, err := a.DB.QueryContext(ctx, `
+					SELECT package_name, action FROM metadata_changes
+					WHERE build_id = ? AND timestamp > ?
+					ORDER BY id`, builds[i].ID, cutoff)
+				if err == nil {
+					for changeRows.Next() {
+						var c buildChange
+						_ = changeRows.Scan(&c.PackageName, &c.Action)
+						sb.Changes = append(sb.Changes, c)
+					}
+					_ = changeRows.Close()
+				}
+			}
+			statusBuilds = append(statusBuilds, sb)
+		}
+
+		checks, err := packages.GetStatusChecks(ctx, a.DB, 50)
+		if err != nil {
+			a.Logger.Error("querying status checks for status page", "error", err)
+			captureError(r, err)
+		}
+
+		var statusChecks []statusPageCheck
+		for _, c := range checks {
+			sc := statusPageCheck{StatusCheck: c}
+			if c.Deactivated > 0 || c.Reactivated > 0 {
+				sc.Changes, _ = packages.GetStatusCheckChanges(ctx, a.DB, c.ID)
+			}
+			statusChecks = append(statusChecks, sc)
+		}
+
+		// 24h activity stats for the summary card
+		var packagesUpdated24h int64
+		_ = a.DB.QueryRowContext(ctx,
+			`SELECT COUNT(DISTINCT package_name) FROM metadata_changes WHERE timestamp > ?`,
+			cutoff).Scan(&packagesUpdated24h)
+
+		var deactivated24h, reactivated24h int64
+		_ = a.DB.QueryRowContext(ctx,
+			`SELECT COALESCE(SUM(deactivated),0), COALESCE(SUM(reactivated),0)
+			 FROM status_checks WHERE started_at > ?`,
+			time.Now().Add(-24*time.Hour).UTC().Format(time.RFC3339)).Scan(&deactivated24h, &reactivated24h)
+
+		data := map[string]any{
+			"Title":              "Status",
+			"Stats":              dashStats["Stats"],
+			"Builds":             statusBuilds,
+			"StatusChecks":       statusChecks,
+			"PackagesUpdated24h": packagesUpdated24h,
+			"Deactivated24h":     deactivated24h,
+			"Reactivated24h":     reactivated24h,
+		}
+		if len(statusBuilds) > 0 {
+			data["LastBuildStartedAt"] = statusBuilds[0].StartedAt
+		}
+		render(w, r, tmpl.status, "layout", data)
+	}
 }
