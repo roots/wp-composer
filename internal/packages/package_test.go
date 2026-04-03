@@ -179,9 +179,13 @@ func TestDeactivatePackage(t *testing.T) {
 	}
 
 	var isActive int
-	_ = database.QueryRow("SELECT is_active FROM packages WHERE id=?", id).Scan(&isActive)
+	var contentChangedAt *string
+	_ = database.QueryRow("SELECT is_active, content_changed_at FROM packages WHERE id=?", id).Scan(&isActive, &contentChangedAt)
 	if isActive != 0 {
 		t.Error("package should be inactive")
+	}
+	if contentChangedAt == nil {
+		t.Error("content_changed_at should be set after deactivation")
 	}
 }
 
@@ -371,6 +375,12 @@ func TestReactivatePackage(t *testing.T) {
 	pkgs, _ = GetAllPackages(ctx, database, "")
 	if !pkgs[0].IsActive {
 		t.Error("expected package to be active after reactivation")
+	}
+
+	var contentChangedAt *string
+	_ = database.QueryRow("SELECT content_changed_at FROM packages WHERE id=?", pkgs[0].ID).Scan(&contentChangedAt)
+	if contentChangedAt == nil {
+		t.Error("content_changed_at should be set after reactivation")
 	}
 }
 
