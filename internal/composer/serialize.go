@@ -10,18 +10,6 @@ import (
 	"github.com/roots/wp-packages/internal/version"
 )
 
-// FileOutput holds serialized Composer JSON and its R2 object key.
-type FileOutput struct {
-	Data []byte
-	Key  string // R2 object key, e.g. "p2/wp-plugin/akismet.json"
-}
-
-// PackageFiles holds the output files for a single package.
-type PackageFiles struct {
-	Tagged FileOutput // p2/wp-plugin/akismet.json (always present for active packages)
-	Dev    FileOutput // p2/wp-plugin/akismet~dev.json (empty if no dev versions)
-}
-
 // HashVersions computes a content hash over the normalized versions_json and
 // trunk_revision. trunk_revision is included because it affects the serialized
 // dev-trunk output (source.reference includes trunk@<rev>) even though it's
@@ -39,91 +27,60 @@ func HashVersions(versionsJSON string, trunkRevision *int64) string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
-// SerializePackage splits versions_json into tagged and dev files, computes a
-// content hash over the full deterministic versions_json, and returns the hash
-// plus the serialized Composer JSON for each output file.
+// SerializePackage produces the Composer p2 JSON for a single package file.
 //
-// The hash is computed over the full normalized versions_json (all versions),
-// not the output files. This means any version change triggers re-upload of
-// both files, which is simpler than tracking separate hashes.
+// The name parameter determines which versions to include:
+//   - "akismet"     → tagged versions (all non-dev-* versions)
+//   - "akismet~dev" → dev versions only (dev-trunk)
 //
-// Plugins produce both tagged and dev files. Themes produce only tagged.
-// Plugins with zero tagged versions get dev-trunk in the main file.
-func SerializePackage(pkgType, name string, versionsJSON string, meta PackageMeta) (hash string, files PackageFiles, err error) {
-	// Parse and re-normalize versions
+// Plugins with zero tagged versions get dev-trunk in the main (non-~dev) file.
+// Themes never produce dev versions.
+//
+// Returns nil with no error when there are no versions to serialize (e.g.
+// theme ~dev request, or theme with no tagged versions).
+func SerializePackage(pkgType, name string, versionsJSON string, meta PackageMeta) ([]byte, error) {
+	isDev := strings.HasSuffix(name, "~dev")
+	slug := strings.TrimSuffix(name, "~dev")
+
+	// Themes never produce dev files
+	if isDev && pkgType == "theme" {
+		return nil, nil
+	}
+
 	var versions map[string]string
 	if err := json.Unmarshal([]byte(versionsJSON), &versions); err != nil {
-		return "", PackageFiles{}, fmt.Errorf("parsing versions_json for %s/%s: %w", pkgType, name, err)
+		return nil, fmt.Errorf("parsing versions_json for %s/%s: %w", pkgType, slug, err)
 	}
 	versions = version.NormalizeVersions(versions)
 
-	// Compute content hash over versions + trunk_revision.
-	// We hash the re-normalized JSON (not the raw input) so the hash matches
-	// what HashVersions would produce on the same DB row.
-	normalized, err := json.Marshal(versions)
-	if err != nil {
-		return "", PackageFiles{}, fmt.Errorf("marshaling normalized versions for %s/%s: %w", pkgType, name, err)
-	}
-	hash = HashVersions(string(normalized), meta.TrunkRevision)
+	composerName := ComposerName(pkgType, slug)
 
-	composerName := ComposerName(pkgType, name)
-
-	// Split versions into tagged and dev
-	taggedVersions := make(map[string]any)
-	for ver, dlURL := range versions {
-		if !strings.HasPrefix(ver, "dev-") {
-			taggedVersions[ver] = ComposerVersion(pkgType, name, ver, dlURL, meta)
+	var entries map[string]VersionEntry
+	if isDev {
+		entries = map[string]VersionEntry{
+			"dev-trunk": ComposerVersion(pkgType, slug, "dev-trunk", "", meta),
+		}
+	} else {
+		entries = make(map[string]VersionEntry)
+		for ver, dlURL := range versions {
+			if !strings.HasPrefix(ver, "dev-") {
+				entries[ver] = ComposerVersion(pkgType, slug, ver, dlURL, meta)
+			}
+		}
+		// Trunk-only plugins: put dev-trunk in the main file
+		if len(entries) == 0 && pkgType == "plugin" {
+			entries["dev-trunk"] = ComposerVersion(pkgType, slug, "dev-trunk", "", meta)
 		}
 	}
 
-	var devVersions map[string]any
-	if pkgType == "plugin" {
-		devVersions = map[string]any{
-			"dev-trunk": ComposerVersion(pkgType, name, "dev-trunk", "", meta),
-		}
+	if len(entries) == 0 {
+		return nil, nil
 	}
 
-	// Main file: tagged versions, or dev-trunk for trunk-only plugins
-	mainVersions := taggedVersions
-	if len(mainVersions) == 0 && devVersions != nil {
-		mainVersions = devVersions
-	}
-	if len(mainVersions) == 0 {
-		// Theme with no tagged versions — nothing to serialize
-		return hash, PackageFiles{}, nil
-	}
-
-	taggedPayload := map[string]any{
+	payload := map[string]any{
 		"packages": map[string]any{
-			composerName: mainVersions,
+			composerName: entries,
 		},
 	}
-	taggedData, err := DeterministicJSON(taggedPayload)
-	if err != nil {
-		return "", PackageFiles{}, fmt.Errorf("serializing tagged %s: %w", composerName, err)
-	}
-
-	files.Tagged = FileOutput{
-		Data: taggedData,
-		Key:  fmt.Sprintf("p2/%s.json", composerName),
-	}
-
-	// Dev file: plugins only
-	if devVersions != nil {
-		devPayload := map[string]any{
-			"packages": map[string]any{
-				composerName: devVersions,
-			},
-		}
-		devData, err := DeterministicJSON(devPayload)
-		if err != nil {
-			return "", PackageFiles{}, fmt.Errorf("serializing dev %s: %w", composerName, err)
-		}
-		files.Dev = FileOutput{
-			Data: devData,
-			Key:  fmt.Sprintf("p2/%s~dev.json", composerName),
-		}
-	}
-
-	return hash, files, nil
+	return json.Marshal(payload)
 }
