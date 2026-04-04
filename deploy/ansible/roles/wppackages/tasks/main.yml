@@ -7,11 +7,29 @@
     group: www-data
     mode: "0640"
 
+- name: Stop and disable legacy wppackages socket unit
+  service:
+    name: wppackages.socket
+    state: stopped
+    enabled: no
+  failed_when: false
+
 - name: Remove legacy wppackages socket unit
   file:
     path: /etc/systemd/system/wppackages.socket
     state: absent
   notify: Reload systemd
+
+- name: Deploy litestream service
+  template:
+    src: litestream.service.j2
+    dest: /etc/systemd/system/litestream.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart litestream
 
 - name: Deploy wppackages service
   template:
@@ -20,7 +38,9 @@
     owner: root
     group: root
     mode: "0644"
-  notify: Reload systemd
+  notify:
+    - Reload systemd
+    - Restart wppackages
 
 - name: Deploy pipeline timer
   template:
@@ -139,6 +159,12 @@
 
 - name: Flush handlers
   meta: flush_handlers
+
+- name: Enable and start litestream service
+  service:
+    name: litestream
+    state: started
+    enabled: yes
 
 - name: Enable and start wppackages service
   service:

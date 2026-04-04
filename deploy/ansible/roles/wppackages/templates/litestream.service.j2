@@ -1,0 +1,16 @@
+[Unit]
+Description=Litestream replication for WP Packages
+After=network.target
+Before=wppackages.service
+
+[Service]
+Type=simple
+User=deploy
+Group=www-data
+ExecStart=/usr/bin/litestream replicate -config {{ app_root }}/shared/litestream.yml
+Restart=always
+RestartSec=1s
+EnvironmentFile={{ app_root }}/shared/.env
+
+[Install]
+WantedBy=multi-user.target

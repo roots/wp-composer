@@ -3,6 +3,11 @@
   systemd:
     daemon_reload: yes
 
+- name: Restart litestream
+  service:
+    name: litestream
+    state: restarted
+
 - name: Restart wppackages
   service:
     name: wppackages
