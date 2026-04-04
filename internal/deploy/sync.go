@@ -50,31 +50,13 @@ func Sync(ctx context.Context, db *sql.DB, cfg config.R2Config, appURL string, l
 	for _, p := range dirty {
 		p := p
 		g.Go(func() error {
-			composerName := composer.ComposerName(p.Type, p.Name)
-			meta := p.ComposerMeta()
-
-			// Tagged versions file (always)
-			taggedData, err := composer.SerializePackage(p.Type, p.Name, p.VersionsJSON, meta)
+			files, err := composer.PackageFiles(p.Type, p.Name, p.VersionsJSON, p.ComposerMeta())
 			if err != nil {
-				return fmt.Errorf("serializing %s: %w", composerName, err)
+				return fmt.Errorf("serializing %s/%s: %w", p.Type, p.Name, err)
 			}
-			if taggedData != nil {
-				key := "p2/" + composerName + ".json"
-				if err := putObjectWithRetry(gCtx, client, cfg.Bucket, key, taggedData, logger); err != nil {
-					return fmt.Errorf("uploading %s: %w", key, err)
-				}
-				uploaded.Add(1)
-			}
-
-			// Dev versions file (plugins only)
-			devData, err := composer.SerializePackage(p.Type, p.Name+"~dev", p.VersionsJSON, meta)
-			if err != nil {
-				return fmt.Errorf("serializing %s~dev: %w", composerName, err)
-			}
-			if devData != nil {
-				key := "p2/" + composerName + "~dev.json"
-				if err := putObjectWithRetry(gCtx, client, cfg.Bucket, key, devData, logger); err != nil {
-					return fmt.Errorf("uploading %s: %w", key, err)
+			for _, f := range files {
+				if err := putObjectWithRetry(gCtx, client, cfg.Bucket, f.Key, f.Data, logger); err != nil {
+					return fmt.Errorf("uploading %s: %w", f.Key, err)
 				}
 				uploaded.Add(1)
 			}
@@ -98,16 +80,14 @@ func Sync(ctx context.Context, db *sql.DB, cfg config.R2Config, appURL string, l
 	}
 
 	for _, p := range deactivated {
-		composerName := composer.ComposerName(p.Type, p.Name)
-		for _, suffix := range []string{".json", "~dev.json"} {
-			key := "p2/" + composerName + suffix
+		for _, key := range composer.ObjectKeys(p.Type, p.Name) {
 			if err := deleteObjectWithRetry(ctx, client, cfg.Bucket, key, logger); err != nil {
 				logger.Warn("sync: failed to delete deactivated package file", "key", key, "error", err)
 				continue
 			}
 		}
 		deleted.Add(1)
-		logger.Info("sync: deleted deactivated package", "package", composerName)
+		logger.Info("sync: deleted deactivated package", "type", p.Type, "name", p.Name)
 	}
 
 	// Step 3: Conditional packages.json upload
