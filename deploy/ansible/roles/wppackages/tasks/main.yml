@@ -7,17 +7,13 @@
     group: www-data
     mode: "0640"
 
-- name: Stop and disable legacy wppackages socket unit
-  service:
-    name: wppackages.socket
-    state: stopped
-    enabled: no
-  failed_when: false
-
-- name: Remove legacy wppackages socket unit
-  file:
-    path: /etc/systemd/system/wppackages.socket
-    state: absent
+- name: Deploy wppackages socket
+  template:
+    src: wppackages.socket.j2
+    dest: /etc/systemd/system/wppackages.socket
+    owner: root
+    group: root
+    mode: "0644"
   notify: Reload systemd
 
 - name: Deploy litestream service
@@ -163,6 +159,12 @@
 - name: Enable and start litestream service
   service:
     name: litestream
+    state: started
+    enabled: yes
+
+- name: Enable and start wppackages socket
+  service:
+    name: wppackages.socket
     state: started
     enabled: yes
 
