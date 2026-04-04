@@ -341,9 +341,10 @@ func GetPackagesNeedingUpdate(ctx context.Context, db *sql.DB, opts UpdateQueryO
 
 // DeactivatePackage sets is_active = 0 for a package.
 func DeactivatePackage(ctx context.Context, db *sql.DB, id int64) error {
+	now := time.Now().UTC().Format(time.RFC3339)
 	_, err := db.ExecContext(ctx,
-		`UPDATE packages SET is_active = 0, updated_at = ? WHERE id = ?`,
-		time.Now().UTC().Format(time.RFC3339), id,
+		`UPDATE packages SET is_active = 0, updated_at = ?, content_changed_at = ? WHERE id = ?`,
+		now, now, id,
 	)
 	if err != nil {
 		return fmt.Errorf("deactivating package %d: %w", id, err)
@@ -353,9 +354,10 @@ func DeactivatePackage(ctx context.Context, db *sql.DB, id int64) error {
 
 // ReactivatePackage sets is_active = 1 for a package.
 func ReactivatePackage(ctx context.Context, db *sql.DB, id int64) error {
+	now := time.Now().UTC().Format(time.RFC3339)
 	_, err := db.ExecContext(ctx,
-		`UPDATE packages SET is_active = 1, updated_at = ? WHERE id = ?`,
-		time.Now().UTC().Format(time.RFC3339), id,
+		`UPDATE packages SET is_active = 1, updated_at = ?, content_changed_at = ? WHERE id = ?`,
+		now, now, id,
 	)
 	if err != nil {
 		return fmt.Errorf("reactivating package %d: %w", id, err)
