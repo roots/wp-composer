@@ -8,8 +8,27 @@ import (
 	"strings"
 	"time"
 
+	"github.com/roots/wp-packages/internal/composer"
 	"github.com/roots/wp-packages/internal/version"
 )
+
+// ComposerMeta builds a composer.PackageMeta from a Package's nullable DB fields.
+func (p *Package) ComposerMeta() composer.PackageMeta {
+	meta := composer.PackageMeta{TrunkRevision: p.TrunkRevision}
+	if p.Description != nil {
+		meta.Description = *p.Description
+	}
+	if p.Homepage != nil {
+		meta.Homepage = *p.Homepage
+	}
+	if p.Author != nil {
+		meta.Author = *p.Author
+	}
+	if p.LastCommitted != nil {
+		meta.LastUpdated = p.LastCommitted.Format(time.RFC3339)
+	}
+	return meta
+}
 
 type Package struct {
 	ID                      int64
@@ -333,6 +352,60 @@ func GetPackagesNeedingUpdate(ctx context.Context, db *sql.DB, opts UpdateQueryO
 			if t, err := time.Parse(time.RFC3339, *lastSyncedAt); err == nil {
 				p.LastSyncedAt = &t
 			}
+		}
+		pkgs = append(pkgs, &p)
+	}
+	return pkgs, rows.Err()
+}
+
+// GetDirtyPackages returns active packages whose content_hash differs from deployed_hash.
+func GetDirtyPackages(ctx context.Context, db *sql.DB) ([]*Package, error) {
+	rows, err := db.QueryContext(ctx, `
+		SELECT id, type, name, versions_json, content_hash,
+			description, homepage, author, last_committed, trunk_revision
+		FROM packages
+		WHERE is_active = 1
+			AND content_hash IS NOT NULL
+			AND (deployed_hash IS NULL OR content_hash != deployed_hash)`)
+	if err != nil {
+		return nil, fmt.Errorf("querying dirty packages: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var pkgs []*Package
+	for rows.Next() {
+		var p Package
+		var lastCommitted *string
+		if err := rows.Scan(&p.ID, &p.Type, &p.Name, &p.VersionsJSON, &p.ContentHash,
+			&p.Description, &p.Homepage, &p.Author, &lastCommitted, &p.TrunkRevision); err != nil {
+			return nil, fmt.Errorf("scanning dirty package: %w", err)
+		}
+		if lastCommitted != nil {
+			if t, err := time.Parse(time.RFC3339, *lastCommitted); err == nil {
+				p.LastCommitted = &t
+			}
+		}
+		pkgs = append(pkgs, &p)
+	}
+	return pkgs, rows.Err()
+}
+
+// GetDeactivatedDeployedPackages returns inactive packages that still have a deployed_hash
+// (i.e. their p2 files are still on R2 and need to be deleted).
+func GetDeactivatedDeployedPackages(ctx context.Context, db *sql.DB) ([]*Package, error) {
+	rows, err := db.QueryContext(ctx, `
+		SELECT id, type, name FROM packages
+		WHERE is_active = 0 AND deployed_hash IS NOT NULL`)
+	if err != nil {
+		return nil, fmt.Errorf("querying deactivated deployed packages: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var pkgs []*Package
+	for rows.Next() {
+		var p Package
+		if err := rows.Scan(&p.ID, &p.Type, &p.Name); err != nil {
+			return nil, fmt.Errorf("scanning deactivated package: %w", err)
 		}
 		pkgs = append(pkgs, &p)
 	}

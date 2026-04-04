@@ -13,6 +13,7 @@ import (
 
 	"github.com/roots/wp-packages/internal/composer"
 	"github.com/roots/wp-packages/internal/config"
+	"github.com/roots/wp-packages/internal/packages"
 )
 
 // SyncResult holds statistics from a DB-driven R2 sync.
@@ -36,54 +37,9 @@ func Sync(ctx context.Context, db *sql.DB, cfg config.R2Config, appURL string, l
 	var uploaded, deleted, skipped atomic.Int64
 
 	// Step 1: Upload changed p2/ files
-	rows, err := db.QueryContext(ctx, `
-		SELECT id, type, name, versions_json, content_hash,
-			description, homepage, author, last_committed, trunk_revision
-		FROM packages
-		WHERE is_active = 1
-			AND content_hash IS NOT NULL
-			AND (deployed_hash IS NULL OR content_hash != deployed_hash)`)
+	dirty, err := packages.GetDirtyPackages(ctx, db)
 	if err != nil {
 		return nil, fmt.Errorf("querying dirty packages: %w", err)
-	}
-
-	type dirtyPkg struct {
-		id            int64
-		pkgType, name string
-		versionsJSON  string
-		contentHash   string
-		meta          composer.PackageMeta
-	}
-
-	var dirty []dirtyPkg
-	for rows.Next() {
-		var p dirtyPkg
-		var description, homepage, author, lastCommitted *string
-		var trunkRevision *int64
-
-		if err := rows.Scan(&p.id, &p.pkgType, &p.name, &p.versionsJSON, &p.contentHash,
-			&description, &homepage, &author, &lastCommitted, &trunkRevision); err != nil {
-			_ = rows.Close()
-			return nil, fmt.Errorf("scanning dirty package: %w", err)
-		}
-
-		if description != nil {
-			p.meta.Description = *description
-		}
-		if homepage != nil {
-			p.meta.Homepage = *homepage
-		}
-		if author != nil {
-			p.meta.Author = *author
-		}
-		if lastCommitted != nil {
-			p.meta.LastUpdated = *lastCommitted
-		}
-		p.meta.TrunkRevision = trunkRevision
-		dirty = append(dirty, p)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, fmt.Errorf("closing dirty packages query: %w", err)
 	}
 
 	logger.Info("sync: dirty packages", "count", len(dirty))
@@ -94,10 +50,11 @@ func Sync(ctx context.Context, db *sql.DB, cfg config.R2Config, appURL string, l
 	for _, p := range dirty {
 		p := p
 		g.Go(func() error {
-			composerName := composer.ComposerName(p.pkgType, p.name)
+			composerName := composer.ComposerName(p.Type, p.Name)
+			meta := p.ComposerMeta()
 
 			// Tagged versions file (always)
-			taggedData, err := composer.SerializePackage(p.pkgType, p.name, p.versionsJSON, p.meta)
+			taggedData, err := composer.SerializePackage(p.Type, p.Name, p.VersionsJSON, meta)
 			if err != nil {
 				return fmt.Errorf("serializing %s: %w", composerName, err)
 			}
@@ -110,7 +67,7 @@ func Sync(ctx context.Context, db *sql.DB, cfg config.R2Config, appURL string, l
 			}
 
 			// Dev versions file (plugins only)
-			devData, err := composer.SerializePackage(p.pkgType, p.name+"~dev", p.versionsJSON, p.meta)
+			devData, err := composer.SerializePackage(p.Type, p.Name+"~dev", p.VersionsJSON, meta)
 			if err != nil {
 				return fmt.Errorf("serializing %s~dev: %w", composerName, err)
 			}
@@ -135,29 +92,13 @@ func Sync(ctx context.Context, db *sql.DB, cfg config.R2Config, appURL string, l
 	}
 
 	// Step 2: Delete p2/ files for deactivated packages
-	deactivatedRows, err := db.QueryContext(ctx, `
-		SELECT type, name FROM packages
-		WHERE is_active = 0 AND deployed_hash IS NOT NULL`)
+	deactivated, err := packages.GetDeactivatedDeployedPackages(ctx, db)
 	if err != nil {
 		return nil, fmt.Errorf("querying deactivated packages: %w", err)
 	}
 
-	type deactivatedPkg struct {
-		pkgType, name string
-	}
-	var deactivated []deactivatedPkg
-	for deactivatedRows.Next() {
-		var p deactivatedPkg
-		if err := deactivatedRows.Scan(&p.pkgType, &p.name); err != nil {
-			_ = deactivatedRows.Close()
-			return nil, fmt.Errorf("scanning deactivated package: %w", err)
-		}
-		deactivated = append(deactivated, p)
-	}
-	_ = deactivatedRows.Close()
-
 	for _, p := range deactivated {
-		composerName := composer.ComposerName(p.pkgType, p.name)
+		composerName := composer.ComposerName(p.Type, p.Name)
 		for _, suffix := range []string{".json", "~dev.json"} {
 			key := "p2/" + composerName + suffix
 			if err := deleteObjectWithRetry(ctx, client, cfg.Bucket, key, logger); err != nil {
