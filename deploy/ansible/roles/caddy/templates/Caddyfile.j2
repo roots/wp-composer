@@ -12,6 +12,10 @@
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 	}
 
+	# Strip trailing slashes (redirect to canonical non-slash URL)
+	@trailing_slash path_regexp trailing ^(.+)/$
+	redir @trailing_slash {re.trailing.1} permanent
+
 	# Reverse proxy to Go app — retry during restarts for zero-downtime deploys
 	reverse_proxy {{ go_upstream_addr | default("localhost" ~ go_listen_addr) }} {
 		header_up X-Real-IP {remote_host}
