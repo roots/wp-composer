@@ -1,0 +1,9 @@
+[Unit]
+Description=WP Packages Socket
+
+[Socket]
+ListenStream={{ go_listen_addr }}
+NoDelay=true
+
+[Install]
+WantedBy=sockets.target
