@@ -162,6 +162,47 @@ func CacheControlForPath(path string) string {
 	return "public, max-age=300"
 }
 
+// deleteObjectWithRetry deletes a single object from R2 with exponential backoff retry.
+func deleteObjectWithRetry(ctx context.Context, client *s3.Client, bucket, key string, logger *slog.Logger) error {
+	var lastErr error
+	for attempt := range r2MaxRetries {
+		if attempt > 0 {
+			delay := time.Duration(float64(r2RetryBaseMs)*math.Pow(2, float64(attempt-1))) * time.Millisecond
+			logger.Warn("retrying R2 delete", "key", key, "attempt", attempt+1, "delay", delay)
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(delay):
+			}
+		}
+
+		_, lastErr = client.DeleteObject(ctx, &s3.DeleteObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key),
+		})
+		if lastErr == nil {
+			return nil
+		}
+	}
+	return fmt.Errorf("deleting %s after %d attempts: %w", key, r2MaxRetries, lastErr)
+}
+
+// headObject returns the ETag of an object, or "" if the object doesn't exist.
+func headObject(ctx context.Context, client *s3.Client, bucket, key string) (string, error) {
+	resp, err := client.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		// NoSuchKey or similar — object doesn't exist
+		return "", nil
+	}
+	if resp.ETag != nil {
+		return *resp.ETag, nil
+	}
+	return "", nil
+}
+
 func newS3Client(cfg config.R2Config) *s3.Client {
 	return s3.New(s3.Options{
 		Region: "auto",
