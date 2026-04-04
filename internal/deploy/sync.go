@@ -89,7 +89,7 @@ func Sync(ctx context.Context, db *sql.DB, cfg config.R2Config, appURL string, l
 	logger.Info("sync: dirty packages", "count", len(dirty))
 
 	g, gCtx := errgroup.WithContext(ctx)
-	g.SetLimit(50)
+	g.SetLimit(cfg.Concurrency)
 
 	for _, p := range dirty {
 		p := p

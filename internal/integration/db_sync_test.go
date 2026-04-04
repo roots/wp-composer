@@ -77,6 +77,7 @@ func TestDBDrivenSync(t *testing.T) {
 		SecretAccessKey: "test",
 		Bucket:          "test-bucket",
 		Endpoint:        ts.URL,
+		Concurrency:     1,
 	}
 
 	// 3. First sync — all packages should be uploaded

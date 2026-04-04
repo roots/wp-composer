@@ -58,7 +58,7 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 	// Upload p2/ files in parallel, packages.json last.
 	var uploaded, skipped atomic.Int64
 	g, gCtx := errgroup.WithContext(ctx)
-	g.SetLimit(50)
+	g.SetLimit(cfg.Concurrency)
 
 	for _, relPath := range filePaths {
 		relPath := relPath

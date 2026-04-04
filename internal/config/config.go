@@ -40,6 +40,7 @@ type R2Config struct {
 	Bucket          string `yaml:"bucket"`
 	Endpoint        string `yaml:"endpoint"`
 	Enabled         bool   `yaml:"enabled"`
+	Concurrency     int    `yaml:"concurrency"`
 	CDNBucket       string `yaml:"cdn_bucket"`
 	CDNPublicURL    string `yaml:"cdn_public_url"`
 }
@@ -74,6 +75,7 @@ func defaults() *Config {
 		Server: ServerConfig{
 			Addr: ":8080",
 		},
+		R2:      R2Config{Concurrency: 50},
 		Session: SessionConfig{LifetimeMinutes: 7200},
 		Telemetry: TelemetryConfig{
 			DedupeWindowSeconds: 3600,
