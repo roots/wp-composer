@@ -101,6 +101,12 @@ this.textContent = showing ? 'Show all {{len .Versions}} versions' : 'Show fewer
 {{end}}
 {{else}}<div class="text-center py-16"><p class="text-gray-500">No versions available.</p></div>{{end}}
 </div>
+{{if .MonthlyInstalls}}
+<div class="mt-10">
+<h2 class="text-sm font-semibold text-gray-900 mb-3">Composer Installs</h2>
+{{installChart .MonthlyInstalls}}
+</div>
+{{end}}
 </div>
 <aside class="space-y-4">
 <div class="rounded-xl border border-gray-200/60 bg-white overflow-hidden">

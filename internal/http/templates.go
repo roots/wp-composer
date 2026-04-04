@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/roots/wp-packages/internal/telemetry"
 )
 
 //go:embed templates/*.html
@@ -76,6 +78,7 @@ var funcMap = template.FuncMap{
 		}
 		return fmt.Sprintf("%.1f", float64(n)*100/float64(total))
 	},
+	"installChart": installChart,
 	"wporgURL": func(composerName string) string {
 		// "wp-plugin/slug" → "https://wordpress.org/plugins/slug/"
 		// "wp-theme/slug"  → "https://wordpress.org/themes/slug/"
@@ -383,4 +386,128 @@ func pageRange(current, total int) []int {
 		result = append(result, p)
 	}
 	return result
+}
+
+// installChart renders a server-side SVG bar chart for monthly install data.
+func installChart(data []telemetry.MonthlyInstall) template.HTML {
+	if len(data) == 0 {
+		return ""
+	}
+
+	// Use last 12 months max
+	if len(data) > 12 {
+		data = data[len(data)-12:]
+	}
+
+	// Find max value for scaling
+	max := 0
+	for _, m := range data {
+		if m.Installs > max {
+			max = m.Installs
+		}
+	}
+	if max == 0 {
+		return ""
+	}
+
+	// Compute nice Y-axis tick values
+	ticks := yAxisTicks(max)
+
+	n := len(data)
+	padLeft := 44.0
+	padRight := 4.0
+	padTop := 20.0
+	padBottom := 28.0
+	chartW := 600.0
+	chartH := 160.0
+	totalW := padLeft + chartW + padRight
+	barGap := 6.0
+	maxBarW := 48.0
+	barW := (chartW - float64(n-1)*barGap) / float64(n)
+	if barW > maxBarW {
+		barW = maxBarW
+	}
+	totalH := padTop + chartH + padBottom
+
+	var b strings.Builder
+	fmt.Fprintf(&b, `<svg viewBox="0 0 %.0f %.0f" width="100%%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Monthly Composer installs chart">`, totalW, totalH)
+	b.WriteString(`<style>g.bar .tip{opacity:0;transition:opacity .1s}g.bar:hover .tip{opacity:1}g.bar:hover rect{opacity:.9!important}</style>`)
+
+	// Y-axis tick lines and labels
+	for _, tick := range ticks {
+		y := padTop + chartH - (float64(tick)/float64(max))*chartH
+		// Grid line
+		fmt.Fprintf(&b, `<line x1="%.0f" y1="%.1f" x2="%.0f" y2="%.1f" stroke="#e5e7eb" stroke-width="1"/>`,
+			padLeft, y, totalW-padRight, y)
+		// Label
+		fmt.Fprintf(&b, `<text class="label" x="%.0f" y="%.1f" text-anchor="end" fill="#9ca3af" style="font-size:10px;font-family:sans-serif">%s</text>`,
+			padLeft-6, y+3.5, formatNumber(int64(tick)))
+	}
+
+	for i, m := range data {
+		x := padLeft + float64(i)*(barW+barGap)
+		barH := (float64(m.Installs) / float64(max)) * chartH
+		y := padTop + chartH - barH
+
+		label := formatNumberComma(int64(m.Installs))
+
+		// Bar with rounded top corners
+		radius := 3.0
+		if barH < radius*2 {
+			radius = barH / 2
+		}
+
+		// Wrap bar + hover label in a group
+		b.WriteString(`<g class="bar">`)
+		ariaLabel := fmt.Sprintf("%s: %s installs", m.Month, label)
+		fmt.Fprintf(&b, `<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" rx="%.1f" fill="#525ddc" style="opacity:.6;transition:opacity .15s" role="graphics-symbol" aria-label="%s"/>`,
+			x, y, barW, barH, radius, template.HTMLEscapeString(ariaLabel))
+		// Hover label above bar
+		tipY := y - 6
+		if tipY < 8 {
+			tipY = 8
+		}
+		fmt.Fprintf(&b, `<text class="tip tip-text" x="%.1f" y="%.1f" text-anchor="middle" fill="#525ddc" style="font-size:10px;font-weight:600;font-family:sans-serif">%s</text>`,
+			x+barW/2, tipY, label)
+		b.WriteString(`</g>`)
+
+		// X-axis label
+		labelX := x + barW/2
+		labelY := padTop + chartH + 16
+		fmt.Fprintf(&b, `<text x="%.1f" y="%.1f" text-anchor="middle" fill="#9ca3af" style="font-size:10px;font-family:sans-serif">%s</text>`,
+			labelX, labelY, m.Month)
+	}
+
+	b.WriteString(`</svg>`)
+	return template.HTML(b.String())
+}
+
+// yAxisTicks returns 3-5 nice round tick values from 0 to max.
+func yAxisTicks(max int) []int {
+	if max <= 0 {
+		return nil
+	}
+	// Find a nice step: 1, 2, 5, 10, 20, 50, 100, ...
+	target := max / 4
+	if target < 1 {
+		target = 1
+	}
+	mag := 1
+	for mag*10 <= target {
+		mag *= 10
+	}
+	var step int
+	if mag*2 >= target {
+		step = mag * 2
+	} else if mag*5 >= target {
+		step = mag * 5
+	} else {
+		step = mag * 10
+	}
+
+	var ticks []int
+	for v := step; v <= max; v += step {
+		ticks = append(ticks, v)
+	}
+	return ticks
 }

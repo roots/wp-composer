@@ -21,6 +21,7 @@ import (
 	"github.com/roots/wp-packages/internal/deploy"
 	"github.com/roots/wp-packages/internal/og"
 	"github.com/roots/wp-packages/internal/packages"
+	"github.com/roots/wp-packages/internal/telemetry"
 	"github.com/roots/wp-packages/internal/version"
 )
 
@@ -57,6 +58,7 @@ func setETag(w http.ResponseWriter, r *http.Request, parts ...string) bool {
 }
 
 type packageRow struct {
+	ID                      int64
 	Type                    string
 	Name                    string
 	DisplayName             string
@@ -356,6 +358,8 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 
 		versions := parseVersions(pkg)
 
+		monthlyInstalls, _ := telemetry.GetMonthlyInstalls(r.Context(), a.DB, pkg.ID)
+
 		untagged := pkg.Type == "plugin" && pkg.WporgVersion != "" && !versionIsTagged(versions, pkg.WporgVersion)
 		trunkOnly := untagged && !hasTaggedVersion(versions)
 
@@ -426,14 +430,15 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		}
 
 		render(w, r, tmpl.detail, "layout", map[string]any{
-			"Package":   pkg,
-			"Versions":  versions,
-			"Untagged":  untagged,
-			"TrunkOnly": trunkOnly,
-			"AppURL":    a.Config.AppURL,
-			"CDNURL":    a.Config.R2.CDNPublicURL,
-			"OGImage":   ogImage,
-			"JSONLD":    []any{softwareApp, breadcrumbs},
+			"Package":         pkg,
+			"Versions":        versions,
+			"MonthlyInstalls": monthlyInstalls,
+			"Untagged":        untagged,
+			"TrunkOnly":       trunkOnly,
+			"AppURL":          a.Config.AppURL,
+			"CDNURL":          a.Config.R2.CDNPublicURL,
+			"OGImage":         ogImage,
+			"JSONLD":          []any{softwareApp, breadcrumbs},
 		})
 	}
 }
@@ -727,12 +732,12 @@ func packageExistsInactive(ctx context.Context, db *sql.DB, pkgType, name string
 
 func queryPackageDetail(ctx context.Context, db *sql.DB, pkgType, name string) (*packageDetail, error) {
 	var p packageDetail
-	err := db.QueryRowContext(ctx, `SELECT type, name, COALESCE(display_name,''), COALESCE(description,''),
+	err := db.QueryRowContext(ctx, `SELECT id, type, name, COALESCE(display_name,''), COALESCE(description,''),
 		COALESCE(author,''), COALESCE(homepage,''), COALESCE(current_version,''),
 		downloads, active_installs, wp_packages_installs_total, versions_json,
 		COALESCE(wporg_version,''), COALESCE(updated_at,''), og_image_generated_at
 		FROM packages WHERE type = ? AND name = ? AND is_active = 1`, pkgType, name,
-	).Scan(&p.Type, &p.Name, &p.DisplayName, &p.Description, &p.Author, &p.Homepage,
+	).Scan(&p.ID, &p.Type, &p.Name, &p.DisplayName, &p.Description, &p.Author, &p.Homepage,
 		&p.CurrentVersion, &p.Downloads, &p.ActiveInstalls, &p.WpPackagesInstallsTotal,
 		&p.VersionsJSON, &p.WporgVersion, &p.UpdatedAt, &p.OGImageGeneratedAt)
 	if err != nil {
