@@ -1,5 +1,8 @@
 dbs:
   - path: ${DB_PATH}
+    min-checkpoint-page-count: 1000
+    checkpoint-interval: 1m
+    truncate-page-n: 0
     replicas:
       - type: s3
         bucket: ${LITESTREAM_BUCKET}
