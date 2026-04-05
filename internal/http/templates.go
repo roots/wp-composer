@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"html/template"
+	"io"
 	"io/fs"
 	"net/http"
 	"net/url"
@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/CloudyKit/jet/v6"
 	"github.com/roots/wp-packages/internal/telemetry"
 )
 
@@ -22,6 +23,27 @@ var templateFS embed.FS
 
 //go:embed all:static
 var staticFS embed.FS
+
+// embedLoader implements jet.Loader for an embed.FS.
+type embedLoader struct {
+	fs     embed.FS
+	prefix string // e.g. "templates"
+}
+
+func (l *embedLoader) Exists(templatePath string) bool {
+	name := l.prefix + templatePath // templatePath has leading /
+	f, err := l.fs.Open(name)
+	if err != nil {
+		return false
+	}
+	_ = f.Close()
+	return true
+}
+
+func (l *embedLoader) Open(templatePath string) (io.ReadCloser, error) {
+	name := l.prefix + templatePath
+	return l.fs.Open(name)
+}
 
 // assetHashes maps static file paths (e.g. "assets/styles/app.css") to a
 // short content hash computed once at startup from the embedded filesystem.
@@ -56,32 +78,34 @@ func assetPath(path string) string {
 	return path[:len(path)-len(ext)] + "." + v + ext
 }
 
-var funcMap = template.FuncMap{
-	"assetPath":         assetPath,
-	"formatNumber":      formatNumber,
-	"formatNumberComma": formatNumberComma,
-	"sub":               func(a, b int) int { return a - b },
-	"add":               func(a, b int) int { return a + b },
-	"paginate":          paginateURL,
-	"paginatePartial":   paginatePartialURL,
-	"jsonLD":            jsonLD,
-	"formatCST":         formatCST,
-	"timeAgo":           timeAgo,
-	"timeAgoShort":      timeAgoShort,
-	"formatDuration":    formatDuration,
-	"pageRange":         pageRange,
-	"untaggedPaginate":  untaggedPaginateURL,
-	"untaggedPaginateP": untaggedPaginatePartialURL,
-	"pct": func(n, total int64) string {
+func loadTemplates(env string) *jet.Set {
+	loader := &embedLoader{fs: templateFS, prefix: "templates"}
+	var opts []jet.Option
+	if env != "production" {
+		opts = append(opts, jet.InDevelopmentMode())
+	}
+	set := jet.NewSet(loader, opts...)
+
+	// Plain functions
+	set.AddGlobal("assetPath", assetPath)
+	set.AddGlobal("formatNumber", formatNumber)
+	set.AddGlobal("formatNumberComma", formatNumberComma)
+	set.AddGlobal("paginate", paginateURL)
+	set.AddGlobal("paginatePartial", paginatePartialURL)
+	set.AddGlobal("untaggedPaginate", untaggedPaginateURL)
+	set.AddGlobal("untaggedPaginateP", untaggedPaginatePartialURL)
+	set.AddGlobal("formatCST", formatCST)
+	set.AddGlobal("timeAgo", timeAgo)
+	set.AddGlobal("timeAgoShort", timeAgoShort)
+	set.AddGlobal("formatDuration", formatDuration)
+	set.AddGlobal("pageRange", pageRange)
+	set.AddGlobal("pct", func(n, total int64) string {
 		if total == 0 {
 			return "0"
 		}
 		return fmt.Sprintf("%.1f", float64(n)*100/float64(total))
-	},
-	"installChart": installChart,
-	"wporgURL": func(composerName string) string {
-		// "wp-plugin/slug" → "https://wordpress.org/plugins/slug/"
-		// "wp-theme/slug"  → "https://wordpress.org/themes/slug/"
+	})
+	set.AddGlobal("wporgURL", func(composerName string) string {
 		parts := strings.SplitN(composerName, "/", 2)
 		if len(parts) != 2 {
 			return "https://wordpress.org/"
@@ -91,52 +115,38 @@ var funcMap = template.FuncMap{
 			section = "themes"
 		}
 		return "https://wordpress.org/" + section + "/" + parts[1] + "/"
-	},
+	})
+	set.AddGlobal("isProduction", func() bool { return env == "production" })
+
+	// Functions returning raw HTML — use |raw in templates to bypass escaping
+	set.AddGlobal("jsonLD", renderJsonLD)
+	set.AddGlobal("installChart", renderInstallChart)
+
+	return set
 }
 
-type templateSet struct {
-	index           *template.Template
-	indexPartial    *template.Template
-	detail          *template.Template
-	compare         *template.Template
-	docs            *template.Template
-	wordpressCore   *template.Template
-	untagged        *template.Template
-	untaggedPartial *template.Template
-	notFound        *template.Template
-	adminLogs       *template.Template
-	status          *template.Template
-}
-
-func loadTemplates(env string) *templateSet {
-	funcMap["isProduction"] = func() bool { return env == "production" }
-	return &templateSet{
-		index:           parse("templates/layout.html", "templates/index.html", "templates/package_results.html"),
-		indexPartial:    parse("templates/package_results.html"),
-		detail:          parse("templates/layout.html", "templates/detail.html"),
-		compare:         parse("templates/layout.html", "templates/compare.html"),
-		docs:            parse("templates/layout.html", "templates/docs.html"),
-		wordpressCore:   parse("templates/layout.html", "templates/wordpress_core.html"),
-		untagged:        parse("templates/layout.html", "templates/untagged.html", "templates/untagged_results.html"),
-		untaggedPartial: parse("templates/untagged_results.html"),
-		notFound:        parse("templates/layout.html", "templates/404.html"),
-		adminLogs:       parse("templates/admin_layout.html", "templates/admin_logs.html"),
-		status:          parse("templates/layout.html", "templates/status.html"),
+func render(w http.ResponseWriter, r *http.Request, set *jet.Set, name string, data map[string]any) {
+	vars := make(jet.VarMap)
+	// Defaults for variables used in layout that not every handler passes.
+	vars.Set("CDNURL", "")
+	vars.Set("AppURL", "")
+	vars.Set("OGImage", "")
+	vars.Set("Gone", false)
+	for k, v := range data {
+		vars.Set(k, v)
 	}
-}
+	vars.Set("Path", r.URL.Path)
 
-func parse(files ...string) *template.Template {
-	return template.Must(template.New("").Funcs(funcMap).ParseFS(templateFS, files...))
-}
-
-func render(w http.ResponseWriter, r *http.Request, tmpl *template.Template, name string, data any) {
-	if m, ok := data.(map[string]any); ok {
-		m["Path"] = r.URL.Path
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := tmpl.ExecuteTemplate(w, name, data); err != nil {
+	tmpl, err := set.GetTemplate(name)
+	if err != nil {
 		captureError(r, err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.Execute(w, vars, nil); err != nil {
+		captureError(r, err)
 	}
 }
 
@@ -183,6 +193,53 @@ func formatAxisLabel(n int) string {
 		return fmt.Sprintf("%.1fK", v)
 	}
 	return fmt.Sprintf("%d", n)
+}
+
+type paginationPage struct {
+	Number     int
+	URL        string
+	PartialURL string
+}
+
+type pagination struct {
+	Page        int
+	TotalPages  int
+	Target      string
+	SwapTarget  string
+	PrevURL     string
+	PrevPartial string
+	NextURL     string
+	NextPartial string
+	Pages       []paginationPage
+}
+
+func buildPagination(page, totalPages int, target, swapTarget string, urlFn, partialFn func(int) string) *pagination {
+	if totalPages <= 1 {
+		return nil
+	}
+	p := &pagination{
+		Page:       page,
+		TotalPages: totalPages,
+		Target:     target,
+		SwapTarget: swapTarget,
+	}
+	if page > 1 {
+		p.PrevURL = urlFn(page - 1)
+		p.PrevPartial = partialFn(page - 1)
+	}
+	if page < totalPages {
+		p.NextURL = urlFn(page + 1)
+		p.NextPartial = partialFn(page + 1)
+	}
+	for _, n := range pageRange(page, totalPages) {
+		pg := paginationPage{Number: n}
+		if n > 0 {
+			pg.URL = urlFn(n)
+			pg.PartialURL = partialFn(n)
+		}
+		p.Pages = append(p.Pages, pg)
+	}
+	return p
 }
 
 type publicFilters struct {
@@ -281,7 +338,7 @@ func untaggedPaginatePartialURL(filter, search, author, sort string, page int) s
 	return "/untagged-partial?" + q
 }
 
-func jsonLD(data any) template.HTML {
+func renderJsonLD(data any) string {
 	if data == nil {
 		return ""
 	}
@@ -295,13 +352,13 @@ func jsonLD(data any) template.HTML {
 			}
 			out += `<script type="application/ld+json">` + string(b) + `</script>`
 		}
-		return template.HTML(out)
+		return out
 	}
 	b, err := json.Marshal(data)
 	if err != nil {
 		return ""
 	}
-	return template.HTML(`<script type="application/ld+json">` + string(b) + `</script>`)
+	return `<script type="application/ld+json">` + string(b) + `</script>`
 }
 
 var cst = func() *time.Location {
@@ -408,8 +465,8 @@ func pageRange(current, total int) []int {
 	return result
 }
 
-// installChart renders a server-side SVG bar chart for monthly install data.
-func installChart(data []telemetry.MonthlyInstall) template.HTML {
+// renderInstallChart renders a server-side SVG bar chart for monthly install data.
+func renderInstallChart(data []telemetry.MonthlyInstall) string {
 	if len(data) == 0 {
 		return ""
 	}
@@ -484,7 +541,7 @@ func installChart(data []telemetry.MonthlyInstall) template.HTML {
 		b.WriteString(`<g class="bar">`)
 		ariaLabel := fmt.Sprintf("%s: %s installs", m.Month, label)
 		fmt.Fprintf(&b, `<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" rx="%.1f" fill="#525ddc" style="opacity:.6;transition:opacity .15s" role="graphics-symbol" aria-label="%s"/>`,
-			x, y, barW, barH, radius, template.HTMLEscapeString(ariaLabel))
+			x, y, barW, barH, radius, htmlEscapeString(ariaLabel))
 		// Hover label above bar
 		tipY := y - 6
 		if tipY < 8 {
@@ -502,7 +559,19 @@ func installChart(data []telemetry.MonthlyInstall) template.HTML {
 	}
 
 	b.WriteString(`</svg>`)
-	return template.HTML(b.String())
+	return b.String()
+}
+
+// htmlEscapeString escapes special HTML characters in a string.
+func htmlEscapeString(s string) string {
+	replacer := strings.NewReplacer(
+		"&", "&amp;",
+		"<", "&lt;",
+		">", "&gt;",
+		`"`, "&quot;",
+		"'", "&#39;",
+	)
+	return replacer.Replace(s)
 }
 
 // yAxisTicks returns 3-5 nice round tick values from 0 to max.

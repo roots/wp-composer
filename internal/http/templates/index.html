@@ -1,23 +1,24 @@
-{{template "layout" .}}
-{{define "title"}}WP Packages — WordPress Packages for Composer | WPackagist Alternative{{end}}
-{{define "meta_seo"}}
+{{extends "layout.html"}}
+{{import "components.html"}}
+{{block title()}}WP Packages — WordPress Packages for Composer | WPackagist Alternative{{end}}
+{{block meta_seo()}}
 <meta name="description" content="Composer repository for WordPress plugins and themes. A 17x faster, open-source WPackagist alternative with 5-minute update cycles.">
-{{if .AppURL}}<link rel="canonical" href="{{.AppURL}}/">{{end}}
-{{if and .Page (gt .Page 1)}}<meta name="robots" content="noindex, follow">{{end}}
+{{if AppURL}}<link rel="canonical" href="{{AppURL}}/">{{end}}
+{{if Page && Page > 1}}<meta name="robots" content="noindex, follow">{{end}}
 {{end}}
-{{define "json_ld"}}{{jsonLD .JSONLD}}{{end}}
-{{define "og_meta"}}
+{{block json_ld()}}{{jsonLD(JSONLD)|raw}}{{end}}
+{{block og_meta()}}
 <meta property="og:title" content="WP Packages — WordPress Packages for Composer | WPackagist Alternative">
 <meta property="og:description" content="Composer repository for WordPress plugins and themes.">
-{{if .OGImage}}<meta property="og:image" content="{{.OGImage}}">{{end}}
-{{if .AppURL}}<meta property="og:url" content="{{.AppURL}}">{{end}}
+{{if OGImage}}<meta property="og:image" content="{{OGImage}}">{{end}}
+{{if AppURL}}<meta property="og:url" content="{{AppURL}}">{{end}}
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="WP Packages — WordPress Packages for Composer | WPackagist Alternative">
 <meta name="twitter:description" content="Composer repository for WordPress plugins and themes.">
-{{if .OGImage}}<meta name="twitter:image" content="{{.OGImage}}">{{end}}
+{{if OGImage}}<meta name="twitter:image" content="{{OGImage}}">{{end}}
 {{end}}
-{{define "content"}}
+{{block body()}}
 <section class="relative overflow-hidden border-b border-gray-200/50">
 <div class="absolute inset-0 bg-gradient-to-b from-brand-lightest/40 to-transparent"></div>
 <div class="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-16 pb-12 sm:pt-24 sm:pb-16 text-center">
@@ -31,15 +32,15 @@
 <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
 <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200/50">
 <div class="py-6 text-center">
-<div class="text-2xl sm:text-3xl font-bold text-brand-primary tabular-nums">{{formatNumber .Stats.PluginInstalls}}</div>
+<div class="text-2xl sm:text-3xl font-bold text-brand-primary tabular-nums">{{formatNumber(Stats.PluginInstalls)}}</div>
 <div class="text-sm text-gray-500 mt-0.5">Plugin Installs</div>
 </div>
 <div class="py-6 text-center">
-<div class="text-2xl sm:text-3xl font-bold text-brand-primary tabular-nums">{{formatNumber .Stats.ThemeInstalls}}</div>
+<div class="text-2xl sm:text-3xl font-bold text-brand-primary tabular-nums">{{formatNumber(Stats.ThemeInstalls)}}</div>
 <div class="text-sm text-gray-500 mt-0.5">Theme Installs</div>
 </div>
 <div class="py-6 text-center">
-<div class="text-2xl sm:text-3xl font-bold text-brand-primary tabular-nums">{{formatNumber .Stats.RootsDownloads}}</div>
+<div class="text-2xl sm:text-3xl font-bold text-brand-primary tabular-nums">{{formatNumber(Stats.RootsDownloads)}}</div>
 <div class="text-sm text-gray-500 mt-0.5"><a href="/wordpress-core" class="hover:text-gray-900 transition-colors"><code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded-md border border-gray-200/40">roots/wordpress</code> Installs</a></div>
 </div>
 </div>
@@ -50,9 +51,7 @@
 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2">
 <form id="filter-form" method="GET" action="/" hx-get="/packages-partial" hx-target="#package-results" hx-trigger="submit, change from:select, input from:[name=search] delay:300ms changed" hx-push-url="false" hx-swap="innerHTML" class="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1 scroll-mt-16">
 <div class="relative w-full sm:max-w-md">
-<svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
-<input type="search" name="search" value="{{.Filters.Search}}" placeholder="Search packages..." class="w-full pl-9 pr-12 h-10 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
-<kbd class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:inline-flex h-5 items-center rounded border border-gray-200/80 bg-gray-100/80 px-1.5 text-[10px] font-mono text-gray-500">/</kbd>
+{{yield input(icon="search", type="search", name="search", value=Filters.Search, placeholder="Search packages...", showShortcut=true)}}
 </div>
 <div class="flex items-center gap-2">
 <label for="filter-type" class="sr-only">Package type</label>
@@ -60,18 +59,18 @@
 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z"/></svg>
 <select id="filter-type" name="type" class="h-10 pl-9 pr-8 text-sm border border-gray-200 rounded-lg bg-white select-chevron focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
 <option value="">All types</option>
-<option value="plugin"{{if eq .Filters.Type "plugin"}} selected{{end}}>Plugins</option>
-<option value="theme"{{if eq .Filters.Type "theme"}} selected{{end}}>Themes</option>
+<option value="plugin"{{if Filters.Type == "plugin"}} selected{{end}}>Plugins</option>
+<option value="theme"{{if Filters.Type == "theme"}} selected{{end}}>Themes</option>
 </select>
 </div>
 <label for="filter-sort" class="sr-only">Sort by</label>
 <div class="relative">
 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"/></svg>
 <select id="filter-sort" name="sort" class="h-10 pl-9 pr-8 text-sm border border-gray-200 rounded-lg bg-white select-chevron focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
-<option value="composer_installs"{{if eq .Filters.Sort "composer_installs"}} selected{{end}}>Composer installs</option>
-<option value="active_installs"{{if eq .Filters.Sort "active_installs"}} selected{{end}}>Active installs</option>
-<option value="name"{{if eq .Filters.Sort "name"}} selected{{end}}>Name</option>
-<option value="updated"{{if eq .Filters.Sort "updated"}} selected{{end}}>Recently updated</option>
+<option value="composer_installs"{{if Filters.Sort == "composer_installs"}} selected{{end}}>Composer installs</option>
+<option value="active_installs"{{if Filters.Sort == "active_installs"}} selected{{end}}>Active installs</option>
+<option value="name"{{if Filters.Sort == "name"}} selected{{end}}>Name</option>
+<option value="updated"{{if Filters.Sort == "updated"}} selected{{end}}>Recently updated</option>
 </select>
 </div>
 <button type="submit" class="sr-only">Search</button>
@@ -79,24 +78,23 @@
 </form>
 </div>
 <div id="package-results">
-{{template "package-results" .}}
+{{include "package_results.html"}}
 </div>
 
 <div class="flex justify-center mt-8">
-<div class="inline-flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 max-w-2xl">
-<svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
-<span class="text-balance">Some WordPress plugins have a latest version on WordPress.org that isn't tagged in SVN. These can be installed via <code class="text-xs font-mono bg-amber-100 px-1 py-0.5 rounded whitespace-nowrap">dev-trunk</code>. <a href="/untagged" class="font-medium underline underline-offset-2 hover:no-underline">Learn more on our Untagged Plugins page</a>.</span>
-</div>
+{{yield notice() content}}
+Some WordPress plugins have a latest version on WordPress.org that isn't tagged in SVN. These can be installed via <code class="text-xs font-mono bg-amber-100 px-1 py-0.5 rounded whitespace-nowrap">dev-trunk</code>. <a href="/untagged" class="font-medium underline underline-offset-2 hover:no-underline">Learn more on our Untagged Plugins page</a>.
+{{end}}
 </div>
 
 </section>
-{{if .BlogPosts}}
+{{if BlogPosts}}
 <section class="border-t border-gray-200/50 py-14">
 <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 text-center">
 <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">Latest updates</h2>
 <ul class="space-y-2 max-w-xl mx-auto">
-{{range .BlogPosts}}
-<li><a href="{{.Link}}" class="text-sm font-medium text-brand-primary hover:underline">{{.Title}}</a></li>
+{{range _, post := BlogPosts}}
+<li><a href="{{post.Link}}" class="text-sm font-medium text-brand-primary hover:underline">{{post.Title}}</a></li>
 {{end}}
 </ul>
 </div>

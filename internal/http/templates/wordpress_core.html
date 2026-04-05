@@ -1,28 +1,28 @@
-{{template "layout" .}}
-{{define "title"}}WordPress Core via Composer — WP Packages{{end}}
-{{define "meta_seo"}}
+{{extends "layout.html"}}
+{{block title()}}WordPress Core via Composer — WP Packages{{end}}
+{{block meta_seo()}}
 <meta name="description" content="Install WordPress core via Composer with roots/wordpress packages. Choose between full, minimal, or standard WordPress builds for your Composer-based project.">
-{{if .AppURL}}<link rel="canonical" href="{{.AppURL}}/wordpress-core">{{end}}
+{{if AppURL}}<link rel="canonical" href="{{AppURL}}/wordpress-core">{{end}}
 {{end}}
-{{define "json_ld"}}{{end}}
-{{define "og_meta"}}
+{{block json_ld()}}{{end}}
+{{block og_meta()}}
 <meta property="og:title" content="WordPress Core via Composer — WP Packages">
 <meta property="og:description" content="Install WordPress core via Composer with roots/wordpress packages. Choose between full, minimal, or standard builds.">
-{{if .OGImage}}<meta property="og:image" content="{{.OGImage}}">{{end}}
-{{if .AppURL}}<meta property="og:url" content="{{.AppURL}}/wordpress-core">{{end}}
+{{if OGImage}}<meta property="og:image" content="{{OGImage}}">{{end}}
+{{if AppURL}}<meta property="og:url" content="{{AppURL}}/wordpress-core">{{end}}
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="WordPress Core via Composer — WP Packages">
 <meta name="twitter:description" content="Install WordPress core via Composer with roots/wordpress packages. Choose between full, minimal, or standard builds.">
-{{if .OGImage}}<meta name="twitter:image" content="{{.OGImage}}">{{end}}
+{{if OGImage}}<meta name="twitter:image" content="{{OGImage}}">{{end}}
 {{end}}
-{{define "content"}}
+{{block body()}}
 <section class="relative border-b border-gray-200/50">
 <div class="absolute inset-0 bg-gradient-to-b from-brand-lightest/40 to-transparent"></div>
 <div class="relative mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 pt-16 pb-12 sm:pt-24 sm:pb-16 text-center">
 <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-gray-900 mb-4 text-balance">WordPress Core <span class="text-brand-primary">via Composer</span></h1>
 <p class="text-lg text-gray-500 max-w-xl mx-auto text-balance">Packages for installing WordPress core via Composer. Choose the build that fits your project.</p>
-{{if .RootsDownloads}}<p class="mt-6 text-sm text-gray-500"><span class="font-semibold text-brand-primary">{{formatNumber .RootsDownloads}}</span> total installs via Packagist</p>{{end}}
+{{if RootsDownloads}}<p class="mt-6 text-sm text-gray-500"><span class="font-semibold text-brand-primary">{{formatNumber(RootsDownloads)}}</span> total installs via Packagist</p>{{end}}
 </div>
 </section>
 

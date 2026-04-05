@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/CloudyKit/jet/v6"
 	"os"
 	"path/filepath"
 	"slices"
@@ -80,7 +82,7 @@ type versionRow struct {
 	IsLatest bool
 }
 
-func handleIndex(a *app.App, tmpl *templateSet) http.HandlerFunc {
+func handleIndex(a *app.App, tmpl *jet.Set) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		filters := publicFilters{
 			Search: r.URL.Query().Get("search"),
@@ -126,23 +128,27 @@ func handleIndex(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			return
 		}
 
-		render(w, r, tmpl.index, "layout", map[string]any{
+		render(w, r, tmpl, "index.html", map[string]any{
 			"Packages":   packages,
 			"Filters":    filters,
 			"Page":       page,
 			"Total":      total,
 			"TotalPages": totalPages,
-			"Stats":      stats,
-			"AppURL":     a.Config.AppURL,
-			"CDNURL":     a.Config.R2.CDNPublicURL,
-			"OGImage":    ogImageURL(a.Config, "social/default.png"),
-			"JSONLD":     jsonLDData,
-			"BlogPosts":  a.Blog.Posts(),
+			"Pagination": buildPagination(page, totalPages, "#package-results", "#filter-form:top",
+				func(p int) string { return paginateURL(filters, p) },
+				func(p int) string { return paginatePartialURL(filters, p) },
+			),
+			"Stats":     stats,
+			"AppURL":    a.Config.AppURL,
+			"CDNURL":    a.Config.R2.CDNPublicURL,
+			"OGImage":   ogImageURL(a.Config, "social/default.png"),
+			"JSONLD":    jsonLDData,
+			"BlogPosts": a.Blog.Posts(),
 		})
 	}
 }
 
-func handleIndexPartial(a *app.App, tmpl *templateSet) http.HandlerFunc {
+func handleIndexPartial(a *app.App, tmpl *jet.Set) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		filters := publicFilters{
 			Search: r.URL.Query().Get("search"),
@@ -168,20 +174,24 @@ func handleIndexPartial(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		totalPages := (total + perPage - 1) / perPage
 
 		w.Header().Set("X-Robots-Tag", "noindex")
-		render(w, r, tmpl.indexPartial, "package-results", map[string]any{
+		render(w, r, tmpl, "package_results.html", map[string]any{
 			"Packages":   packages,
 			"Filters":    filters,
 			"Page":       page,
 			"Total":      total,
 			"TotalPages": totalPages,
+			"Pagination": buildPagination(page, totalPages, "#package-results", "#filter-form:top",
+				func(p int) string { return paginateURL(filters, p) },
+				func(p int) string { return paginatePartialURL(filters, p) },
+			),
 		})
 	}
 }
 
-func handleDocs(a *app.App, tmpl *templateSet) http.HandlerFunc {
+func handleDocs(a *app.App, tmpl *jet.Set) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
-		render(w, r, tmpl.docs, "layout", map[string]any{
+		render(w, r, tmpl, "docs.html", map[string]any{
 			"AppURL":  a.Config.AppURL,
 			"CDNURL":  a.Config.R2.CDNPublicURL,
 			"OGImage": ogImageURL(a.Config, "social/default.png"),
@@ -189,10 +199,10 @@ func handleDocs(a *app.App, tmpl *templateSet) http.HandlerFunc {
 	}
 }
 
-func handleCompare(a *app.App, tmpl *templateSet) http.HandlerFunc {
+func handleCompare(a *app.App, tmpl *jet.Set) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
-		render(w, r, tmpl.compare, "layout", map[string]any{
+		render(w, r, tmpl, "compare.html", map[string]any{
 			"AppURL":  a.Config.AppURL,
 			"CDNURL":  a.Config.R2.CDNPublicURL,
 			"OGImage": ogImageURL(a.Config, "social/default.png"),
@@ -202,7 +212,7 @@ func handleCompare(a *app.App, tmpl *templateSet) http.HandlerFunc {
 
 const untaggedPerPage = 20
 
-func handleUntagged(a *app.App, tmpl *templateSet) http.HandlerFunc {
+func handleUntagged(a *app.App, tmpl *jet.Set) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 		if page < 1 {
@@ -227,7 +237,7 @@ func handleUntagged(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		_ = a.DB.QueryRowContext(r.Context(), "SELECT active_plugins FROM package_stats WHERE id = 1").Scan(&totalPlugins)
 
 		w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
-		render(w, r, tmpl.untagged, "layout", map[string]any{
+		render(w, r, tmpl, "untagged.html", map[string]any{
 			"Packages":     packages,
 			"Filter":       filter,
 			"Search":       search,
@@ -237,14 +247,18 @@ func handleUntagged(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			"Total":        int64(total),
 			"TotalPlugins": totalPlugins,
 			"TotalPages":   totalPages,
-			"AppURL":       a.Config.AppURL,
-			"CDNURL":       a.Config.R2.CDNPublicURL,
-			"OGImage":      ogImageURL(a.Config, "social/default.png"),
+			"Pagination": buildPagination(page, totalPages, "#untagged-results", "#untagged-form:top",
+				func(p int) string { return untaggedPaginateURL(filter, search, author, sort, p) },
+				func(p int) string { return untaggedPaginatePartialURL(filter, search, author, sort, p) },
+			),
+			"AppURL":  a.Config.AppURL,
+			"CDNURL":  a.Config.R2.CDNPublicURL,
+			"OGImage": ogImageURL(a.Config, "social/default.png"),
 		})
 	}
 }
 
-func handleUntaggedPartial(a *app.App, tmpl *templateSet) http.HandlerFunc {
+func handleUntaggedPartial(a *app.App, tmpl *jet.Set) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 		if page < 1 {
@@ -266,7 +280,7 @@ func handleUntaggedPartial(a *app.App, tmpl *templateSet) http.HandlerFunc {
 		totalPages := (total + untaggedPerPage - 1) / untaggedPerPage
 
 		w.Header().Set("X-Robots-Tag", "noindex")
-		render(w, r, tmpl.untaggedPartial, "untagged-results", map[string]any{
+		render(w, r, tmpl, "untagged_results.html", map[string]any{
 			"Packages":   packages,
 			"Filter":     filter,
 			"Search":     search,
@@ -275,6 +289,10 @@ func handleUntaggedPartial(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			"Page":       page,
 			"Total":      int64(total),
 			"TotalPages": totalPages,
+			"Pagination": buildPagination(page, totalPages, "#untagged-results", "#untagged-form:top",
+				func(p int) string { return untaggedPaginateURL(filter, search, author, sort, p) },
+				func(p int) string { return untaggedPaginatePartialURL(filter, search, author, sort, p) },
+			),
 		})
 	}
 }
@@ -324,10 +342,10 @@ func handleUntaggedAuthors(a *app.App) http.HandlerFunc {
 	}
 }
 
-func handleWordpressCore(a *app.App, tmpl *templateSet) http.HandlerFunc {
+func handleWordpressCore(a *app.App, tmpl *jet.Set) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
-		render(w, r, tmpl.wordpressCore, "layout", map[string]any{
+		render(w, r, tmpl, "wordpress_core.html", map[string]any{
 			"AppURL":         a.Config.AppURL,
 			"CDNURL":         a.Config.R2.CDNPublicURL,
 			"OGImage":        ogImageURL(a.Config, "social/default.png"),
@@ -336,7 +354,7 @@ func handleWordpressCore(a *app.App, tmpl *templateSet) http.HandlerFunc {
 	}
 }
 
-func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
+func handleDetail(a *app.App, tmpl *jet.Set) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		pkgType := r.PathValue("type")
 		name := r.PathValue("name")
@@ -351,7 +369,7 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 				http.Redirect(w, r, "https://wp-packages.org/", http.StatusFound)
 			} else {
 				w.WriteHeader(http.StatusNotFound)
-				render(w, r, tmpl.notFound, "layout", map[string]any{"Gone": false, "CDNURL": a.Config.R2.CDNPublicURL})
+				render(w, r, tmpl, "404.html", map[string]any{"Gone": false, "CDNURL": a.Config.R2.CDNPublicURL})
 			}
 			return
 		}
@@ -429,7 +447,7 @@ func handleDetail(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			return
 		}
 
-		render(w, r, tmpl.detail, "layout", map[string]any{
+		render(w, r, tmpl, "detail.html", map[string]any{
 			"Package":         pkg,
 			"Versions":        versions,
 			"MonthlyInstalls": monthlyInstalls,
@@ -449,9 +467,9 @@ var logFiles = map[string]string{
 	"check-status": filepath.Join("storage", "logs", "check-status.log"),
 }
 
-func handleAdminLogs(tmpl *templateSet) http.HandlerFunc {
+func handleAdminLogs(tmpl *jet.Set) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		render(w, r, tmpl.adminLogs, "admin_layout", nil)
+		render(w, r, tmpl, "admin_logs.html", nil)
 	}
 }
 
@@ -937,7 +955,7 @@ type statusPageCheck struct {
 	Changes []packages.StatusCheckChange
 }
 
-func handleStatus(a *app.App, tmpl *templateSet) http.HandlerFunc {
+func handleStatus(a *app.App, tmpl *jet.Set) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		cutoff := time.Now().Add(-24 * time.Hour).UnixMilli()
@@ -1022,10 +1040,12 @@ func handleStatus(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			"PackagesUpdated24h": packagesUpdated24h,
 			"Deactivated24h":     deactivated24h,
 			"Reactivated24h":     reactivated24h,
+			"AppURL":             a.Config.AppURL,
+			"CDNURL":             a.Config.R2.CDNPublicURL,
 		}
 		if len(statusBuilds) > 0 {
 			data["LastBuildStartedAt"] = statusBuilds[0].StartedAt
 		}
-		render(w, r, tmpl.status, "layout", data)
+		render(w, r, tmpl, "status.html", data)
 	}
 }

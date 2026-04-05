@@ -1,4 +1,4 @@
-{{define "untagged-results"}}
+{{import "components.html"}}
 <div class="rounded-xl border border-gray-200/60 overflow-x-auto">
 <table class="w-full text-sm min-w-[600px]">
 <thead class="bg-gray-50/50">
@@ -6,46 +6,39 @@
 <th class="text-left px-4 py-3 font-medium text-gray-500">Plugin</th>
 <th class="text-right px-4 py-3 font-medium text-gray-500 w-36">
 <button type="button" onclick="toggleSort('updated','least_updated')" class="inline-flex items-center gap-1 cursor-pointer hover:text-gray-900 transition-colors ml-auto whitespace-nowrap">Last Updated
-<svg class="w-3.5 h-3.5 {{if and (ne .Sort "updated") (ne .Sort "least_updated")}}text-gray-300{{end}}" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">{{if eq .Sort "least_updated"}}<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/>{{else}}<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>{{end}}</svg>
+<svg class="w-3.5 h-3.5 {{if Sort != "updated" && Sort != "least_updated"}}text-gray-300{{end}}" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">{{if Sort == "least_updated"}}<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/>{{else}}<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>{{end}}</svg>
 </button>
 </th>
 <th class="text-right px-4 py-3 font-medium text-gray-500 w-36">
 <button type="button" onclick="toggleSort('active_installs','active_installs')" class="inline-flex items-center gap-1 cursor-pointer hover:text-gray-900 transition-colors ml-auto whitespace-nowrap">Active Installs
-<svg class="w-3.5 h-3.5 {{if and (ne .Sort "") (ne .Sort "active_installs")}}text-gray-300{{end}}" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+<svg class="w-3.5 h-3.5 {{if Sort != "" && Sort != "active_installs"}}text-gray-300{{end}}" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
 </button>
 </th>
 </tr>
 </thead>
 <tbody>
-{{range .Packages}}
+{{range _, pkg := Packages}}
 <tr class="border-t border-gray-200/40 hover:bg-gray-50/50 transition-colors">
 <td class="px-4 py-3">
 <div class="min-w-0">
-<a href="/packages/wp-{{.Type}}/{{.Name}}" class="font-medium text-gray-900 hover:text-brand-primary transition-colors">{{if .DisplayName}}{{.DisplayName}}{{else}}{{.Name}}{{end}}</a>
+<a href="/packages/wp-{{pkg.Type}}/{{pkg.Name}}" class="font-medium text-gray-900 hover:text-brand-primary transition-colors">{{if pkg.DisplayName}}{{pkg.DisplayName}}{{else}}{{pkg.Name}}{{end}}</a>
 <div class="flex items-center gap-2 mt-0.5">
-<span class="text-xs text-gray-400 font-mono truncate">wp-plugin/{{.Name}}</span>
-{{if and .CurrentVersion (ne .CurrentVersion .WporgVersion)}}<span class="inline-flex items-center shrink-0 whitespace-nowrap rounded-md bg-amber-100 px-1.5 py-0 text-[10px] text-amber-700">latest not tagged</span>{{else}}<span class="inline-flex items-center shrink-0 whitespace-nowrap rounded-md bg-red-100 px-1.5 py-0 text-[10px] text-red-700">trunk only</span>{{end}}
+<span class="text-xs text-gray-400 font-mono truncate">wp-plugin/{{pkg.Name}}</span>
+{{if pkg.CurrentVersion && pkg.CurrentVersion != pkg.WporgVersion}}<span class="inline-flex items-center shrink-0 whitespace-nowrap rounded-md bg-amber-100 px-1.5 py-0 text-[10px] text-amber-700">latest not tagged</span>{{else}}<span class="inline-flex items-center shrink-0 whitespace-nowrap rounded-md bg-red-100 px-1.5 py-0 text-[10px] text-red-700">trunk only</span>{{end}}
 </div>
 <div class="flex items-center gap-2 mt-1 text-xs">
-<button onclick="openTagRequest('{{.Name}}')" class="text-brand-primary hover:underline cursor-pointer">Request tagging</button>
+<button onclick="openTagRequest('{{pkg.Name}}')" class="text-brand-primary hover:underline cursor-pointer">Request tagging</button>
 <span class="text-gray-300">&middot;</span>
-<button onclick="copyInstall(this,'{{.Name}}')" class="text-gray-500 hover:text-brand-primary transition-colors cursor-pointer">Copy install command</button>
+<button onclick="copyInstall(this,'{{pkg.Name}}')" class="text-gray-500 hover:text-brand-primary transition-colors cursor-pointer">Copy install command</button>
 </div>
 </div>
 </td>
-<td class="px-4 py-3 text-right text-gray-500 align-top text-xs">{{if .LastCommitted}}{{timeAgoShort .LastCommitted}}{{else}}&mdash;{{end}}</td>
-<td class="px-4 py-3 text-right font-mono text-gray-600 align-top">{{formatNumberComma .ActiveInstalls}}</td>
+<td class="px-4 py-3 text-right text-gray-500 align-top text-xs">{{if pkg.LastCommitted}}{{timeAgoShort(pkg.LastCommitted)}}{{else}}&mdash;{{end}}</td>
+<td class="px-4 py-3 text-right font-mono text-gray-600 align-top">{{formatNumberComma(pkg.ActiveInstalls)}}</td>
 </tr>
 {{end}}
 </tbody>
 </table>
 </div>
 
-{{if gt .TotalPages 1}}
-<div class="flex justify-center items-center gap-1 pt-8">
-{{if gt .Page 1}}<a href="{{untaggedPaginate .Filter .Search .Author .Sort (sub .Page 1)}}" hx-get="{{untaggedPaginateP .Filter .Search .Author .Sort (sub .Page 1)}}" hx-target="#untagged-results" hx-swap="innerHTML show:#untagged-form:top" hx-include="" class="inline-flex items-center gap-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-colors cursor-pointer"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>Previous</a>{{else}}<span class="inline-flex items-center gap-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-300 cursor-default"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>Previous</span>{{end}}
-{{range pageRange $.Page $.TotalPages}}{{if eq . 0}}<span class="min-w-9 h-9 px-2 inline-flex items-center justify-center text-sm text-gray-400">...</span>{{else if eq . $.Page}}<span class="min-w-9 h-9 px-2 inline-flex items-center justify-center border border-gray-200 rounded-lg text-sm font-medium text-gray-900 bg-gray-50">{{.}}</span>{{else}}<a href="{{untaggedPaginate $.Filter $.Search $.Author $.Sort .}}" hx-get="{{untaggedPaginateP $.Filter $.Search $.Author $.Sort .}}" hx-target="#untagged-results" hx-swap="innerHTML show:#untagged-form:top" hx-include="" class="min-w-9 h-9 px-2 inline-flex items-center justify-center border border-gray-200 rounded-lg text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-colors cursor-pointer">{{.}}</a>{{end}}{{end}}
-{{if lt .Page .TotalPages}}<a href="{{untaggedPaginate .Filter .Search .Author .Sort (add .Page 1)}}" hx-get="{{untaggedPaginateP .Filter .Search .Author .Sort (add .Page 1)}}" hx-target="#untagged-results" hx-swap="innerHTML show:#untagged-form:top" hx-include="" class="inline-flex items-center gap-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-colors cursor-pointer">Next<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg></a>{{else}}<span class="inline-flex items-center gap-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-300 cursor-default">Next<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg></span>{{end}}
-</div>
-{{end}}
-{{end}}
+{{yield pagination(pager=Pagination, class="pt-8")}}

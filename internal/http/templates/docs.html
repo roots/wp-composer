@@ -1,22 +1,23 @@
-{{template "layout" .}}
-{{define "title"}}Documentation — WP Packages{{end}}
-{{define "meta_seo"}}
+{{extends "layout.html"}}
+{{import "components.html"}}
+{{block title()}}Documentation — WP Packages{{end}}
+{{block meta_seo()}}
 <meta name="description" content="Documentation for WP Packages — how to use and how to migrate from WPackagist.">
-{{if .AppURL}}<link rel="canonical" href="{{.AppURL}}/docs">{{end}}
+{{if AppURL}}<link rel="canonical" href="{{AppURL}}/docs">{{end}}
 {{end}}
-{{define "json_ld"}}{{end}}
-{{define "og_meta"}}
+{{block json_ld()}}{{end}}
+{{block og_meta()}}
 <meta property="og:title" content="Documentation — WP Packages">
 <meta property="og:description" content="Documentation for WP Packages — how to use and how to migrate from WPackagist.">
-{{if .OGImage}}<meta property="og:image" content="{{.OGImage}}">{{end}}
-{{if .AppURL}}<meta property="og:url" content="{{.AppURL}}/docs">{{end}}
+{{if OGImage}}<meta property="og:image" content="{{OGImage}}">{{end}}
+{{if AppURL}}<meta property="og:url" content="{{AppURL}}/docs">{{end}}
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Documentation — WP Packages">
 <meta name="twitter:description" content="Documentation for WP Packages — how to use and how to migrate from WPackagist.">
-{{if .OGImage}}<meta name="twitter:image" content="{{.OGImage}}">{{end}}
+{{if OGImage}}<meta name="twitter:image" content="{{OGImage}}">{{end}}
 {{end}}
-{{define "content"}}
+{{block body()}}
 <section class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-8 pb-16">
 <div class="max-w-4xl mx-auto md:max-w-none md:grid md:grid-cols-[minmax(0,3fr)_minmax(180px,1fr)] md:gap-12">
 <div>
@@ -35,18 +36,11 @@
 </ul>
 </nav>
 <p class="text-gray-600 mb-4">Add the WP Packages repository to your project:</p>
-<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-4" onclick="copyCmd(this,'composer config repositories.wp-packages composer https://repo.wp-packages.org')">
-<span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
-<code class="flex-1 text-sm font-mono text-gray-900 truncate">composer config repositories.wp-packages composer https://repo.wp-packages.org</code>
-<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer">
-<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg>
-</button>
-</div>
+{{yield shell(command="composer config repositories.wp-packages composer https://repo.wp-packages.org", class="mb-4")}}
 <p class="text-gray-600 mb-4">Every active plugin and theme from the WordPress.org directory is available as a Composer package. <a href="/#filter-form" class="text-brand-primary hover:underline">Search all packages &rarr;</a></p>
-<div class="inline-flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 mb-12">
-<svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
-<span>Some WordPress plugins have a latest version on WordPress.org that isn't tagged in SVN. These can be installed via <code class="text-xs font-mono bg-amber-100 px-1 py-0.5 rounded">dev-trunk</code>. <a href="/untagged" class="font-medium underline underline-offset-2 hover:no-underline">Learn more on our Untagged Plugins page</a>.</span>
-</div>
+{{yield notice(class="mb-12") content}}
+Some WordPress plugins have a latest version on WordPress.org that isn't tagged in SVN. These can be installed via <code class="text-xs font-mono bg-amber-100 px-1 py-0.5 rounded">dev-trunk</code>. <a href="/untagged" class="font-medium underline underline-offset-2 hover:no-underline">Learn more on our Untagged Plugins page</a>.
+{{end}}
 
 <h2 id="naming" class="text-2xl font-bold mb-6 scroll-mt-20">Package naming</h2>
 <div class="rounded-xl border border-gray-200/60 overflow-hidden mb-12">
@@ -117,46 +111,28 @@
 <h2 id="migrate" class="text-2xl font-bold mb-4 scroll-mt-20">Migrating from WPackagist</h2>
 <p class="text-sm text-gray-500 mb-4"><a href="/wp-packages-vs-wpackagist" class="text-brand-primary hover:underline">See how WP Packages compares to WPackagist &rarr;</a></p>
 <p class="text-gray-600 mb-4">Switching from WPackagist takes one command. Use the <a href="https://github.com/roots/wp-packages/blob/main/scripts/migrate-from-wpackagist.sh" class="text-brand-primary hover:underline">migration script</a> to automatically update your <code class="text-sm font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">composer.json</code>:</p>
-<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-8" onclick="copyCmd(this,'curl -sO https://raw.githubusercontent.com/roots/wp-packages/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh')">
-<span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
-<code class="flex-1 text-sm font-mono text-gray-900 truncate">curl -sO https://raw.githubusercontent.com/roots/wp-packages/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh</code>
-<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer">
-<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg>
-</button>
-</div>
+{{yield shell(command="curl -sO https://raw.githubusercontent.com/roots/wp-packages/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh", class="mb-8")}}
 <h3 class="text-lg font-bold mb-6">Manually migrate</h3>
 <div class="space-y-6 mb-8">
 <div class="flex items-start gap-4">
 <div class="flex w-7 h-7 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-xs font-bold">1</div>
 <div class="min-w-0">
 <p class="text-gray-600 mb-2 leading-7">Remove WPackagist packages:</p>
-<div class="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-200/60 bg-gray-100/30 cursor-pointer hover:border-gray-300 transition-colors" onclick="copyCmd(this,'composer remove wpackagist-plugin/woocommerce')">
-<span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
-<code class="flex-1 text-sm font-mono text-gray-900 truncate">composer remove wpackagist-plugin/woocommerce</code>
-<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
-</div>
+{{yield shell(command="composer remove wpackagist-plugin/woocommerce")}}
 </div>
 </div>
 <div class="flex items-start gap-4">
 <div class="flex w-7 h-7 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-xs font-bold">2</div>
 <div class="min-w-0">
 <p class="text-gray-600 mb-2 leading-7">Remove the WPackagist repository and add WP Packages:</p>
-<div class="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-200/60 bg-gray-100/30 cursor-pointer hover:border-gray-300 transition-colors" onclick="copyCmd(this,'composer config --unset repositories.wpackagist &amp;&amp; composer config repositories.wp-packages composer https://repo.wp-packages.org')">
-<span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
-<code class="flex-1 text-sm font-mono text-gray-900 truncate">composer config --unset repositories.wpackagist &amp;&amp; composer config repositories.wp-packages composer https://repo.wp-packages.org</code>
-<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
-</div>
+{{yield shell(command="composer config --unset repositories.wpackagist &amp;&amp; composer config repositories.wp-packages composer https://repo.wp-packages.org")}}
 </div>
 </div>
 <div class="flex items-start gap-4">
 <div class="flex w-7 h-7 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-xs font-bold">3</div>
 <div class="min-w-0">
 <p class="text-gray-600 mb-2 leading-7">Require packages with the new naming:</p>
-<div class="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-200/60 bg-gray-100/30 cursor-pointer hover:border-gray-300 transition-colors" onclick="copyCmd(this,'composer require wp-plugin/woocommerce')">
-<span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
-<code class="flex-1 text-sm font-mono text-gray-900 truncate">composer require wp-plugin/woocommerce</code>
-<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
-</div>
+{{yield shell(command="composer require wp-plugin/woocommerce")}}
 </div>
 </div>
 </div>
@@ -202,11 +178,7 @@
 
 <h3 class="text-lg font-bold mb-3">GET /api/stats/packages/{type}/{name}</h3>
 <p class="text-gray-600 mb-3">Returns monthly install history for a specific package (up to 36 months). The <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">type</code> can be <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">wp-plugin</code> or <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">wp-theme</code>.</p>
-<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-3" onclick="copyCmd(this,'curl https://wp-packages.org/api/stats/packages/wp-plugin/akismet')">
-<span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
-<code class="flex-1 text-sm font-mono text-gray-900 truncate">curl https://wp-packages.org/api/stats/packages/wp-plugin/akismet</code>
-<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
-</div>
+{{yield shell(command="curl https://wp-packages.org/api/stats/packages/wp-plugin/akismet", class="mb-3")}}
 <div class="rounded-xl border border-gray-200/60 overflow-hidden mb-8">
 <div class="bg-gray-50/50 px-4 py-2 text-xs text-gray-500 border-b border-gray-200/40">Response</div>
 <pre class="p-4 text-sm font-mono leading-relaxed overflow-x-auto"><code>[
