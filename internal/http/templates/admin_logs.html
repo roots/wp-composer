@@ -1,6 +1,6 @@
-{{template "admin_layout" .}}
-{{define "title"}}Logs{{end}}
-{{define "content"}}
+{{extends "admin_layout.html"}}
+{{block title()}}Logs{{end}}
+{{block body()}}
 <div class="flex items-center justify-between mb-4">
 <h1 class="text-xl font-bold">Logs</h1>
 <div class="flex items-center gap-2 text-sm">

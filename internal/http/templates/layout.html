@@ -1,21 +1,21 @@
-{{define "layout"}}<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{{template "title" .}}</title>
-{{template "meta_seo" .}}
+<title>{{yield title()}}</title>
+{{yield meta_seo()}}
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="alternate" type="application/atom+xml" title="WP Packages — Recently Updated Packages" href="/feed.xml">
-{{template "og_meta" .}}
-{{template "json_ld" .}}
-<link rel="stylesheet" href="{{assetPath "/assets/styles/app.css"}}">
-<link rel="stylesheet" href="{{assetPath "/assets/styles/fonts.css"}}">
-{{if .CDNURL}}<link rel="preconnect" href="{{.CDNURL}}" crossorigin>{{end}}
-<script src="{{assetPath "/assets/scripts/htmx.min.js"}}"></script>
+{{yield og_meta()}}
+{{yield json_ld()}}
+<link rel="stylesheet" href="{{assetPath("/assets/styles/app.css")}}">
+<link rel="stylesheet" href="{{assetPath("/assets/styles/fonts.css")}}">
+{{if CDNURL}}<link rel="preconnect" href="{{CDNURL}}" crossorigin>{{end}}
+<script src="{{assetPath("/assets/scripts/htmx.min.js")}}"></script>
 <script>
 function copyCmd(el,txt){navigator.clipboard.writeText(txt);const svg=el.querySelector('button svg')||el.querySelector('svg:last-of-type')||el.querySelector('svg');if(!svg||svg.dataset.copied)return;svg.dataset.copied='1';const orig=svg.innerHTML;const oc=svg.style.color;svg.style.transition='opacity 150ms,color 200ms';svg.style.opacity='0';setTimeout(()=>{svg.innerHTML='<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>';svg.style.color='#16a34a';svg.style.opacity='1'},150);setTimeout(()=>{svg.style.opacity='0';setTimeout(()=>{svg.innerHTML=orig;svg.style.color=oc;svg.style.opacity='1';delete svg.dataset.copied},150)},1500)}
 document.addEventListener('keydown',e=>{if(e.key==='/'&&!e.ctrlKey&&!e.metaKey&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();const s=document.querySelector('input[name="search"]');if(s)s.focus()}});
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded',()=>{const t=document.getElementByI
 <div id="rename-banner" class="border-b border-amber-200 bg-amber-50">
 <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-2.5 text-sm text-amber-900 flex items-center justify-between gap-3">
 <p class="leading-relaxed">WP Composer is now WP Packages! <a href="https://roots.io/wp-composer-is-now-wp-packages/" class="font-medium underline underline-offset-2 hover:no-underline" rel="noopener">Read the announcement</a>.</p>
-<button id="rename-banner-close" type="button" class="shrink-0 rounded p-1 text-amber-800 hover:bg-amber-100" aria-label="Dismiss rename announcement">✕</button>
+<button id="rename-banner-close" type="button" class="shrink-0 rounded p-1 text-amber-800 hover:bg-amber-100" aria-label="Dismiss rename announcement">&#10005;</button>
 </div>
 </div>
 <header class="sticky top-0 z-50 border-b border-gray-200/50 bg-white/80 backdrop-blur-xl">
@@ -42,10 +42,10 @@ document.addEventListener('DOMContentLoaded',()=>{const t=document.getElementByI
 roots.io</a>
 </div>
 <nav aria-label="Main" class="flex items-center gap-1">
-<a href="/" class="hidden nav:inline-flex rounded-md px-2 py-1.5 text-sm {{if eq .Path "/"}}text-gray-900 font-medium{{else}}text-gray-500 hover:text-gray-900{{end}} transition-colors">Packages</a>
-<a href="/docs" class="hidden nav:inline-flex rounded-md px-2 py-1.5 text-sm {{if eq .Path "/docs"}}text-gray-900 font-medium{{else}}text-gray-500 hover:text-gray-900{{end}} transition-colors">Docs</a>
+<a href="/" class="hidden nav:inline-flex rounded-md px-2 py-1.5 text-sm {{if Path == "/"}}text-gray-900 font-medium{{else}}text-gray-500 hover:text-gray-900{{end}} transition-colors">Packages</a>
+<a href="/docs" class="hidden nav:inline-flex rounded-md px-2 py-1.5 text-sm {{if Path == "/docs"}}text-gray-900 font-medium{{else}}text-gray-500 hover:text-gray-900{{end}} transition-colors">Docs</a>
 <a href="/docs#migrate" class="hidden nav:inline-flex rounded-md px-2 py-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors">Migrate from WPackagist</a>
-<a href="/status" class="hidden nav:inline-flex rounded-md px-2 py-1.5 text-sm {{if eq .Path "/status"}}text-gray-900 font-medium{{else}}text-gray-500 hover:text-gray-900{{end}} transition-colors">Status</a>
+<a href="/status" class="hidden nav:inline-flex rounded-md px-2 py-1.5 text-sm {{if Path == "/status"}}text-gray-900 font-medium{{else}}text-gray-500 hover:text-gray-900{{end}} transition-colors">Status</a>
 <a href="https://discourse.roots.io/" class="hidden nav:inline-flex rounded-md px-2 py-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors" rel="noopener">Community</a>
 <a href="https://github.com/roots/wp-packages" class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors" rel="noopener"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>GitHub</a>
 <a href="https://github.com/sponsors/roots" class="inline-flex items-center rounded-lg bg-brand-primary px-3.5 py-1.5 text-sm font-medium text-white hover:bg-brand-primary/85 transition-colors" rel="noopener">Sponsor</a>
@@ -57,24 +57,24 @@ roots.io</a>
 </div>
 <div id="nav-menu" class="hidden nav:hidden border-t border-gray-200/50">
 <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-3 flex flex-col gap-1">
-<a href="/" class="rounded-md px-3 py-2 text-sm {{if eq .Path "/"}}text-gray-900 font-medium bg-gray-50{{else}}text-gray-500 hover:text-gray-900 hover:bg-gray-50{{end}} transition-colors">Packages</a>
-<a href="/docs" class="rounded-md px-3 py-2 text-sm {{if eq .Path "/docs"}}text-gray-900 font-medium bg-gray-50{{else}}text-gray-500 hover:text-gray-900 hover:bg-gray-50{{end}} transition-colors">Docs</a>
+<a href="/" class="rounded-md px-3 py-2 text-sm {{if Path == "/"}}text-gray-900 font-medium bg-gray-50{{else}}text-gray-500 hover:text-gray-900 hover:bg-gray-50{{end}} transition-colors">Packages</a>
+<a href="/docs" class="rounded-md px-3 py-2 text-sm {{if Path == "/docs"}}text-gray-900 font-medium bg-gray-50{{else}}text-gray-500 hover:text-gray-900 hover:bg-gray-50{{end}} transition-colors">Docs</a>
 <a href="/docs#migrate" class="rounded-md px-3 py-2 text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors">Migrate from WPackagist</a>
-<a href="/status" class="rounded-md px-3 py-2 text-sm {{if eq .Path "/status"}}text-gray-900 font-medium bg-gray-50{{else}}text-gray-500 hover:text-gray-900 hover:bg-gray-50{{end}} transition-colors">Status</a>
+<a href="/status" class="rounded-md px-3 py-2 text-sm {{if Path == "/status"}}text-gray-900 font-medium bg-gray-50{{else}}text-gray-500 hover:text-gray-900 hover:bg-gray-50{{end}} transition-colors">Status</a>
 <a href="https://discourse.roots.io/" class="rounded-md px-3 py-2 text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors" rel="noopener">Community</a>
 </div>
 </div>
 </header>
-<main class="flex-1">{{template "content" .}}</main>
+<main class="flex-1">{{yield body()}}</main>
 <section class="border-t border-gray-200/50 py-14">
 <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 text-center">
 <p class="text-sm text-gray-500 max-w-lg mx-auto mb-8 leading-relaxed text-balance">WP Packages is community-funded open source. Support our work by <a href="https://github.com/sponsors/roots" class="font-medium text-brand-primary hover:underline" rel="noopener">sponsoring us on GitHub</a>.</p>
 <p class="text-xs font-medium uppercase tracking-widest text-gray-500 mb-6">Sponsors</p>
 <div class="flex flex-wrap items-center justify-center gap-6">
-<a href="https://www.carrot.com/" class="hover:opacity-80 transition-opacity" rel="sponsored"><img src="{{assetPath "/assets/images/carrot.svg"}}" alt="Carrot" class="h-20 w-auto rounded-lg"></a>
-<a href="https://wordpress.com/" class="hover:opacity-80 transition-opacity" rel="sponsored"><img src="{{assetPath "/assets/images/wordpress-com.svg"}}" alt="WordPress.com" class="h-20 w-auto rounded-lg"></a>
-<a href="https://www.itineris.co.uk/" class="hover:opacity-80 transition-opacity" rel="sponsored"><img src="{{assetPath "/assets/images/itineris.svg"}}" alt="Itineris" class="h-20 w-auto rounded-lg"></a>
-<a href="https://kinsta.com/" class="hover:opacity-80 transition-opacity" rel="sponsored"><img src="{{assetPath "/assets/images/kinsta.svg"}}" alt="Kinsta" class="h-20 w-auto rounded-lg"></a>
+<a href="https://www.carrot.com/" class="hover:opacity-80 transition-opacity" rel="sponsored"><img src="{{assetPath("/assets/images/carrot.svg")}}" alt="Carrot" class="h-20 w-auto rounded-lg"></a>
+<a href="https://wordpress.com/" class="hover:opacity-80 transition-opacity" rel="sponsored"><img src="{{assetPath("/assets/images/wordpress-com.svg")}}" alt="WordPress.com" class="h-20 w-auto rounded-lg"></a>
+<a href="https://www.itineris.co.uk/" class="hover:opacity-80 transition-opacity" rel="sponsored"><img src="{{assetPath("/assets/images/itineris.svg")}}" alt="Itineris" class="h-20 w-auto rounded-lg"></a>
+<a href="https://kinsta.com/" class="hover:opacity-80 transition-opacity" rel="sponsored"><img src="{{assetPath("/assets/images/kinsta.svg")}}" alt="Kinsta" class="h-20 w-auto rounded-lg"></a>
 </div>
 </div>
 </section>
@@ -116,6 +116,6 @@ roots.io</a>
 function openTagRequest(pluginName){const d=document.getElementById("tag-request-dialog");const msg=document.getElementById("tag-request-message");const link=document.getElementById("tag-request-link");msg.textContent=msg.dataset.template;link.href="https://wordpress.org/support/plugin/"+pluginName+"/";d.showModal()}
 document.getElementById("tag-request-dialog").addEventListener("click",e=>{const d=e.currentTarget;const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close()});
 </script>
-{{if isProduction}}<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "7c071b0b0f4744d6946688c90ecaab2f"}'></script>{{end}}
+{{if isProduction()}}<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "7c071b0b0f4744d6946688c90ecaab2f"}'></script>{{end}}
 </body>
-</html>{{end}}
+</html>

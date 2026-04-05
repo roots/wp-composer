@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/CloudyKit/jet/v6"
 	sentryhttp "github.com/getsentry/sentry-go/http"
 	"github.com/roots/wp-packages/internal/app"
 )
@@ -146,7 +147,7 @@ func NewRouter(a *app.App) http.Handler {
 // handler touched the response (checked via a context flag set by routeMarker),
 // replace the default body with the custom template. 405s and handler-generated
 // 404s pass through untouched.
-func appHandler(mux *http.ServeMux, tmpl *templateSet, a *app.App, sitemapPackages http.HandlerFunc) http.Handler {
+func appHandler(mux *http.ServeMux, tmpl *jet.Set, a *app.App, sitemapPackages http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Sitemap-packages prefix can't be expressed as a ServeMux pattern
 		// (wildcards must be full path segments).
@@ -163,7 +164,7 @@ func appHandler(mux *http.ServeMux, tmpl *templateSet, a *app.App, sitemapPackag
 		// so rec.dispatched is false only when the mux itself returned 404/405/etc.
 		if rec.code == http.StatusNotFound && !rec.dispatched {
 			w.WriteHeader(http.StatusNotFound)
-			render(w, r, tmpl.notFound, "layout", map[string]any{"Gone": false, "CDNURL": a.Config.R2.CDNPublicURL})
+			render(w, r, tmpl, "404.html", map[string]any{"Gone": false, "CDNURL": a.Config.R2.CDNPublicURL})
 		}
 	})
 }
