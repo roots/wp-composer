@@ -165,6 +165,26 @@ func formatNumberComma(n int64) string {
 	return string(result)
 }
 
+// formatAxisLabel formats a number for chart Y-axis labels, keeping enough
+// precision to avoid collisions (e.g. 1500 → "1.5K" instead of "2K").
+func formatAxisLabel(n int) string {
+	if n >= 1_000_000 {
+		v := float64(n) / 1_000_000
+		if v == float64(int(v)) {
+			return fmt.Sprintf("%dM", int(v))
+		}
+		return fmt.Sprintf("%.1fM", v)
+	}
+	if n >= 1_000 {
+		v := float64(n) / 1_000
+		if v == float64(int(v)) {
+			return fmt.Sprintf("%dK", int(v))
+		}
+		return fmt.Sprintf("%.1fK", v)
+	}
+	return fmt.Sprintf("%d", n)
+}
+
 type publicFilters struct {
 	Search string
 	Type   string
@@ -444,7 +464,7 @@ func installChart(data []telemetry.MonthlyInstall) template.HTML {
 			padLeft, y, totalW-padRight, y)
 		// Label
 		fmt.Fprintf(&b, `<text class="label" x="%.0f" y="%.1f" text-anchor="end" fill="#9ca3af" style="font-size:10px;font-family:sans-serif">%s</text>`,
-			padLeft-6, y+3.5, formatNumber(int64(tick)))
+			padLeft-6, y+3.5, formatAxisLabel(tick))
 	}
 
 	for i, m := range data {
