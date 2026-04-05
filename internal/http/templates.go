@@ -410,8 +410,11 @@ func installChart(data []telemetry.MonthlyInstall) template.HTML {
 		return ""
 	}
 
-	// Compute nice Y-axis tick values
+	// Compute nice Y-axis tick values and scale to the highest tick
 	ticks := yAxisTicks(max)
+	if len(ticks) > 0 {
+		max = ticks[len(ticks)-1]
+	}
 
 	n := len(data)
 	padLeft := 44.0
@@ -506,8 +509,11 @@ func yAxisTicks(max int) []int {
 	}
 
 	var ticks []int
-	for v := step; v <= max; v += step {
+	for v := step; v < max; v += step {
 		ticks = append(ticks, v)
 	}
+	// Always include a tick at or above max so bars don't exceed the top grid line
+	topTick := ((max + step - 1) / step) * step
+	ticks = append(ticks, topTick)
 	return ticks
 }
