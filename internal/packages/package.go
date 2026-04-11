@@ -47,6 +47,7 @@ type Package struct {
 	Rating                  *float64
 	NumRatings              int
 	IsActive                bool
+	PermanentlyClosed       bool
 	LastCommitted           *time.Time
 	LastSyncedAt            *time.Time
 	LastSyncRunID           *int64
@@ -162,7 +163,8 @@ func UpsertShellPackage(ctx context.Context, db *sql.DB, pkgType, name string, l
 				THEN excluded.last_committed
 				ELSE packages.last_committed
 			END,
-			updated_at = excluded.updated_at`,
+			updated_at = excluded.updated_at
+		WHERE packages.permanently_closed = 0`,
 		pkgType, name, timeStr(lastCommitted), now, now,
 	)
 	if err != nil {
@@ -198,7 +200,8 @@ func BatchUpsertShellPackages(ctx context.Context, db *sql.DB, entries []ShellEn
 				THEN excluded.last_committed
 				ELSE packages.last_committed
 			END,
-			updated_at = excluded.updated_at`)
+			updated_at = excluded.updated_at
+		WHERE packages.permanently_closed = 0`)
 	if err != nil {
 		return fmt.Errorf("preparing statement: %w", err)
 	}
@@ -290,7 +293,7 @@ type UpdateQueryOpts struct {
 
 // GetPackagesNeedingUpdate returns packages that should be updated.
 func GetPackagesNeedingUpdate(ctx context.Context, db *sql.DB, opts UpdateQueryOpts) ([]*Package, error) {
-	query := `SELECT id, type, name, last_committed, last_synced_at, is_active, versions_json, content_hash, trunk_revision FROM packages WHERE 1=1`
+	query := `SELECT id, type, name, last_committed, last_synced_at, is_active, versions_json, content_hash, trunk_revision FROM packages WHERE permanently_closed = 0`
 	var args []any
 
 	if opts.Name != "" {
@@ -425,6 +428,22 @@ func DeactivatePackage(ctx context.Context, db *sql.DB, id int64) error {
 	return nil
 }
 
+// MarkPermanentlyClosed tombstones a package so it's excluded from discovery
+// and polling entirely. The row is kept (with is_active = 0 and
+// permanently_closed = 1) so SVN discovery dedup still works and audit
+// history via status_check_changes is preserved.
+func MarkPermanentlyClosed(ctx context.Context, db *sql.DB, id int64) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := db.ExecContext(ctx,
+		`UPDATE packages SET permanently_closed = 1, is_active = 0, updated_at = ?, content_changed_at = ? WHERE id = ?`,
+		now, now, id,
+	)
+	if err != nil {
+		return fmt.Errorf("marking package %d permanently closed: %w", id, err)
+	}
+	return nil
+}
+
 // ReactivatePackage sets is_active = 1 for a package.
 func ReactivatePackage(ctx context.Context, db *sql.DB, id int64) error {
 	now := time.Now().UTC().Format(time.RFC3339)
@@ -440,7 +459,7 @@ func ReactivatePackage(ctx context.Context, db *sql.DB, id int64) error {
 
 // GetAllPackages returns all packages, optionally filtered by type.
 func GetAllPackages(ctx context.Context, db *sql.DB, pkgType string) ([]*Package, error) {
-	query := `SELECT id, type, name, is_active FROM packages WHERE 1=1`
+	query := `SELECT id, type, name, is_active FROM packages WHERE permanently_closed = 0`
 	var args []any
 
 	if pkgType != "" && pkgType != "all" {

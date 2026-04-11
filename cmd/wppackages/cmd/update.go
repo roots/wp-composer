@@ -71,7 +71,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 
 	const writeBatchSize = 100
 
-	var succeeded, failed, deactivated, changed, staleRetried, staleExpired atomic.Int64
+	var succeeded, failed, deactivated, tombstoned, changed, staleRetried, staleExpired atomic.Int64
 	g, gCtx := errgroup.WithContext(ctx)
 	g.SetLimit(concurrency)
 
@@ -119,7 +119,14 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 			}
 
 			if fetchErr != nil {
-				if errors.Is(fetchErr, wporg.ErrNotFound) {
+				if errors.Is(fetchErr, wporg.ErrClosedPermanent) {
+					if err := packages.MarkPermanentlyClosed(gCtx, application.DB, p.ID); err != nil {
+						application.Logger.Warn("failed to tombstone package", "type", p.Type, "name", p.Name, "error", err)
+						failed.Add(1)
+					} else {
+						tombstoned.Add(1)
+					}
+				} else if errors.Is(fetchErr, wporg.ErrNotFound) {
 					if err := packages.DeactivatePackage(gCtx, application.DB, p.ID); err != nil {
 						application.Logger.Warn("failed to deactivate 404 package", "type", p.Type, "name", p.Name, "error", err)
 					}
@@ -128,7 +135,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 					application.Logger.Warn("failed to fetch", "type", p.Type, "name", p.Name, "error", fetchErr)
 					failed.Add(1)
 				}
-				total := succeeded.Load() + failed.Load() + deactivated.Load()
+				total := succeeded.Load() + failed.Load() + deactivated.Load() + tombstoned.Load()
 				if total%500 == 0 {
 					application.Logger.Info("update progress",
 						"completed", total,
@@ -136,6 +143,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 						"succeeded", succeeded.Load(),
 						"failed", failed.Load(),
 						"deactivated", deactivated.Load(),
+						"tombstoned", tombstoned.Load(),
 					)
 				}
 				return nil
@@ -191,7 +199,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 			succeeded.Add(1)
 			writeCh <- pkg
 
-			total := succeeded.Load() + failed.Load() + deactivated.Load()
+			total := succeeded.Load() + failed.Load() + deactivated.Load() + tombstoned.Load()
 			if total%500 == 0 {
 				application.Logger.Info("update progress",
 					"completed", total,
@@ -199,6 +207,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 					"succeeded", succeeded.Load(),
 					"failed", failed.Load(),
 					"deactivated", deactivated.Load(),
+					"tombstoned", tombstoned.Load(),
 				)
 			}
 			application.Logger.Debug("updated package", "type", p.Type, "name", p.Name, "versions", validVersions)
@@ -218,6 +227,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		"changed":       changed.Load(),
 		"failed":        failed.Load(),
 		"deactivated":   deactivated.Load(),
+		"tombstoned":    tombstoned.Load(),
 		"stale_retried": staleRetried.Load(),
 		"stale_expired": staleExpired.Load(),
 	}
@@ -240,6 +250,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		"changed", changed.Load(),
 		"failed", failed.Load(),
 		"deactivated", deactivated.Load(),
+		"tombstoned", tombstoned.Load(),
 		"stale_retried", staleRetried.Load(),
 		"stale_expired", staleExpired.Load(),
 	)

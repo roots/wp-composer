@@ -36,6 +36,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			rating REAL,
 			num_ratings INTEGER NOT NULL DEFAULT 0,
 			is_active INTEGER NOT NULL DEFAULT 1,
+			permanently_closed INTEGER NOT NULL DEFAULT 0,
 			last_committed TEXT,
 			last_synced_at TEXT,
 			last_sync_run_id INTEGER,
