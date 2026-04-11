@@ -58,7 +58,7 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 	// Upload p2/ files in parallel, packages.json last.
 	var uploaded, skipped atomic.Int64
 	g, gCtx := errgroup.WithContext(ctx)
-	g.SetLimit(50)
+	g.SetLimit(cfg.Concurrency)
 
 	for _, relPath := range filePaths {
 		relPath := relPath
@@ -103,35 +103,43 @@ func SyncToR2(ctx context.Context, cfg config.R2Config, buildDir, buildID, previ
 	return nil
 }
 
-// putObjectWithRetry uploads a single file to R2 with exponential backoff retry.
-func putObjectWithRetry(ctx context.Context, client *s3.Client, bucket, key string, data []byte, logger *slog.Logger) error {
-	contentType := "application/json"
-	cacheControl := CacheControlForPath(key)
-
+// withRetry executes fn up to r2MaxRetries times with exponential backoff.
+// The label is used in log messages to identify the operation.
+func withRetry(ctx context.Context, logger *slog.Logger, label string, fn func() error) error {
 	var lastErr error
 	for attempt := range r2MaxRetries {
 		if attempt > 0 {
 			delay := time.Duration(float64(r2RetryBaseMs)*math.Pow(2, float64(attempt-1))) * time.Millisecond
-			logger.Warn("retrying R2 upload", "key", key, "attempt", attempt+1, "delay", delay)
+			logger.Warn("retrying R2 operation", "op", label, "attempt", attempt+1, "delay", delay)
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
 			case <-time.After(delay):
 			}
 		}
+		lastErr = fn()
+		if lastErr == nil {
+			return nil
+		}
+	}
+	return fmt.Errorf("%s after %d attempts: %w", label, r2MaxRetries, lastErr)
+}
 
-		_, lastErr = client.PutObject(ctx, &s3.PutObjectInput{
+// putObjectWithRetry uploads a single file to R2 with exponential backoff retry.
+func putObjectWithRetry(ctx context.Context, client *s3.Client, bucket, key string, data []byte, logger *slog.Logger) error {
+	contentType := "application/json"
+	cacheControl := CacheControlForPath(key)
+
+	return withRetry(ctx, logger, "uploading "+key, func() error {
+		_, err := client.PutObject(ctx, &s3.PutObjectInput{
 			Bucket:       aws.String(bucket),
 			Key:          aws.String(key),
 			Body:         bytes.NewReader(data),
 			ContentType:  aws.String(contentType),
 			CacheControl: aws.String(cacheControl),
 		})
-		if lastErr == nil {
-			return nil
-		}
-	}
-	return fmt.Errorf("uploading %s after %d attempts: %w", key, r2MaxRetries, lastErr)
+		return err
+	})
 }
 
 // fileUnchanged returns true if relPath exists in both directories with identical content.
@@ -160,6 +168,33 @@ func CacheControlForPath(path string) string {
 	}
 	// All p2/ files are mutable
 	return "public, max-age=300"
+}
+
+// deleteObjectWithRetry deletes a single object from R2 with exponential backoff retry.
+func deleteObjectWithRetry(ctx context.Context, client *s3.Client, bucket, key string, logger *slog.Logger) error {
+	return withRetry(ctx, logger, "deleting "+key, func() error {
+		_, err := client.DeleteObject(ctx, &s3.DeleteObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key),
+		})
+		return err
+	})
+}
+
+// headObject returns the ETag of an object, or "" if the object doesn't exist.
+func headObject(ctx context.Context, client *s3.Client, bucket, key string) (string, error) {
+	resp, err := client.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		// NoSuchKey or similar — object doesn't exist
+		return "", nil
+	}
+	if resp.ETag != nil {
+		return *resp.ETag, nil
+	}
+	return "", nil
 }
 
 func newS3Client(cfg config.R2Config) *s3.Client {

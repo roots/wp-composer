@@ -66,6 +66,7 @@ func TestR2Sync(t *testing.T) {
 		SecretAccessKey: "test",
 		Bucket:          "test-bucket",
 		Endpoint:        ts.URL,
+		Concurrency:     1,
 	}
 
 	// 4. First sync — all packages uploaded

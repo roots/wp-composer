@@ -10,6 +10,56 @@ import (
 	"github.com/roots/wp-packages/internal/version"
 )
 
+// PackageFile represents a single R2-uploadable file for a package.
+type PackageFile struct {
+	Key  string // R2 object key, e.g. "p2/wp-plugin/akismet.json"
+	Data []byte
+}
+
+// PackageFiles returns all Composer p2 files that a package produces.
+// Plugins produce up to 2 files (tagged + dev), themes produce 1 (tagged only).
+// Returns nil if the package has no serializable versions.
+func PackageFiles(pkgType, name, versionsJSON string, meta PackageMeta) ([]PackageFile, error) {
+	composerName := ComposerName(pkgType, name)
+	var files []PackageFile
+
+	// Tagged versions (always attempted)
+	tagged, err := SerializePackage(pkgType, name, versionsJSON, meta)
+	if err != nil {
+		return nil, err
+	}
+	if tagged != nil {
+		files = append(files, PackageFile{
+			Key:  "p2/" + composerName + ".json",
+			Data: tagged,
+		})
+	}
+
+	// Dev versions (plugins only — SerializePackage returns nil for themes)
+	dev, err := SerializePackage(pkgType, name+"~dev", versionsJSON, meta)
+	if err != nil {
+		return nil, err
+	}
+	if dev != nil {
+		files = append(files, PackageFile{
+			Key:  "p2/" + composerName + "~dev.json",
+			Data: dev,
+		})
+	}
+
+	return files, nil
+}
+
+// ObjectKeys returns all possible storage keys for a package,
+// regardless of whether the files currently exist. Used for deletion.
+func ObjectKeys(pkgType, name string) []string {
+	composerName := ComposerName(pkgType, name)
+	return []string{
+		"p2/" + composerName + ".json",
+		"p2/" + composerName + "~dev.json",
+	}
+}
+
 // HashVersions computes a content hash over the normalized versions_json and
 // trunk_revision. trunk_revision is included because it affects the serialized
 // dev-trunk output (source.reference includes trunk@<rev>) even though it's
