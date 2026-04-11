@@ -43,7 +43,7 @@ func runCheckStatus(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("recording status check: %w", err)
 	}
 
-	var checked, deactivated, reactivated, failed atomic.Int64
+	var checked, deactivated, tombstoned, reactivated, failed atomic.Int64
 	var runErr error
 	defer func() {
 		_ = packages.FinishStatusCheck(ctx, application.DB, runID, started,
@@ -80,7 +80,16 @@ func runCheckStatus(cmd *cobra.Command, args []string) error {
 			}
 
 			if fetchErr != nil {
-				if errors.Is(fetchErr, wporg.ErrNotFound) {
+				if errors.Is(fetchErr, wporg.ErrClosedPermanent) {
+					if err := packages.MarkPermanentlyClosed(gCtx, application.DB, p.ID); err != nil {
+						application.Logger.Warn("failed to tombstone", "type", p.Type, "name", p.Name, "error", err)
+						failed.Add(1)
+					} else {
+						tombstoned.Add(1)
+						application.Logger.Info("tombstoned permanently-closed package", "type", p.Type, "name", p.Name)
+						packages.RecordStatusCheckChange(gCtx, application.DB, runID, p.Type, p.Name, "tombstoned")
+					}
+				} else if errors.Is(fetchErr, wporg.ErrNotFound) {
 					if p.IsActive {
 						if err := packages.DeactivatePackage(gCtx, application.DB, p.ID); err != nil {
 							application.Logger.Warn("failed to deactivate", "type", p.Type, "name", p.Name, "error", err)
@@ -113,6 +122,7 @@ func runCheckStatus(cmd *cobra.Command, args []string) error {
 					"checked", total,
 					"total", len(pkgs),
 					"deactivated", deactivated.Load(),
+					"tombstoned", tombstoned.Load(),
 					"reactivated", reactivated.Load(),
 					"failed", failed.Load(),
 				)
@@ -126,6 +136,7 @@ func runCheckStatus(cmd *cobra.Command, args []string) error {
 	application.Logger.Info("check-status complete",
 		"checked", checked.Load(),
 		"deactivated", deactivated.Load(),
+		"tombstoned", tombstoned.Load(),
 		"reactivated", reactivated.Load(),
 		"failed", failed.Load(),
 	)

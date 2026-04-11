@@ -2,6 +2,7 @@ package wporg
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -62,6 +63,43 @@ func TestFetchJSON_APIError(t *testing.T) {
 	_, err := c.fetchJSON(context.Background(), srv.URL)
 	if err == nil {
 		t.Fatal("expected error for API error response")
+	}
+}
+
+// wp.org serves closed-plugin JSON with an HTTP 404 status code, so the
+// fixture handlers below mirror that to catch the status-code short-circuit
+// regression.
+
+func TestFetchJSON_ClosedPermanent(t *testing.T) {
+	body := `{"error":"closed","name":"YALW","slug":"yalw","description":"This plugin has been closed as of April 9, 2026 and is not available for download. This closure is permanent. Reason: Author Request.","closed":true,"closed_date":"2026-04-09","reason":"author-request","reason_text":"Author Request"}`
+	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = fmt.Fprint(w, body)
+	}))
+	defer srv.Close()
+
+	_, err := c.fetchJSON(context.Background(), srv.URL)
+	if !errors.Is(err, ErrClosedPermanent) {
+		t.Fatalf("got err=%v, want ErrClosedPermanent", err)
+	}
+}
+
+func TestFetchJSON_ClosedTemporary(t *testing.T) {
+	body := `{"error":"closed","name":"Temp","slug":"temp","description":"This plugin has been closed as of April 9, 2026 and is not available for download. This closure is temporary, pending a full review.","closed":true,"closed_date":"2026-04-09","reason":false,"reason_text":false}`
+	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = fmt.Fprint(w, body)
+	}))
+	defer srv.Close()
+
+	_, err := c.fetchJSON(context.Background(), srv.URL)
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("got err=%v, want ErrNotFound", err)
+	}
+	if errors.Is(err, ErrClosedPermanent) {
+		t.Fatalf("temporary closure should not return ErrClosedPermanent")
 	}
 }
 
