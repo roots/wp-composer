@@ -126,7 +126,18 @@ func NewRouter(a *app.App) http.Handler {
 	protectedMux.HandleFunc("GET /logs/stream", handleAdminLogStream(a))
 	adminMux.Handle("/", Chain(protectedMux, SessionAuth(a.DB), RequireAdmin))
 
-	route("/admin/", http.StripPrefix("/admin", adminMux))
+	// Register both /admin and /admin/ so Go's ServeMux doesn't auto-redirect
+	// the bare form to the trailing-slash form — Caddy strips trailing slashes
+	// and would bounce it right back, creating a loop.
+	adminHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.URL.Path = strings.TrimPrefix(r.URL.Path, "/admin")
+		if r.URL.Path == "" {
+			r.URL.Path = "/"
+		}
+		adminMux.ServeHTTP(w, r)
+	})
+	route("/admin", adminHandler)
+	route("/admin/", adminHandler)
 
 	// Build handler chain
 	handler := appHandler(mux, tmpl, a, sitemapPackagesHandler)
