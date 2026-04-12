@@ -20,17 +20,10 @@
 function copyCmd(el,txt){navigator.clipboard.writeText(txt);const svg=el.querySelector('button svg')||el.querySelector('svg:last-of-type')||el.querySelector('svg');if(!svg||svg.dataset.copied)return;svg.dataset.copied='1';const orig=svg.innerHTML;const oc=svg.style.color;svg.style.transition='opacity 150ms,color 200ms';svg.style.opacity='0';setTimeout(()=>{svg.innerHTML='<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>';svg.style.color='#16a34a';svg.style.opacity='1'},150);setTimeout(()=>{svg.style.opacity='0';setTimeout(()=>{svg.innerHTML=orig;svg.style.color=oc;svg.style.opacity='1';delete svg.dataset.copied},150)},1500)}
 document.addEventListener('keydown',e=>{if(e.key==='/'&&!e.ctrlKey&&!e.metaKey&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();const s=document.querySelector('input[name="search"]');if(s)s.focus()}});
 document.addEventListener('htmx:afterRequest',e=>{const xhr=e.detail.xhr;if(!xhr)return;const u=new URL(xhr.responseURL);if(u.pathname==='/packages-partial'){const p=u.searchParams;p.delete('');const q=p.toString();history.pushState(null,'',q?'/?'+q:'/')}});
-document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('rename-banner');const c=document.getElementById('rename-banner-close');if(!b||!c)return;const k='wp-packages-rename-banner-dismissed';try{if(localStorage.getItem(k)==='1'){b.remove();return}}catch{}c.addEventListener('click',()=>{try{localStorage.setItem(k,'1')}catch{}b.remove()})});
 document.addEventListener('DOMContentLoaded',()=>{const t=document.getElementById('nav-menu-toggle');const m=document.getElementById('nav-menu');if(!t||!m)return;function close(){m.classList.add('hidden');t.setAttribute('aria-expanded','false');t.querySelector('svg').innerHTML='<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>';}t.addEventListener('click',()=>{const open=m.classList.toggle('hidden');t.setAttribute('aria-expanded',!open);t.querySelector('svg').innerHTML=open?'<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>':'<path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>'});document.addEventListener('click',e=>{if(!m.classList.contains('hidden')&&!m.contains(e.target)&&!t.contains(e.target))close()})});
 </script>
 </head>
 <body class="min-h-screen flex flex-col bg-white text-gray-900 font-sans">
-<div id="rename-banner" class="border-b border-amber-200 bg-amber-50">
-<div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-2.5 text-sm text-amber-900 flex items-center justify-between gap-3">
-<p class="leading-relaxed">WP Composer is now WP Packages! <a href="https://roots.io/wp-composer-is-now-wp-packages/" class="font-medium underline underline-offset-2 hover:no-underline" rel="noopener">Read the announcement</a>.</p>
-<button id="rename-banner-close" type="button" class="shrink-0 rounded p-1 text-amber-800 hover:bg-amber-100" aria-label="Dismiss rename announcement">✕</button>
-</div>
-</div>
 <header class="sticky top-0 z-50 border-b border-gray-200/50 bg-white/80 backdrop-blur-xl">
 <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
 <div class="flex h-14 items-center justify-between">
