@@ -18,6 +18,9 @@ import (
 	"github.com/roots/wp-packages/internal/config"
 )
 
+// UserAgent identifies outbound requests to WordPress.org.
+const UserAgent = "wp-packages/1.0 (+https://wp-packages.org)"
+
 // ErrNotFound is returned when a package does not exist on WordPress.org.
 var ErrNotFound = errors.New("package not found")
 
@@ -163,6 +166,7 @@ func (c *Client) fetchJSON(ctx context.Context, rawURL string) (map[string]any, 
 		if err != nil {
 			return nil, fmt.Errorf("creating request: %w", err)
 		}
+		req.Header.Set("User-Agent", UserAgent)
 
 		resp, err := c.http.Do(req)
 		if err != nil {

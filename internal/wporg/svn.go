@@ -32,6 +32,7 @@ func (c *Client) ParseSVNListing(ctx context.Context, baseURL string, fn func(SV
 	if err != nil {
 		return nil, fmt.Errorf("creating SVN request: %w", err)
 	}
+	req.Header.Set("User-Agent", UserAgent)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -153,6 +154,7 @@ func (c *Client) FetchSVNChangedSlugs(ctx context.Context, baseURL string, fromR
 		return nil, fmt.Errorf("creating SVN log request: %w", err)
 	}
 	req.Header.Set("Content-Type", "text/xml")
+	req.Header.Set("User-Agent", UserAgent)
 
 	// Use a generous timeout — catch-up runs after downtime can span many
 	// revisions and produce large responses.

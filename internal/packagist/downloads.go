@@ -52,7 +52,13 @@ func (c *DownloadsCache) fetch() {
 }
 
 func fetchDownloads(pkg string) (int64, error) {
-	resp, err := http.Get(fmt.Sprintf("https://packagist.org/packages/%s/downloads.json", pkg))
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://packagist.org/packages/%s/downloads.json", pkg), nil)
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("User-Agent", "wp-packages/1.0 (+https://wp-packages.org)")
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return 0, err
 	}
