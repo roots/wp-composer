@@ -109,6 +109,7 @@ func NewRouter(a *app.App) http.Handler {
 	apiLimiter := newAPIRateLimiter()
 	route("GET /api/stats", apiLimiter.RateLimit(http.HandlerFunc(handleAPIStats(a))))
 	route("GET /api/stats/packages/{type}/{name}", apiLimiter.RateLimit(http.HandlerFunc(handleAPIMonthlyInstalls(a))))
+	route("GET /api/packages/{type}/closed", apiLimiter.RateLimit(http.HandlerFunc(handleAPIClosedPackages(a))))
 
 	// Serve Composer repository metadata from DB
 	routeFunc("GET /packages.json", handlePackagesJSON(a))
