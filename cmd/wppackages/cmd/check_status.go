@@ -10,6 +10,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/roots/wp-packages/internal/packages"
+	"github.com/roots/wp-packages/internal/reports"
 	"github.com/roots/wp-packages/internal/wporg"
 )
 
@@ -142,6 +143,13 @@ func runCheckStatus(cmd *cobra.Command, args []string) error {
 		"reactivated", reactivated.Load(),
 		"failed", failed.Load(),
 	)
+
+	if gistURL, err := reports.PostClosureReport(ctx, application.DB, runID, started, application.Config.GitHubToken); err != nil {
+		application.Logger.Warn("failed to post closure gist", "error", err)
+	} else if gistURL != "" {
+		application.Logger.Info("posted closure gist", "url", gistURL)
+	}
+
 	return runErr
 }
 
