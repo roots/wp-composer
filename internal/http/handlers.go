@@ -987,7 +987,7 @@ func handleStatus(a *app.App, tmpl *templateSet) http.HandlerFunc {
 			statusBuilds = append(statusBuilds, sb)
 		}
 
-		checks, err := packages.GetStatusChecks(ctx, a.DB, 50)
+		checks, err := packages.GetStatusChecks(ctx, a.DB, packages.StatusCheckDisplayLimit)
 		if err != nil {
 			a.Logger.Error("querying status checks for status page", "error", err)
 			captureError(r, err)

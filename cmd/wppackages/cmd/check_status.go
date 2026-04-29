@@ -30,10 +30,12 @@ func runCheckStatus(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	started := time.Now().UTC()
 
-	// Cleanup: delete status_check_changes older than 24 hours.
-	cutoff := time.Now().Add(-24 * time.Hour).UTC().Format(time.RFC3339)
+	// Cleanup: keep change rows only for the most recent runs that the status
+	// page displays; drop the rest.
 	if _, err := application.DB.ExecContext(ctx,
-		`DELETE FROM status_check_changes WHERE created_at < ?`, cutoff); err != nil {
+		`DELETE FROM status_check_changes WHERE status_check_id NOT IN (
+			SELECT id FROM status_checks ORDER BY started_at DESC LIMIT ?
+		)`, packages.StatusCheckDisplayLimit); err != nil {
 		application.Logger.Warn("failed to cleanup old status check changes", "error", err)
 	}
 

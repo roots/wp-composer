@@ -558,6 +558,10 @@ func GetStatusCheckChanges(ctx context.Context, db *sql.DB, statusCheckID int64)
 	return changes, rows.Err()
 }
 
+// StatusCheckDisplayLimit is the number of recent status check runs shown on
+// the status page, and the retention window for per-package change rows.
+const StatusCheckDisplayLimit = 50
+
 // StatusCheck represents a row from the status_checks table.
 type StatusCheck struct {
 	ID              int64
