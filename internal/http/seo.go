@@ -162,7 +162,7 @@ func handleRobotsTxt(a *app.App) http.HandlerFunc {
 			sitemapURL = a.Config.AppURL + sitemapURL
 		}
 
-		_, _ = fmt.Fprintf(w, "User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /*?search=\nDisallow: /*?page=\nDisallow: /packages-partial\n\nSitemap: %s\n", sitemapURL)
+		_, _ = fmt.Fprintf(w, "User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /*?search=\nDisallow: /*?page=\nDisallow: /packages-partial\n\nSitemap: %s\n", sitemapURL)
 	}
 }
 

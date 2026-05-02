@@ -130,6 +130,7 @@ func NewRouter(a *app.App) http.Handler {
 	// the bare form to the trailing-slash form — Caddy strips trailing slashes
 	// and would bounce it right back, creating a loop.
 	adminHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 		r.URL.Path = strings.TrimPrefix(r.URL.Path, "/admin")
 		if r.URL.Path == "" {
 			r.URL.Path = "/"
