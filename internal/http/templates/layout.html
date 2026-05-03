@@ -12,8 +12,8 @@
 <link rel="alternate" type="application/atom+xml" title="WP Packages — Recently Updated Packages" href="/feed.xml">
 {{template "og_meta" .}}
 {{template "json_ld" .}}
-<link rel="stylesheet" href="{{assetPath "/assets/styles/app.css"}}">
-<link rel="stylesheet" href="{{assetPath "/assets/styles/fonts.css"}}">
+<style>{{inlineCSS "/assets/styles/fonts.css"}}</style>
+<style>{{inlineCSS "/assets/styles/app.css"}}</style>
 {{if .CDNURL}}<link rel="preconnect" href="{{.CDNURL}}" crossorigin>{{end}}
 <script defer src="{{assetPath "/assets/scripts/htmx.min.js"}}"></script>
 <script defer src="{{assetPath "/assets/scripts/app.js"}}"></script>

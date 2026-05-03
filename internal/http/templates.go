@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -56,8 +58,34 @@ func assetPath(path string) string {
 	return path[:len(path)-len(ext)] + "." + v + ext
 }
 
+var cssCommentRe = regexp.MustCompile(`/\*[\s\S]*?\*/`)
+
+var inlinedCSS = func() map[string]template.CSS {
+	out := make(map[string]template.CSS)
+	_ = fs.WalkDir(staticFS, "static", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".css") {
+			return nil
+		}
+		data, err := staticFS.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+		data = cssCommentRe.ReplaceAll(data, nil)
+		data = bytes.TrimSpace(data)
+		key := "/" + strings.TrimPrefix(path, "static/")
+		out[key] = template.CSS(data)
+		return nil
+	})
+	return out
+}()
+
+func inlineCSS(path string) template.CSS {
+	return inlinedCSS[path]
+}
+
 var funcMap = template.FuncMap{
 	"assetPath":         assetPath,
+	"inlineCSS":         inlineCSS,
 	"formatNumber":      formatNumber,
 	"formatNumberComma": formatNumberComma,
 	"sub":               func(a, b int) int { return a - b },
