@@ -27,4 +27,38 @@
     background-position: right 0.5rem center;
     background-repeat: no-repeat;
   }
+
+  .compare-table td { vertical-align: top; }
+
+  @media (max-width: 767px) {
+    .compare-table thead { display: none; }
+    .compare-table, .compare-table tbody, .compare-table tr, .compare-table td { display: block; width: 100%; }
+    .compare-table tr { padding: 1rem; border-top: 1px solid rgb(229 231 235 / 0.6); }
+    .compare-table tbody tr:first-child { border-top: 0; }
+    .compare-table td { padding: 0; }
+    .compare-table td:first-child {
+      font-weight: 600;
+      color: rgb(17 24 39);
+      font-size: 0.95rem;
+      margin-bottom: 0.75rem;
+    }
+    .compare-table td:nth-child(2)::before,
+    .compare-table td:nth-child(3)::before {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+    }
+    .compare-table td:nth-child(2)::before {
+      content: "WP Packages";
+      color: var(--color-brand-primary);
+    }
+    .compare-table td:nth-child(3) { margin-top: 0.75rem; }
+    .compare-table td:nth-child(3)::before {
+      content: "WPackagist";
+      color: rgb(107 114 128);
+    }
+  }
 }

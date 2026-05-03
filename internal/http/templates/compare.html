@@ -34,7 +34,7 @@
 <h2 class="text-2xl font-bold text-gray-900 mb-6">How they compare</h2>
 
 <div class="rounded-xl border border-gray-200/60 overflow-hidden mb-12">
-<table class="w-full text-sm">
+<table class="compare-table w-full text-sm">
 <thead class="bg-gray-50/50">
 <tr>
 <th class="text-left px-4 py-3 font-medium text-gray-500 w-1/3"></th>
@@ -50,8 +50,8 @@
 </tr>
 <tr class="border-t border-gray-200/40">
 <td class="px-4 py-3 font-medium text-gray-700">Open source</td>
-<td class="px-4 py-3 text-gray-600">Fully open source &mdash; <a href="https://github.com/roots/wp-packages" class="text-brand-primary hover:underline">contributions welcome</a></td>
-<td class="px-4 py-3 text-gray-600">Partially open source &mdash; incomplete source (<a href="https://github.com/wpengine/wpackagist/issues/557" class="text-brand-primary hover:underline">#557</a>), and currently doesn't reflect the live site (<a href="https://github.com/wpengine/wpackagist/issues/556" class="text-brand-primary hover:underline">#556</a>)</td>
+<td class="px-4 py-3 text-gray-600">Fully open source &mdash; application, infrastructure, deployment, and operational tooling all live in the public repo. Every commit is what runs in production. <a href="https://github.com/roots/wp-packages" class="text-brand-primary hover:underline">Contributions welcome</a></td>
+<td class="px-4 py-3 text-gray-600">Application source and Docker build are public, but production infrastructure (cloud provisioning, environment configuration, CI/CD) is not &mdash; the running service can't be reproduced from the public repo. The repo has also historically diverged from what's actually deployed</td>
 </tr>
 <tr class="border-t border-gray-200/40">
 <td class="px-4 py-3 font-medium text-gray-700">Funding</td>
@@ -84,6 +84,11 @@
 <td class="px-4 py-3 text-gray-600">Mutable trunk zip with cache-busting timestamp &mdash; <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">composer.lock</code> is not reproducible &mdash; <strong>this can cause unexpected plugin updates</strong></td>
 </tr>
 <tr class="border-t border-gray-200/40">
+<td class="px-4 py-3 font-medium text-gray-700">Closed plugins &amp; themes</td>
+<td class="px-4 py-3 text-gray-600">Removed in lockstep with WordPress.org &mdash; matches wp.org's own behavior, where closed plugins are no longer downloadable. Closures are tracked on the <a href="/status" class="text-brand-primary hover:underline">status page</a> and exposed via the <a href="/docs#api" class="text-brand-primary hover:underline">closures API</a></td>
+<td class="px-4 py-3 text-gray-600">Continues serving closed plugins indefinitely with no notice &mdash; <strong>users can unknowingly install plugins closed years ago for security or abandonment</strong></td>
+</tr>
+<tr class="border-t border-gray-200/40">
 <td class="px-4 py-3 font-medium text-gray-700">Install statistics</td>
 <td class="px-4 py-3 text-gray-600">Per-package install stats &mdash; transparency for the community and package authors to see how many times their packages are installed via Composer</td>
 <td class="px-4 py-3 text-gray-600">No install statistics</td>
@@ -96,6 +101,14 @@
 </tbody>
 </table>
 </div>
+
+<h2 class="text-2xl font-bold text-gray-900 mb-4">Closed plugins</h2>
+
+<p class="text-gray-600 mb-4 leading-relaxed">When the WordPress.org plugin directory closes a plugin &mdash; typically for security vulnerabilities, author abandonment, or guideline violations &mdash; the plugin is no longer downloadable from wp.org. WP Packages mirrors this behavior: closed plugins are removed from the repository, so Composer cannot install or upgrade to a closed version.</p>
+
+<p class="text-gray-600 mb-4 leading-relaxed">WPackagist continues serving closed plugins with no notice to users. We've heard from developers who migrated to WP Packages and discovered they had been depending on plugins that wp.org closed <em>years</em> earlier &mdash; including some closed for security reasons. If your <code class="text-sm font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">composer.lock</code> references a plugin wp.org has since closed, WP Packages surfaces it; WPackagist silently keeps installing it.</p>
+
+<p class="text-gray-600 mb-12 leading-relaxed">All currently closed plugins are listed on the <a href="/status" class="text-brand-primary hover:underline">status page</a> and available via the <a href="/docs#api" class="text-brand-primary hover:underline">closures API</a>.</p>
 
 <h2 class="text-2xl font-bold text-gray-900 mb-6">Performance</h2>
 
@@ -135,7 +148,7 @@
 <h3 class="text-lg font-semibold text-gray-900 mb-4">Metadata &amp; caching</h3>
 
 <div class="rounded-xl border border-gray-200/60 overflow-hidden mb-8">
-<table class="w-full text-sm">
+<table class="compare-table w-full text-sm">
 <thead class="bg-gray-50/50">
 <tr>
 <th class="text-left px-4 py-3 font-medium text-gray-500"></th>
@@ -176,7 +189,9 @@
 
 <p class="text-gray-600 mb-4 leading-relaxed">Its acquisition by WP Engine raises important questions. When infrastructure this foundational to the WordPress developer workflow is controlled by a single corporation, the community loses its voice. Decisions about availability, pricing, and direction are made in boardrooms, not in the open.</p>
 
-<p class="text-gray-600 mb-8 leading-relaxed">It's also unclear whether WPackagist remains truly open source. The <a href="https://github.com/outlandishideas/wpackagist" class="text-brand-primary hover:underline">GitHub repository</a> no longer reflects the live website, making it difficult for the community to audit, contribute to, or fork the project.</p>
+<p class="text-gray-600 mb-4 leading-relaxed">WPackagist publishes its application code, a Dockerfile, and a handful of deployment helpers &mdash; but not the production infrastructure that runs the service. Cloud provisioning, environment configuration, CI/CD &mdash; all proprietary. The public repo is enough to build the container, not enough to reproduce the running service.</p>
+
+<p class="text-gray-600 mb-8 leading-relaxed">The public repo has also diverged from production at times: gaps the community has had to catch and report (e.g. <a href="https://github.com/wpengine/wpackagist/issues/556" class="text-brand-primary hover:underline">#556</a>, <a href="https://github.com/wpengine/wpackagist/issues/557" class="text-brand-primary hover:underline">#557</a>) before they were addressed. With infrastructure closed, there's no built-in way for outside observers to know when the public source no longer reflects what's actually running. WP Packages takes the opposite approach: every component that runs the service &mdash; the Go application, the Ansible playbooks, the Caddy configuration, the database tooling &mdash; lives in the public repo. The codebase is what runs in production, and anyone can clone it and spin up their own instance.</p>
 
 <h2 class="text-2xl font-bold text-gray-900 mb-4">Built by Roots, maintained since 2011</h2>
 

@@ -20,6 +20,7 @@ Roots is an independent open source org, supported only by developers like you. 
 
 |  | WP Packages | WPackagist |
 |---|---|---|
+| Open source | Fully open source — application, infrastructure, and deployment all in the public repo | Application + Docker build only; production infrastructure remains proprietary, and public repo has historically diverged from production |
 | Package naming | `wp-plugin/*` `wp-theme/*` | `wpackagist-plugin/*` `wpackagist-theme/*` |
 | Package metadata | Includes authors, description, homepage, and support links | Missing — [requested since 2020](https://github.com/outlandishideas/wpackagist/issues/305) |
 | Update frequency | Every 5 minutes | ~1.5 hours (estimated) |
@@ -28,6 +29,7 @@ Roots is an independent open source org, supported only by developers like you. 
 | Install statistics | ✅ | ❌ |
 | Public status page | ✅ [See status page](https://wp-packages.org/status) | ❌ |
 | Untagged plugin installs | Immutable — pinned to SVN revision | Mutable, resulting in unexpected plugin updates |
+| Closed plugins & themes | Removed in sync with WordPress.org closures | Continues serving closed plugins with no notice |
 
 ### Composer resolve times
 
