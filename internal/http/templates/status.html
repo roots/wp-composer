@@ -32,21 +32,10 @@
 </div>
 </div>
 
-<div class="flex border-b border-gray-200 mb-6" role="tablist">
-<button class="px-4 pb-3 text-sm font-medium cursor-pointer border-b-2 border-brand-primary text-brand-primary" id="tab-builds" role="tab" aria-selected="true" aria-controls="panel-builds" onclick="switchTab('builds')">Builds</button>
-<button class="px-4 pb-3 text-sm font-medium cursor-pointer border-b-2 border-transparent text-gray-500 hover:text-gray-700" id="tab-checks" role="tab" aria-selected="false" aria-controls="panel-checks" onclick="switchTab('checks')">Status Checks</button>
+<div class="flex border-b border-gray-200 mb-6" role="tablist" data-tabs data-tabs-url="/status" data-tabs-default="builds">
+<button type="button" class="px-4 pb-3 text-sm font-medium border-b-2 border-brand-primary text-brand-primary" id="tab-builds" role="tab" aria-selected="true" aria-controls="panel-builds" data-tab="builds">Builds</button>
+<button type="button" class="px-4 pb-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" id="tab-checks" role="tab" aria-selected="false" aria-controls="panel-checks" data-tab="checks">Status Checks</button>
 </div>
-<script>
-function switchTab(t){
-  var tabs={builds:['tab-builds','panel-builds'],checks:['tab-checks','panel-checks']};
-  for(var k in tabs){
-    var btn=document.getElementById(tabs[k][0]),panel=document.getElementById(tabs[k][1]);
-    if(k===t){panel.classList.remove('hidden');btn.classList.add('border-brand-primary','text-brand-primary');btn.classList.remove('border-transparent','text-gray-500');btn.setAttribute('aria-selected','true')}
-    else{panel.classList.add('hidden');btn.classList.remove('border-brand-primary','text-brand-primary');btn.classList.add('border-transparent','text-gray-500');btn.setAttribute('aria-selected','false')}
-  }
-  history.replaceState(null,'',t==='builds'?'/status':'/status?tab='+t);
-}
-</script>
 
 <div id="panel-builds" role="tabpanel" aria-labelledby="tab-builds">
 {{if .LastBuildStartedAt}}<p class="text-sm text-gray-500 mb-4">Builds run every 5 minutes. Last build: {{timeAgo .LastBuildStartedAt}}</p>{{end}}
@@ -69,7 +58,7 @@ function switchTab(t){
 </thead>
 <tbody>
 {{range .Builds}}
-<tr class="border-t border-gray-100 hover:bg-gray-50{{if .Changes}} cursor-pointer{{end}}" {{if .Changes}}tabindex="0" aria-expanded="false" onclick="var r=this.nextElementSibling;r.classList.toggle('hidden');this.setAttribute('aria-expanded',!r.classList.contains('hidden'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"{{end}}>
+<tr class="border-t border-gray-100 hover:bg-gray-50{{if .Changes}} cursor-pointer{{end}}" {{if .Changes}}tabindex="0" aria-expanded="false" data-toggle-next{{end}}>
 <td class="px-4 py-2 font-mono text-xs">{{.ID}}</td>
 <td class="px-4 py-2 text-xs text-gray-500" title="{{.StartedAt}}" data-time="{{.StartedAt}}">{{formatCST .StartedAt}}</td>
 <td class="px-4 py-2 text-right">{{if eq .Status "completed"}}{{.PackagesTotal}}{{else if eq .Status "running"}}<span class="text-gray-300">—</span>{{end}}</td>
@@ -134,7 +123,7 @@ function switchTab(t){
 </thead>
 <tbody>
 {{range .StatusChecks}}
-<tr class="border-t border-gray-100 hover:bg-gray-50{{if .Changes}} cursor-pointer{{end}}" {{if .Changes}}tabindex="0" aria-expanded="false" onclick="var r=this.nextElementSibling;r.classList.toggle('hidden');this.setAttribute('aria-expanded',!r.classList.contains('hidden'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"{{end}}>
+<tr class="border-t border-gray-100 hover:bg-gray-50{{if .Changes}} cursor-pointer{{end}}" {{if .Changes}}tabindex="0" aria-expanded="false" data-toggle-next{{end}}>
 <td class="px-4 py-2 text-xs text-gray-500" title="{{.StartedAt}}" data-time="{{.StartedAt}}">{{formatCST .StartedAt}}</td>
 <td class="px-4 py-2 text-right">{{if or (eq .Status "completed") (eq .Status "completed_with_errors")}}{{.Checked}}{{else if eq .Status "running"}}<span class="text-gray-300">—</span>{{end}}</td>
 <td class="px-4 py-2 text-right">{{if or (eq .Status "completed") (eq .Status "completed_with_errors")}}{{if .Deactivated}}<span class="text-red-600">{{.Deactivated}}</span>{{else}}0{{end}}{{else if eq .Status "running"}}<span class="text-gray-300">—</span>{{end}}</td>
@@ -168,15 +157,5 @@ function switchTab(t){
 </div>
 {{end}}
 </div>
-<script>
-document.querySelectorAll('[data-time]').forEach(function(el){
-  var raw=el.dataset.time;
-  var d=new Date(raw.indexOf('T')>-1||raw.indexOf('Z')>-1?raw:raw.replace(' ','T')+'Z');
-  if(isNaN(d))return;
-  el.textContent=d.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
-});
-var t=new URLSearchParams(location.search).get('tab');
-if(t==='checks')switchTab('checks');
-</script>
 </div>
 {{end}}

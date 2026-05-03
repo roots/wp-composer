@@ -5,12 +5,12 @@
 <tr>
 <th class="text-left px-4 py-3 font-medium text-gray-500">Plugin</th>
 <th class="text-right px-4 py-3 font-medium text-gray-500 w-36">
-<button type="button" onclick="toggleSort('updated','least_updated')" class="inline-flex items-center gap-1 cursor-pointer hover:text-gray-900 transition-colors ml-auto whitespace-nowrap">Last Updated
+<button type="button" data-sort="updated" data-sort-default="least_updated" class="inline-flex items-center gap-1 hover:text-gray-900 transition-colors ml-auto whitespace-nowrap">Last Updated
 <svg class="w-3.5 h-3.5 {{if and (ne .Sort "updated") (ne .Sort "least_updated")}}text-gray-300{{end}}" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">{{if eq .Sort "least_updated"}}<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/>{{else}}<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>{{end}}</svg>
 </button>
 </th>
 <th class="text-right px-4 py-3 font-medium text-gray-500 w-36">
-<button type="button" onclick="toggleSort('active_installs','active_installs')" class="inline-flex items-center gap-1 cursor-pointer hover:text-gray-900 transition-colors ml-auto whitespace-nowrap">Active Installs
+<button type="button" data-sort="active_installs" data-sort-default="active_installs" class="inline-flex items-center gap-1 hover:text-gray-900 transition-colors ml-auto whitespace-nowrap">Active Installs
 <svg class="w-3.5 h-3.5 {{if and (ne .Sort "") (ne .Sort "active_installs")}}text-gray-300{{end}}" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
 </button>
 </th>
@@ -27,9 +27,9 @@
 {{if and .CurrentVersion (ne .CurrentVersion .WporgVersion)}}<span class="inline-flex items-center shrink-0 whitespace-nowrap rounded-md bg-amber-100 px-1.5 py-0 text-[10px] text-amber-700">latest not tagged</span>{{else}}<span class="inline-flex items-center shrink-0 whitespace-nowrap rounded-md bg-red-100 px-1.5 py-0 text-[10px] text-red-700">trunk only</span>{{end}}
 </div>
 <div class="flex items-center gap-2 mt-1 text-xs">
-<button onclick="openTagRequest('{{.Name}}')" class="text-brand-primary hover:underline cursor-pointer">Request tagging</button>
+<button type="button" data-tag-request="{{.Name}}" class="text-brand-primary hover:underline">Request tagging</button>
 <span class="text-gray-300">&middot;</span>
-<button onclick="copyInstall(this,'{{.Name}}')" class="text-gray-500 hover:text-brand-primary transition-colors cursor-pointer">Copy install command</button>
+<button type="button" data-copy-install="{{.Name}}" class="text-gray-500 hover:text-brand-primary transition-colors">Copy install command</button>
 </div>
 </div>
 </td>

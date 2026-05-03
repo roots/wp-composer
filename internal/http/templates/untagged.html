@@ -42,10 +42,10 @@
 <summary class="px-4 py-3 bg-gray-50/50 text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-100/50 transition-colors">Install an untagged plugin via Composer</summary>
 <div class="px-4 py-4 space-y-3">
 <p class="text-sm text-gray-600">You can install any plugin from trunk using <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">dev-trunk</code>. Composer will pin to a specific SVN revision in your lock file.</p>
-<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors" onclick="copyCmd(this,'composer require wp-plugin/example-plugin:dev-trunk')">
+<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors" data-copy="composer require wp-plugin/example-plugin:dev-trunk">
 <span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
 <code class="flex-1 text-sm font-mono text-gray-900 truncate">composer require wp-plugin/example-plugin:dev-trunk</code>
-<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
+<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
 </div>
 </div>
 </details>
@@ -67,7 +67,7 @@
 <div class="relative w-full sm:w-auto">
 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>
 <input type="text" id="author-input" name="author" value="{{.Author}}" placeholder="Filter by author..." autocomplete="off" class="w-full sm:w-48 pl-9 pr-8 h-9 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
-<button type="button" id="author-clear" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 {{if not .Author}}hidden{{end}}" onclick="const i=document.getElementById('author-input');i.value='';this.classList.add('hidden');htmx.trigger('#untagged-form','submit')">
+<button type="button" id="author-clear" data-author-clear class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 {{if not .Author}}hidden{{end}}">
 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
 </button>
 <div id="author-suggestions" class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg hidden max-h-48 overflow-y-auto"></div>
@@ -79,34 +79,4 @@
 </div>
 
 </article>
-<script>
-function copyInstall(btn,slug){navigator.clipboard.writeText("composer require wp-plugin/"+slug+":dev-trunk").then(()=>{const t=btn.textContent;btn.textContent="Copied!";setTimeout(()=>{btn.textContent=t},1500)})}
-function toggleSort(desc,asc){const el=document.getElementById('sort-input');el.value=el.value===desc?asc:desc;htmx.trigger(document.getElementById('untagged-form'),'submit')}
-document.addEventListener('htmx:afterRequest',e=>{const xhr=e.detail.xhr;if(!xhr)return;const u=new URL(xhr.responseURL);if(u.pathname==='/untagged-partial'){const p=u.searchParams.get('page');const f=u.searchParams.get('filter');const s=u.searchParams.get('search');const a=u.searchParams.get('author');const so=u.searchParams.get('sort');const q=[];if(f)q.push('filter='+f);if(s)q.push('search='+encodeURIComponent(s));if(a)q.push('author='+encodeURIComponent(a));if(so&&so!=='active_installs')q.push('sort='+so);if(p&&p!=='1')q.push('page='+p);history.pushState(null,'',q.length?'/untagged?'+q.join('&'):'/untagged')}});
-(()=>{
-const input=document.getElementById('author-input'),box=document.getElementById('author-suggestions'),clear=document.getElementById('author-clear');let timer=null,selected=-1,ctrl=null;
-function show(authors){
-box.innerHTML='';selected=-1;
-if(!authors.length){box.classList.add('hidden');return}
-authors.forEach(a=>{
-const d=document.createElement('div');d.textContent=a;
-d.className='px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-100';
-d.addEventListener('mousedown',e=>{e.preventDefault();input.value=a;box.classList.add('hidden');clear.classList.remove('hidden');htmx.trigger(document.getElementById('untagged-form'),'submit')});
-box.appendChild(d)});
-box.classList.remove('hidden')}
-function highlight(items){items.forEach((el,i)=>{el.classList.toggle('bg-gray-100',i===selected)})}
-input.addEventListener('input',()=>{
-const v=input.value.trim();
-clear.classList.toggle('hidden',!v);
-if(v.length<2){box.classList.add('hidden');return}
-clearTimeout(timer);
-timer=setTimeout(()=>{if(ctrl)ctrl.abort();ctrl=new AbortController();fetch('/untagged-authors?q='+encodeURIComponent(v),{signal:ctrl.signal}).then(r=>r.json()).then(show).catch(()=>{})},200)});
-input.addEventListener('keydown',e=>{
-const items=box.querySelectorAll('div');if(!items.length)return;
-if(e.key==='ArrowDown'){e.preventDefault();selected=Math.min(selected+1,items.length-1);highlight(items)}
-else if(e.key==='ArrowUp'){e.preventDefault();selected=Math.max(selected-1,0);highlight(items)}
-else if(e.key==='Enter'&&selected>=0){e.preventDefault();items[selected].dispatchEvent(new Event('mousedown'))}});
-input.addEventListener('blur',()=>{setTimeout(()=>{box.classList.add('hidden')},150)});
-})();
-</script>
 {{end}}

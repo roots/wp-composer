@@ -35,10 +35,10 @@
 </ul>
 </nav>
 <p class="text-gray-600 mb-4">Add the WP Packages repository to your project:</p>
-<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-4" onclick="copyCmd(this,'composer config repositories.wp-packages composer https://repo.wp-packages.org')">
+<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-4" data-copy="composer config repositories.wp-packages composer https://repo.wp-packages.org">
 <span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
 <code class="flex-1 text-sm font-mono text-gray-900 truncate">composer config repositories.wp-packages composer https://repo.wp-packages.org</code>
-<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer">
+<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors">
 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg>
 </button>
 </div>
@@ -61,9 +61,9 @@
 
 <h2 id="composer-json" class="text-2xl font-bold mb-4 scroll-mt-20">Example <code class="text-2xl font-mono">composer.json</code></h2>
 <div class="mb-12">
-<div class="flex border-b border-gray-200/60">
-<button onclick="document.getElementById('tab-traditional').classList.remove('hidden');document.getElementById('tab-bedrock').classList.add('hidden');this.classList.add('border-brand-primary','text-brand-primary');this.classList.remove('border-transparent','text-gray-500');this.nextElementSibling.classList.remove('border-brand-primary','text-brand-primary');this.nextElementSibling.classList.add('border-transparent','text-gray-500')" class="px-4 py-2 text-sm font-medium border-b-2 border-brand-primary text-brand-primary cursor-pointer">Traditional WordPress</button>
-<button onclick="document.getElementById('tab-bedrock').classList.remove('hidden');document.getElementById('tab-traditional').classList.add('hidden');this.classList.add('border-brand-primary','text-brand-primary');this.classList.remove('border-transparent','text-gray-500');this.previousElementSibling.classList.remove('border-brand-primary','text-brand-primary');this.previousElementSibling.classList.add('border-transparent','text-gray-500')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-900 cursor-pointer">Bedrock</button>
+<div class="flex border-b border-gray-200/60" data-tabs role="tablist">
+<button type="button" role="tab" aria-selected="true" aria-controls="tab-traditional" data-tab="traditional" class="px-4 py-2 text-sm font-medium border-b-2 border-brand-primary text-brand-primary">Traditional WordPress</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="tab-bedrock" data-tab="bedrock" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-900">Bedrock</button>
 </div>
 <div id="tab-traditional">
 <div class="rounded-b-xl border border-t-0 border-gray-200/60 overflow-hidden">
@@ -117,10 +117,10 @@
 <h2 id="migrate" class="text-2xl font-bold mb-4 scroll-mt-20">Migrating from WPackagist</h2>
 <p class="text-sm text-gray-500 mb-4"><a href="/wp-packages-vs-wpackagist" class="text-brand-primary hover:underline">See how WP Packages compares to WPackagist &rarr;</a></p>
 <p class="text-gray-600 mb-4">Switching from WPackagist takes one command. Use the <a href="https://github.com/roots/wp-packages/blob/main/scripts/migrate-from-wpackagist.sh" class="text-brand-primary hover:underline">migration script</a> to automatically update your <code class="text-sm font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">composer.json</code>:</p>
-<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-8" onclick="copyCmd(this,'curl -sO https://raw.githubusercontent.com/roots/wp-packages/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh')">
+<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-8" data-copy="curl -sO https://raw.githubusercontent.com/roots/wp-packages/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh">
 <span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
 <code class="flex-1 text-sm font-mono text-gray-900 truncate">curl -sO https://raw.githubusercontent.com/roots/wp-packages/main/scripts/migrate-from-wpackagist.sh &amp;&amp; bash migrate-from-wpackagist.sh</code>
-<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer">
+<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors">
 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg>
 </button>
 </div>
@@ -130,10 +130,10 @@
 <div class="flex w-7 h-7 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-xs font-bold">1</div>
 <div class="min-w-0">
 <p class="text-gray-600 mb-2 leading-7">Remove WPackagist packages:</p>
-<div class="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-200/60 bg-gray-100/30 cursor-pointer hover:border-gray-300 transition-colors" onclick="copyCmd(this,'composer remove wpackagist-plugin/woocommerce')">
+<div class="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-200/60 bg-gray-100/30 cursor-pointer hover:border-gray-300 transition-colors" data-copy="composer remove wpackagist-plugin/woocommerce">
 <span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
 <code class="flex-1 text-sm font-mono text-gray-900 truncate">composer remove wpackagist-plugin/woocommerce</code>
-<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
+<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
 </div>
 </div>
 </div>
@@ -141,10 +141,10 @@
 <div class="flex w-7 h-7 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-xs font-bold">2</div>
 <div class="min-w-0">
 <p class="text-gray-600 mb-2 leading-7">Remove the WPackagist repository and add WP Packages:</p>
-<div class="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-200/60 bg-gray-100/30 cursor-pointer hover:border-gray-300 transition-colors" onclick="copyCmd(this,'composer config --unset repositories.wpackagist &amp;&amp; composer config repositories.wp-packages composer https://repo.wp-packages.org')">
+<div class="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-200/60 bg-gray-100/30 cursor-pointer hover:border-gray-300 transition-colors" data-copy="composer config --unset repositories.wpackagist &amp;&amp; composer config repositories.wp-packages composer https://repo.wp-packages.org">
 <span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
 <code class="flex-1 text-sm font-mono text-gray-900 truncate">composer config --unset repositories.wpackagist &amp;&amp; composer config repositories.wp-packages composer https://repo.wp-packages.org</code>
-<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
+<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
 </div>
 </div>
 </div>
@@ -152,10 +152,10 @@
 <div class="flex w-7 h-7 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white text-xs font-bold">3</div>
 <div class="min-w-0">
 <p class="text-gray-600 mb-2 leading-7">Require packages with the new naming:</p>
-<div class="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-200/60 bg-gray-100/30 cursor-pointer hover:border-gray-300 transition-colors" onclick="copyCmd(this,'composer require wp-plugin/woocommerce')">
+<div class="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-200/60 bg-gray-100/30 cursor-pointer hover:border-gray-300 transition-colors" data-copy="composer require wp-plugin/woocommerce">
 <span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
 <code class="flex-1 text-sm font-mono text-gray-900 truncate">composer require wp-plugin/woocommerce</code>
-<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
+<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
 </div>
 </div>
 </div>
@@ -202,10 +202,10 @@
 
 <h3 class="text-lg font-bold mb-3">GET /api/stats/packages/{type}/{name}</h3>
 <p class="text-gray-600 mb-3">Returns monthly install history for a specific package (up to 36 months). The <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">type</code> can be <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">wp-plugin</code> or <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">wp-theme</code>.</p>
-<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-3" onclick="copyCmd(this,'curl https://wp-packages.org/api/stats/packages/wp-plugin/akismet')">
+<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-3" data-copy="curl https://wp-packages.org/api/stats/packages/wp-plugin/akismet">
 <span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
 <code class="flex-1 text-sm font-mono text-gray-900 truncate">curl https://wp-packages.org/api/stats/packages/wp-plugin/akismet</code>
-<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
+<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
 </div>
 <div class="rounded-xl border border-gray-200/60 overflow-hidden mb-8">
 <div class="bg-gray-50/50 px-4 py-2 text-xs text-gray-500 border-b border-gray-200/40">Response</div>
@@ -217,10 +217,10 @@
 
 <h3 class="text-lg font-bold mb-3">GET /api/packages/{type}/closed</h3>
 <p class="text-gray-600 mb-3">Returns a sorted list of slugs for plugins or themes that are currently closed on wp.org &mdash; including both temporary and permanent closures. The <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">type</code> can be <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">wp-plugin</code> or <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">wp-theme</code>.</p>
-<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-3" onclick="copyCmd(this,'curl https://wp-packages.org/api/packages/wp-plugin/closed')">
+<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-3" data-copy="curl https://wp-packages.org/api/packages/wp-plugin/closed">
 <span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
 <code class="flex-1 text-sm font-mono text-gray-900 truncate">curl https://wp-packages.org/api/packages/wp-plugin/closed</code>
-<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
+<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
 </div>
 <div class="rounded-xl border border-gray-200/60 overflow-hidden mb-8">
 <div class="bg-gray-50/50 px-4 py-2 text-xs text-gray-500 border-b border-gray-200/40">Response</div>
@@ -232,10 +232,10 @@
 
 <h3 class="text-lg font-bold mb-3">GET /api/packages/{type}/closed/permanent</h3>
 <p class="text-gray-600 mb-3">Returns the subset of closed packages that have been flagged as permanently closed on wp.org. Use this endpoint when you only want to surface closures unlikely to ever reopen.</p>
-<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-3" onclick="copyCmd(this,'curl https://wp-packages.org/api/packages/wp-plugin/closed/permanent')">
+<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-3" data-copy="curl https://wp-packages.org/api/packages/wp-plugin/closed/permanent">
 <span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
 <code class="flex-1 text-sm font-mono text-gray-900 truncate">curl https://wp-packages.org/api/packages/wp-plugin/closed/permanent</code>
-<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
+<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
 </div>
 <div class="rounded-xl border border-gray-200/60 overflow-hidden mb-8">
 <div class="bg-gray-50/50 px-4 py-2 text-xs text-gray-500 border-b border-gray-200/40">Response</div>
@@ -264,7 +264,4 @@
 </aside>
 </div>
 </section>
-<script>
-(()=>{const ids=['intro','naming','composer-json','wordpress-core','migrate','changelog-action','api'];const toc=document.getElementById('toc-sidebar');if(!toc)return;const links={};toc.querySelectorAll('a[href^="#"]').forEach(a=>{links[a.getAttribute('href').slice(1)]=a});const activate=id=>{Object.values(links).forEach(a=>{a.classList.remove('text-gray-900','font-medium');a.classList.add('text-gray-500')});const a=links[id];if(a){a.classList.add('text-gray-900','font-medium');a.classList.remove('text-gray-500')}};const observer=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)activate(e.target.id)})},{rootMargin:'-80px 0px -70% 0px'});ids.forEach(id=>{const el=document.getElementById(id);if(el)observer.observe(el)})})();
-</script>
 {{end}}

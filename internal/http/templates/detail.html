@@ -28,16 +28,16 @@
 <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
 <div class="text-sm text-amber-900 min-w-0">
 {{if .TrunkOnly}}<p class="font-medium">No tagged releases in SVN</p>
-<p class="mt-1">This plugin releases exclusively via SVN trunk. Install with <code class="text-xs font-mono bg-amber-100 px-1 py-0.5 rounded">dev-trunk</code> &mdash; Composer will pin to a specific SVN revision in your lock file. <button onclick="openTagRequest('{{.Package.Name}}')" class="font-medium underline underline-offset-2 hover:no-underline cursor-pointer">Ask the author to tag their releases</button> or see <a href="/untagged" class="font-medium underline underline-offset-2 hover:no-underline">all untagged plugins</a>.</p>
+<p class="mt-1">This plugin releases exclusively via SVN trunk. Install with <code class="text-xs font-mono bg-amber-100 px-1 py-0.5 rounded">dev-trunk</code> &mdash; Composer will pin to a specific SVN revision in your lock file. <button type="button" data-tag-request="{{.Package.Name}}" class="font-medium underline underline-offset-2 hover:no-underline">Ask the author to tag their releases</button> or see <a href="/untagged" class="font-medium underline underline-offset-2 hover:no-underline">all untagged plugins</a>.</p>
 {{else}}<p class="font-medium">Latest version not tagged in SVN</p>
-<p class="mt-1">WordPress.org reports version {{.Package.WporgVersion}} but it doesn't match any tagged release, so the latest version isn't available as a tagged release via Composer. <button onclick="openTagRequest('{{.Package.Name}}')" class="font-medium underline underline-offset-2 hover:no-underline cursor-pointer">Ask the author to tag their releases</button> or see <a href="/untagged" class="font-medium underline underline-offset-2 hover:no-underline">all untagged plugins</a>.</p>
+<p class="mt-1">WordPress.org reports version {{.Package.WporgVersion}} but it doesn't match any tagged release, so the latest version isn't available as a tagged release via Composer. <button type="button" data-tag-request="{{.Package.Name}}" class="font-medium underline underline-offset-2 hover:no-underline">Ask the author to tag their releases</button> or see <a href="/untagged" class="font-medium underline underline-offset-2 hover:no-underline">all untagged plugins</a>.</p>
 <details class="mt-3">
 <summary class="font-medium cursor-pointer hover:underline">Install latest from trunk</summary>
 <p class="mt-2 text-amber-800 mb-2">Install with <code class="text-xs font-mono bg-amber-100 px-1 py-0.5 rounded">dev-trunk</code> to get the latest code. Composer will pin to a specific SVN revision in your lock file.</p>
-<div class="flex items-center gap-3 border border-amber-200 bg-amber-100/50 rounded-lg px-4 py-2.5 cursor-pointer hover:bg-amber-100/80 transition-colors" onclick="copyCmd(this,'composer require wp-{{.Package.Type}}/{{.Package.Name}}:dev-trunk')">
+<div class="flex items-center gap-3 border border-amber-200 bg-amber-100/50 rounded-lg px-4 py-2.5 cursor-pointer hover:bg-amber-100/80 transition-colors" data-copy="composer require wp-{{.Package.Type}}/{{.Package.Name}}:dev-trunk">
 <span class="text-amber-600 text-sm font-mono select-none shrink-0">$</span>
 <code class="flex-1 text-sm font-mono text-amber-900 truncate">composer require wp-{{.Package.Type}}/{{.Package.Name}}:dev-trunk</code>
-<button aria-label="Copy to clipboard" class="text-amber-600 hover:text-amber-900 transition-colors ml-1 cursor-pointer">
+<button aria-label="Copy to clipboard" class="text-amber-600 hover:text-amber-900 transition-colors ml-1">
 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg>
 </button>
 </div>
@@ -59,7 +59,7 @@
 <p class="text-sm text-gray-500 font-mono mt-1">wp-{{.Package.Type}}/{{.Package.Name}}</p>
 </div>
 </div>
-<div class="flex items-center gap-3 mb-10 px-4 py-3 rounded-xl border border-gray-200/60 bg-gray-100/30 cursor-pointer hover:border-gray-300 transition-colors group" onclick="copyCmd(this,'composer require wp-{{.Package.Type}}/{{.Package.Name}}{{if .TrunkOnly}}:dev-trunk{{end}}')">
+<div class="flex items-center gap-3 mb-10 px-4 py-3 rounded-xl border border-gray-200/60 bg-gray-100/30 cursor-pointer hover:border-gray-300 transition-colors group" data-copy="composer require wp-{{.Package.Type}}/{{.Package.Name}}{{if .TrunkOnly}}:dev-trunk{{end}}">
 <span class="text-gray-500 text-sm font-mono select-none">$</span>
 <code class="flex-1 text-sm font-mono text-gray-900 select-all truncate">composer require wp-{{.Package.Type}}/{{.Package.Name}}{{if .TrunkOnly}}:dev-trunk{{end}}</code>
 <span class="shrink-0 text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity mr-1">Click to copy</span>
@@ -67,9 +67,9 @@
 </div>
 <div class="grid gap-10 lg:grid-cols-[1fr_280px]">
 <div class="min-w-0">
-<div class="flex border-b border-gray-200" role="tablist">
-<button class="px-4 pb-3 text-sm font-medium cursor-pointer border-b-2 border-brand-primary text-brand-primary" id="tab-desc" role="tab" aria-selected="true" aria-controls="panel-desc" onclick="document.getElementById('panel-desc').classList.remove('hidden');document.getElementById('panel-ver').classList.add('hidden');this.classList.add('border-brand-primary','text-brand-primary');this.classList.remove('border-transparent','text-gray-500');this.setAttribute('aria-selected','true');const o=document.getElementById('tab-ver');o.classList.remove('border-brand-primary','text-brand-primary');o.classList.add('border-transparent','text-gray-500');o.setAttribute('aria-selected','false')">Description</button>
-<button class="px-4 pb-3 text-sm font-medium cursor-pointer border-b-2 border-transparent text-gray-500 hover:text-gray-700" id="tab-ver" role="tab" aria-selected="false" aria-controls="panel-ver" onclick="document.getElementById('panel-ver').classList.remove('hidden');document.getElementById('panel-desc').classList.add('hidden');this.classList.add('border-brand-primary','text-brand-primary');this.classList.remove('border-transparent','text-gray-500');this.setAttribute('aria-selected','true');const o=document.getElementById('tab-desc');o.classList.remove('border-brand-primary','text-brand-primary');o.classList.add('border-transparent','text-gray-500');o.setAttribute('aria-selected','false')">Versions ({{len .Versions}})</button>
+<div class="flex border-b border-gray-200" role="tablist" data-tabs>
+<button type="button" class="px-4 pb-3 text-sm font-medium border-b-2 border-brand-primary text-brand-primary" id="tab-desc" role="tab" aria-selected="true" aria-controls="panel-desc" data-tab="desc">Description</button>
+<button type="button" class="px-4 pb-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" id="tab-ver" role="tab" aria-selected="false" aria-controls="panel-ver" data-tab="ver">Versions ({{len .Versions}})</button>
 </div>
 <div id="panel-desc" role="tabpanel" aria-labelledby="tab-desc" class="mt-8">
 {{if .Package.Description}}<p class="text-sm text-gray-500 leading-relaxed">{{.Package.Description}}</p>
@@ -84,20 +84,12 @@
 <span class="font-mono text-gray-900">{{$v.Version}}</span>
 {{if $v.IsLatest}}<span class="inline-flex items-center rounded-md bg-brand-primary px-2 py-0.5 text-[10px] font-medium text-white">latest</span>{{end}}
 </div>
-<code class="inline-flex items-center gap-1.5 mt-1 text-xs font-mono text-gray-400 cursor-pointer hover:text-gray-600 transition-colors" onclick="copyCmd(this,'composer require wp-{{$.Package.Type}}/{{$.Package.Name}}:{{$v.Version}}')"><span>composer require wp-{{$.Package.Type}}/{{$.Package.Name}}:{{$v.Version}}</span><svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></code>
+<code class="inline-flex items-center gap-1.5 mt-1 text-xs font-mono text-gray-400 cursor-pointer hover:text-gray-600 transition-colors" data-copy="composer require wp-{{$.Package.Type}}/{{$.Package.Name}}:{{$v.Version}}"><span>composer require wp-{{$.Package.Type}}/{{$.Package.Name}}:{{$v.Version}}</span><svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></code>
 </li>
 {{end}}
 </ol>
 {{if gt (len .Versions) 5}}
-<button id="versions-toggle" class="mt-3 text-sm font-medium text-brand-primary hover:underline" onclick="
-const rows = document.querySelectorAll('.ver-row');
-const showing = this.dataset.expanded === '1';
-for (let i = 5; i < rows.length; i++) {
-  rows[i].classList.toggle('hidden', showing);
-}
-this.dataset.expanded = showing ? '0' : '1';
-this.textContent = showing ? 'Show all {{len .Versions}} versions' : 'Show fewer versions';
-" data-expanded="0">Show all {{len .Versions}} versions</button>
+<button type="button" id="versions-toggle" class="mt-3 text-sm font-medium text-brand-primary hover:underline" data-versions-toggle="{{len .Versions}}" data-expanded="0">Show all {{len .Versions}} versions</button>
 {{end}}
 {{else}}<div class="text-center py-16"><p class="text-gray-500">No versions available.</p></div>{{end}}
 </div>
