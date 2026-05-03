@@ -10,6 +10,10 @@
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		Cross-Origin-Opener-Policy "same-origin"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "interest-cohort=(), browsing-topics=()"
+		Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self'; img-src 'self' data: {{ r2_cdn_public_url }}; font-src 'self' data:; connect-src 'self' https://cloudflareinsights.com {{ r2_cdn_public_url }}; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'; upgrade-insecure-requests"
 	}
 
 	# Strip trailing slashes (redirect to canonical non-slash URL)
