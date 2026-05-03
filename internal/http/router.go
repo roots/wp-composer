@@ -126,6 +126,7 @@ func NewRouter(a *app.App) http.Handler {
 	protectedMux.HandleFunc("GET /{$}", handleAdminLogs(tmpl))
 	protectedMux.HandleFunc("GET /logs", handleAdminLogs(tmpl))
 	protectedMux.HandleFunc("GET /logs/stream", handleAdminLogStream(a))
+	protectedMux.HandleFunc("GET /wporg-check", handleAdminWporgCheck(a))
 	adminMux.Handle("/", Chain(protectedMux, SessionAuth(a.DB), RequireAdmin))
 
 	// Register both /admin and /admin/ so Go's ServeMux doesn't auto-redirect
