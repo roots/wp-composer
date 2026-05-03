@@ -7,7 +7,17 @@ import (
 	"github.com/roots/wp-packages/internal/app"
 )
 
-func handleAPIClosedPackages(a *app.App) http.HandlerFunc {
+// handleAPIClosedPackages returns slugs of closed packages. When permanentOnly
+// is true, the result is restricted to packages flagged permanently_closed = 1
+// (a stable subset of is_active = 0). Otherwise it returns every is_active = 0
+// row, which includes both temporary and permanent closures.
+func handleAPIClosedPackages(a *app.App, permanentOnly bool) http.HandlerFunc {
+	where := "is_active = 0"
+	if permanentOnly {
+		where = "permanently_closed = 1"
+	}
+	query := `SELECT name FROM packages WHERE type = ? AND ` + where + ` ORDER BY name`
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		pkgType, ok := parsePkgType(r.PathValue("type"))
 		if !ok {
@@ -15,14 +25,9 @@ func handleAPIClosedPackages(a *app.App) http.HandlerFunc {
 			return
 		}
 
-		rows, err := a.DB.QueryContext(r.Context(),
-			`SELECT name FROM packages
-			 WHERE type = ? AND permanently_closed = 1
-			 ORDER BY name`,
-			pkgType,
-		)
+		rows, err := a.DB.QueryContext(r.Context(), query, pkgType)
 		if err != nil {
-			a.Logger.Error("querying closed packages", "error", err, "type", pkgType)
+			a.Logger.Error("querying closed packages", "error", err, "type", pkgType, "permanent", permanentOnly)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}

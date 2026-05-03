@@ -29,10 +29,11 @@ func setupClosedTestApp(t *testing.T) *app.App {
 			permanently_closed INTEGER NOT NULL DEFAULT 0,
 			UNIQUE(type, name)
 		);
-		INSERT INTO packages (type, name, permanently_closed) VALUES ('plugin', 'zeta-closed', 1);
-		INSERT INTO packages (type, name, permanently_closed) VALUES ('plugin', 'alpha-closed', 1);
-		INSERT INTO packages (type, name, permanently_closed) VALUES ('plugin', 'still-open', 0);
-		INSERT INTO packages (type, name, permanently_closed) VALUES ('theme', 'old-theme', 1);
+		INSERT INTO packages (type, name, is_active, permanently_closed) VALUES ('plugin', 'zeta-permanent', 0, 1);
+		INSERT INTO packages (type, name, is_active, permanently_closed) VALUES ('plugin', 'alpha-permanent', 0, 1);
+		INSERT INTO packages (type, name, is_active, permanently_closed) VALUES ('plugin', 'mango-temporary', 0, 0);
+		INSERT INTO packages (type, name, is_active, permanently_closed) VALUES ('plugin', 'still-open', 1, 0);
+		INSERT INTO packages (type, name, is_active, permanently_closed) VALUES ('theme', 'old-theme', 0, 1);
 	`)
 	if err != nil {
 		t.Fatal(err)
@@ -45,9 +46,18 @@ func setupClosedTestApp(t *testing.T) *app.App {
 	}
 }
 
-func TestAPIClosedPackages_Plugins(t *testing.T) {
+func decodeSlugs(t *testing.T, w *httptest.ResponseRecorder) []string {
+	t.Helper()
+	var slugs []string
+	if err := json.NewDecoder(w.Body).Decode(&slugs); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	return slugs
+}
+
+func TestAPIClosedPackages_AllPlugins(t *testing.T) {
 	a := setupClosedTestApp(t)
-	handler := handleAPIClosedPackages(a)
+	handler := handleAPIClosedPackages(a, false)
 
 	req := httptest.NewRequest("GET", "/api/packages/wp-plugin/closed", nil)
 	req.SetPathValue("type", "wp-plugin")
@@ -61,11 +71,8 @@ func TestAPIClosedPackages_Plugins(t *testing.T) {
 		t.Errorf("Content-Type: got %q, want application/json", ct)
 	}
 
-	var slugs []string
-	if err := json.NewDecoder(w.Body).Decode(&slugs); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	want := []string{"alpha-closed", "zeta-closed"}
+	slugs := decodeSlugs(t, w)
+	want := []string{"alpha-permanent", "mango-temporary", "zeta-permanent"}
 	if len(slugs) != len(want) {
 		t.Fatalf("got %v, want %v", slugs, want)
 	}
@@ -76,9 +83,34 @@ func TestAPIClosedPackages_Plugins(t *testing.T) {
 	}
 }
 
-func TestAPIClosedPackages_Themes(t *testing.T) {
+func TestAPIClosedPackages_PermanentPlugins(t *testing.T) {
 	a := setupClosedTestApp(t)
-	handler := handleAPIClosedPackages(a)
+	handler := handleAPIClosedPackages(a, true)
+
+	req := httptest.NewRequest("GET", "/api/packages/wp-plugin/closed/permanent", nil)
+	req.SetPathValue("type", "wp-plugin")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("got %d, want 200", w.Code)
+	}
+
+	slugs := decodeSlugs(t, w)
+	want := []string{"alpha-permanent", "zeta-permanent"}
+	if len(slugs) != len(want) {
+		t.Fatalf("got %v, want %v", slugs, want)
+	}
+	for i, s := range want {
+		if slugs[i] != s {
+			t.Errorf("slug %d: got %q, want %q", i, slugs[i], s)
+		}
+	}
+}
+
+func TestAPIClosedPackages_AllThemes(t *testing.T) {
+	a := setupClosedTestApp(t)
+	handler := handleAPIClosedPackages(a, false)
 
 	req := httptest.NewRequest("GET", "/api/packages/wp-theme/closed", nil)
 	req.SetPathValue("type", "wp-theme")
@@ -88,10 +120,7 @@ func TestAPIClosedPackages_Themes(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("got %d, want 200", w.Code)
 	}
-	var slugs []string
-	if err := json.NewDecoder(w.Body).Decode(&slugs); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
+	slugs := decodeSlugs(t, w)
 	if len(slugs) != 1 || slugs[0] != "old-theme" {
 		t.Errorf("got %v, want [old-theme]", slugs)
 	}
@@ -99,7 +128,7 @@ func TestAPIClosedPackages_Themes(t *testing.T) {
 
 func TestAPIClosedPackages_BarePrefix(t *testing.T) {
 	a := setupClosedTestApp(t)
-	handler := handleAPIClosedPackages(a)
+	handler := handleAPIClosedPackages(a, false)
 
 	req := httptest.NewRequest("GET", "/api/packages/plugin/closed", nil)
 	req.SetPathValue("type", "plugin")
@@ -113,7 +142,7 @@ func TestAPIClosedPackages_BarePrefix(t *testing.T) {
 
 func TestAPIClosedPackages_UnknownType(t *testing.T) {
 	a := setupClosedTestApp(t)
-	handler := handleAPIClosedPackages(a)
+	handler := handleAPIClosedPackages(a, false)
 
 	req := httptest.NewRequest("GET", "/api/packages/widget/closed", nil)
 	req.SetPathValue("type", "widget")
@@ -130,7 +159,7 @@ func TestAPIClosedPackages_EmptyResult(t *testing.T) {
 	if _, err := a.DB.Exec(`DELETE FROM packages WHERE type = 'theme'`); err != nil {
 		t.Fatal(err)
 	}
-	handler := handleAPIClosedPackages(a)
+	handler := handleAPIClosedPackages(a, false)
 
 	req := httptest.NewRequest("GET", "/api/packages/wp-theme/closed", nil)
 	req.SetPathValue("type", "wp-theme")
