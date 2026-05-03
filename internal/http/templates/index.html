@@ -51,7 +51,7 @@
 <form id="filter-form" method="GET" action="/" hx-get="/packages-partial" hx-target="#package-results" hx-trigger="submit, change from:select, input from:[name=search] delay:300ms changed" hx-push-url="false" hx-swap="innerHTML" class="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1 scroll-mt-16">
 <div class="relative w-full sm:max-w-md">
 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
-<input type="search" name="search" value="{{.Filters.Search}}" placeholder="Search packages..." class="w-full pl-9 pr-12 h-10 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
+<input type="search" name="search" value="{{.Filters.Search}}" placeholder="Search packages..." aria-label="Search packages" class="w-full pl-9 pr-12 h-10 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
 <kbd class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:inline-flex h-5 items-center rounded border border-gray-200/80 bg-gray-100/80 px-1.5 text-[10px] font-mono text-gray-500">/</kbd>
 </div>
 <div class="flex items-center gap-2">

@@ -53,11 +53,11 @@
 <form id="untagged-form" class="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-6 scroll-mt-24" hx-get="/untagged-partial" hx-target="#untagged-results" hx-swap="innerHTML show:#untagged-form:top" hx-trigger="submit, change from:select, input from:[name=search] delay:300ms changed" hx-push-url="false" hx-include="#untagged-form">
 <div class="relative flex-1 w-full sm:max-w-md">
 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
-<input type="search" name="search" value="{{.Search}}" placeholder="Search plugins..." class="w-full pl-9 pr-3 h-9 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
+<input type="search" name="search" value="{{.Search}}" placeholder="Search plugins..." aria-label="Search plugins" class="w-full pl-9 pr-3 h-9 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
 </div>
 <div class="relative">
 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z"/></svg>
-<select id="untagged-filter" name="filter" class="h-9 pl-9 pr-8 text-sm border border-gray-200 rounded-lg bg-white select-chevron focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
+<select id="untagged-filter" name="filter" aria-label="Filter plugins" class="h-9 pl-9 pr-8 text-sm border border-gray-200 rounded-lg bg-white select-chevron focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
 <option value=""{{if eq .Filter ""}}} selected{{end}}>All</option>
 <option value="trunk-only"{{if eq .Filter "trunk-only"}} selected{{end}}>Trunk only</option>
 <option value="latest-not-tagged"{{if eq .Filter "latest-not-tagged"}} selected{{end}}>Latest not tagged</option>
@@ -66,8 +66,8 @@
 <input type="hidden" name="sort" id="sort-input" value="{{.Sort}}">
 <div class="relative w-full sm:w-auto">
 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>
-<input type="text" id="author-input" name="author" value="{{.Author}}" placeholder="Filter by author..." autocomplete="off" class="w-full sm:w-48 pl-9 pr-8 h-9 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
-<button type="button" id="author-clear" data-author-clear class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 {{if not .Author}}hidden{{end}}">
+<input type="text" id="author-input" name="author" value="{{.Author}}" placeholder="Filter by author..." autocomplete="off" aria-label="Filter by author" class="w-full sm:w-48 pl-9 pr-8 h-9 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary">
+<button type="button" id="author-clear" data-author-clear aria-label="Clear author filter" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 {{if not .Author}}hidden{{end}}">
 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
 </button>
 <div id="author-suggestions" class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg hidden max-h-48 overflow-y-auto"></div>
