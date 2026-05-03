@@ -173,7 +173,7 @@ func formatNumber(n int64) string {
 		return fmt.Sprintf("%.1fM", float64(n)/1_000_000)
 	}
 	if n >= 1_000 {
-		return fmt.Sprintf("%.0fK", float64(n)/1_000)
+		return fmt.Sprintf("%.0fk", float64(n)/1_000)
 	}
 	return fmt.Sprintf("%d", n)
 }
@@ -194,7 +194,7 @@ func formatNumberComma(n int64) string {
 }
 
 // formatAxisLabel formats a number for chart Y-axis labels, keeping enough
-// precision to avoid collisions (e.g. 1500 → "1.5K" instead of "2K").
+// precision to avoid collisions (e.g. 1500 → "1.5k" instead of "2k").
 func formatAxisLabel(n int) string {
 	if n >= 1_000_000 {
 		v := float64(n) / 1_000_000
@@ -206,9 +206,9 @@ func formatAxisLabel(n int) string {
 	if n >= 1_000 {
 		v := float64(n) / 1_000
 		if v == float64(int(v)) {
-			return fmt.Sprintf("%dK", int(v))
+			return fmt.Sprintf("%dk", int(v))
 		}
-		return fmt.Sprintf("%.1fK", v)
+		return fmt.Sprintf("%.1fk", v)
 	}
 	return fmt.Sprintf("%d", n)
 }

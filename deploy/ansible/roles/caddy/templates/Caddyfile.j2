@@ -13,7 +13,7 @@
 		Cross-Origin-Opener-Policy "same-origin"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "interest-cohort=(), browsing-topics=()"
-		Content-Security-Policy "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: {{ r2_cdn_public_url }}; font-src 'self' data:; connect-src 'self' https://cloudflareinsights.com {{ r2_cdn_public_url }}; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'; upgrade-insecure-requests"
+		Content-Security-Policy "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: {{ r2_cdn_public_url }} https://img.shields.io; font-src 'self' data:; connect-src 'self' https://cloudflareinsights.com {{ r2_cdn_public_url }}; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'; upgrade-insecure-requests"
 	}
 
 	# Strip trailing slashes (redirect to canonical non-slash URL)

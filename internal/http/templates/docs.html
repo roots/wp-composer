@@ -32,6 +32,7 @@
 <li><a href="#migrate" class="text-gray-500 hover:text-gray-900 transition-colors">Migrating from WPackagist</a></li>
 <li><a href="#changelog-action" class="text-gray-500 hover:text-gray-900 transition-colors">Changelog action</a></li>
 <li><a href="#api" class="text-gray-500 hover:text-gray-900 transition-colors">API</a></li>
+<li><a href="#badges" class="text-gray-500 hover:text-gray-900 transition-colors">Badges</a></li>
 </ul>
 </nav>
 <p class="text-gray-600 mb-4">Add the WP Packages repository to your project:</p>
@@ -202,9 +203,9 @@
 
 <h3 class="text-lg font-bold mb-3">GET /api/stats/packages/{type}/{name}</h3>
 <p class="text-gray-600 mb-3">Returns monthly install history for a specific package (up to 36 months). The <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">type</code> can be <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">wp-plugin</code> or <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">wp-theme</code>.</p>
-<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-3" data-copy="curl https://wp-packages.org/api/stats/packages/wp-plugin/akismet">
+<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-3" data-copy="curl https://wp-packages.org/api/stats/packages/wp-plugin/woocommerce">
 <span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
-<code class="flex-1 text-sm font-mono text-gray-900 truncate">curl https://wp-packages.org/api/stats/packages/wp-plugin/akismet</code>
+<code class="flex-1 text-sm font-mono text-gray-900 truncate">curl https://wp-packages.org/api/stats/packages/wp-plugin/woocommerce</code>
 <button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
 </div>
 <div class="rounded-xl border border-gray-200/60 overflow-hidden mb-8">
@@ -213,6 +214,21 @@
   { <span class="text-green-700">"month"</span>: <span class="text-green-700">"2026-01"</span>, <span class="text-green-700">"installs"</span>: <span class="text-blue-700">142</span> },
   { <span class="text-green-700">"month"</span>: <span class="text-green-700">"2026-02"</span>, <span class="text-green-700">"installs"</span>: <span class="text-blue-700">88</span> }
 ]</code></pre>
+</div>
+
+<h3 class="text-lg font-bold mb-3">GET /api/stats/packages/{type}/{name}/total</h3>
+<p class="text-gray-600 mb-3">Returns the total Composer install count and the last 30 days of installs for a single package. Designed for use in shields.io badges.</p>
+<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-3" data-copy="curl https://wp-packages.org/api/stats/packages/wp-plugin/woocommerce/total">
+<span class="text-gray-500 text-sm font-mono select-none shrink-0">$</span>
+<code class="flex-1 text-sm font-mono text-gray-900 truncate">curl https://wp-packages.org/api/stats/packages/wp-plugin/woocommerce/total</code>
+<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
+</div>
+<div class="rounded-xl border border-gray-200/60 overflow-hidden mb-8">
+<div class="bg-gray-50/50 px-4 py-2 text-xs text-gray-500 border-b border-gray-200/40">Response</div>
+<pre class="p-4 text-sm font-mono leading-relaxed overflow-x-auto"><code>{
+  <span class="text-green-700">"total_installs"</span>: <span class="text-blue-700">1234567</span>,
+  <span class="text-green-700">"installs_30d"</span>: <span class="text-blue-700">45678</span>
+}</code></pre>
 </div>
 
 <h3 class="text-lg font-bold mb-3">GET /api/packages/{type}/closed</h3>
@@ -245,7 +261,24 @@
 ]</code></pre>
 </div>
 
-<p class="text-sm text-gray-500 mb-8">Stats responses are cached for 5 minutes; the closed-packages list is cached for 1 hour. Returns <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">404</code> for inactive or unknown packages, and <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">429</code> when rate limited.</p>
+<p class="text-sm text-gray-500 mb-12">Stats responses are cached for 5 minutes; the closed-packages list is cached for 1 hour. Returns <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">404</code> for inactive or unknown packages, and <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">429</code> when rate limited.</p>
+
+<h2 id="badges" class="text-2xl font-bold mb-4 scroll-mt-20">Badges for plugin authors</h2>
+<p class="text-gray-600 mb-6">If you maintain a plugin or theme on WordPress.org, show your Composer install count in your README using <a href="https://shields.io" class="text-brand-primary hover:underline">shields.io</a>. The badge updates automatically as installs grow.</p>
+
+<div class="rounded-xl border border-gray-200/60 bg-gray-50/30 p-6 mb-4 text-center"><a href="/packages/wp-plugin/woocommerce"><img src="https://img.shields.io/badge/dynamic/json.svg?url=https%3A%2F%2Fwp-packages.org%2Fapi%2Fstats%2Fpackages%2Fwp-plugin%2Fwoocommerce%2Ftotal&amp;query=%24.total_installs_formatted&amp;label=wp-packages.org%20installs&amp;logo=roots&amp;logoColor=white&amp;colorB=2b3072&amp;colorA=525ddc&amp;style=flat-square" alt="wp-packages.org installs badge for WooCommerce" class="inline-block"></a>
+<p class="text-xs text-gray-500 mt-3">Live badge for <a href="/packages/wp-plugin/woocommerce" class="text-brand-primary hover:underline">wp-plugin/woocommerce</a></p>
+</div>
+
+<p class="text-sm text-gray-500 mb-3">Add this to your README, replacing <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">your-plugin</code> with your plugin slug:</p>
+
+<div class="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-gray-100/30 px-4 py-2.5 cursor-pointer hover:border-gray-300 transition-colors mb-3" data-copy="[![wp-packages.org installs](https://img.shields.io/badge/dynamic/json.svg?url=https%3A%2F%2Fwp-packages.org%2Fapi%2Fstats%2Fpackages%2Fwp-plugin%2Fyour-plugin%2Ftotal&amp;query=%24.total_installs_formatted&amp;label=wp-packages.org%20installs&amp;logo=roots&amp;logoColor=white&amp;colorB=2b3072&amp;colorA=525ddc&amp;style=flat-square)](https://wp-packages.org/packages/wp-plugin/your-plugin)">
+<span class="text-gray-500 text-sm font-mono select-none shrink-0">md</span>
+<code class="flex-1 text-sm font-mono text-gray-900 truncate">[![wp-packages.org installs](https://img.shields.io/badge/dynamic/json.svg?url=https%3A%2F%2Fwp-packages.org%2Fapi%2Fstats%2Fpackages%2Fwp-plugin%2Fyour-plugin%2Ftotal&amp;query=%24.total_installs_formatted&amp;label=wp-packages.org%20installs&amp;logo=roots&amp;logoColor=white&amp;colorB=2b3072&amp;colorA=525ddc&amp;style=flat-square)](https://wp-packages.org/packages/wp-plugin/your-plugin)</code>
+<button aria-label="Copy to clipboard" class="shrink-0 text-gray-400 hover:text-gray-900 transition-colors"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg></button>
+</div>
+
+<p class="text-sm text-gray-500 mb-8">For themes, change <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">wp-plugin</code> to <code class="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200/40">wp-theme</code> in the URL. You can customize the label, color, and style with shields.io's URL parameters &mdash; see the <a href="https://shields.io/badges/dynamic-json-badge" class="text-brand-primary hover:underline">shields.io docs</a>.</p>
 
 </div>
 <aside class="hidden md:block">
@@ -259,6 +292,7 @@
 <li><a href="#migrate" class="text-gray-500 hover:text-gray-900 transition-colors">Migrating from WPackagist</a></li>
 <li><a href="#changelog-action" class="text-gray-500 hover:text-gray-900 transition-colors">Changelog action</a></li>
 <li><a href="#api" class="text-gray-500 hover:text-gray-900 transition-colors">API</a></li>
+<li><a href="#badges" class="text-gray-500 hover:text-gray-900 transition-colors">Badges</a></li>
 </ul>
 </nav>
 </aside>

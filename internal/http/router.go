@@ -109,6 +109,7 @@ func NewRouter(a *app.App) http.Handler {
 	apiLimiter := newAPIRateLimiter()
 	route("GET /api/stats", apiLimiter.RateLimit(http.HandlerFunc(handleAPIStats(a))))
 	route("GET /api/stats/packages/{type}/{name}", apiLimiter.RateLimit(http.HandlerFunc(handleAPIMonthlyInstalls(a))))
+	route("GET /api/stats/packages/{type}/{name}/total", apiLimiter.RateLimit(http.HandlerFunc(handleAPIPackageTotal(a))))
 	route("GET /api/packages/{type}/closed", apiLimiter.RateLimit(http.HandlerFunc(handleAPIClosedPackages(a, false))))
 	route("GET /api/packages/{type}/closed/permanent", apiLimiter.RateLimit(http.HandlerFunc(handleAPIClosedPackages(a, true))))
 
